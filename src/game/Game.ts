@@ -278,9 +278,6 @@ export class Game {
   }
 
   private _minigameWizard(): void {
-    let gameName = "";
-    let is3D = false;
-
     const ov = document.createElement("div");
     ov.style.cssText =
       "position:fixed;inset:0;z-index:100000;background:#080808;overflow-y:auto;" +

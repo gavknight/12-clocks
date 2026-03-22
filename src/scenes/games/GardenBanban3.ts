@@ -789,6 +789,8 @@ export class GardenBanban3 {
     this._canvas.requestPointerLock?.();
   }
 
+  private _toggleAdmin(): void { /* stub — admin panel not yet built for this game */ }
+
   private _setupInput(): void {
     this._kd = (e: KeyboardEvent) => {
       this._keys.add(e.code);
