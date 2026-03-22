@@ -1,0 +1,14 @@
+{
+  "name": "12 Clocks",
+  "short_name": "12 Clocks",
+  "description": "Explore the room, find 12 puzzles, discover the secret...",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1a0a3e",
+  "theme_color": "#6a20a0",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
