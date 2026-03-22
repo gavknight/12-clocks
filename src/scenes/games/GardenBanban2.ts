@@ -97,6 +97,7 @@ export class GardenBanban2 {
   private _mm!: (e: MouseEvent)    => void;
   private _mc!: (e: PointerEvent)  => void;
   private _rz!: () => void;
+  private _touchHud?: HTMLDivElement;
 
   constructor(g: Game) {
     this._g = g;
@@ -1586,6 +1587,119 @@ export class GardenBanban2 {
 
     this._rz = () => this._engine.resize();
     window.addEventListener("resize", this._rz);
+
+    if (window.matchMedia("(pointer:coarse)").matches) this._setupTouchControls();
+  }
+
+  private _setupTouchControls(): void {
+    const hud = document.createElement("div");
+    hud.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:50;";
+    this._wrap.appendChild(hud);
+    this._touchHud = hud;
+
+    const joyBase = document.createElement("div");
+    joyBase.style.cssText =
+      "position:absolute;bottom:90px;left:30px;width:110px;height:110px;" +
+      "border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.25);" +
+      "pointer-events:all;touch-action:none;";
+    const joyDot = document.createElement("div");
+    joyDot.style.cssText =
+      "position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;" +
+      "border-radius:50%;background:rgba(255,255,255,0.5);pointer-events:none;";
+    joyBase.appendChild(joyDot);
+    hud.appendChild(joyBase);
+
+    const KEYS_MOVE = ["KeyW","KeyS","KeyA","KeyD"] as const;
+    let joyId = -1, joyOriginX = 0, joyOriginY = 0;
+
+    const joyMove = (cx: number, cy: number) => {
+      const dx = cx - joyOriginX, dy = cy - joyOriginY;
+      const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
+      const ang  = Math.atan2(dy, dx);
+      joyDot.style.transform = `translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px)`;
+      const thr = 12;
+      KEYS_MOVE.forEach(k => this._keys.delete(k));
+      if (dy < -thr) this._keys.add("KeyW");
+      if (dy >  thr) this._keys.add("KeyS");
+      if (dx < -thr) this._keys.add("KeyA");
+      if (dx >  thr) this._keys.add("KeyD");
+    };
+
+    joyBase.addEventListener("touchstart", e => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      joyId = t.identifier;
+      const r = joyBase.getBoundingClientRect();
+      joyOriginX = r.left + r.width / 2;
+      joyOriginY = r.top  + r.height / 2;
+      if (!this._started) this._doStart();
+      joyMove(t.clientX, t.clientY);
+    }, { passive: false });
+    joyBase.addEventListener("touchmove", e => {
+      e.preventDefault();
+      for (const t of Array.from(e.changedTouches))
+        if (t.identifier === joyId) joyMove(t.clientX, t.clientY);
+    }, { passive: false });
+    joyBase.addEventListener("touchend", e => {
+      for (const t of Array.from(e.changedTouches))
+        if (t.identifier === joyId) { joyId = -1; joyDot.style.transform = ""; KEYS_MOVE.forEach(k => this._keys.delete(k)); }
+    });
+
+    const lookArea = document.createElement("div");
+    lookArea.style.cssText =
+      "position:absolute;top:0;right:0;width:55%;height:100%;pointer-events:all;touch-action:none;";
+    hud.appendChild(lookArea);
+
+    let lookId = -1, lookPrevX = 0, lookPrevY = 0;
+    lookArea.addEventListener("touchstart", e => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      lookId = t.identifier; lookPrevX = t.clientX; lookPrevY = t.clientY;
+      if (!this._started) this._doStart();
+    }, { passive: false });
+    lookArea.addEventListener("touchmove", e => {
+      e.preventDefault();
+      for (const t of Array.from(e.changedTouches)) {
+        if (t.identifier === lookId) {
+          this._yaw   += (t.clientX - lookPrevX) * 0.006;
+          this._pitch  = Math.max(-0.48, Math.min(0.48, this._pitch + (t.clientY - lookPrevY) * 0.006));
+          lookPrevX = t.clientX; lookPrevY = t.clientY;
+        }
+      }
+    }, { passive: false });
+    lookArea.addEventListener("touchend", e => {
+      for (const t of Array.from(e.changedTouches))
+        if (t.identifier === lookId) lookId = -1;
+    });
+
+    const jumpBtn = document.createElement("div");
+    jumpBtn.textContent = "⬆";
+    jumpBtn.style.cssText =
+      "position:absolute;bottom:90px;right:30px;width:70px;height:70px;" +
+      "border-radius:50%;background:rgba(100,180,255,0.25);border:2px solid rgba(100,180,255,0.5);" +
+      "display:flex;align-items:center;justify-content:center;font-size:28px;" +
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(jumpBtn);
+    jumpBtn.addEventListener("touchstart", e => {
+      e.preventDefault();
+      this._keys.add("Space");
+      if (!this._started) this._doStart();
+    }, { passive: false });
+    jumpBtn.addEventListener("touchend", () => this._keys.delete("Space"));
+
+    const interactBtn = document.createElement("div");
+    interactBtn.textContent = "E";
+    interactBtn.style.cssText =
+      "position:absolute;bottom:90px;right:115px;width:60px;height:60px;" +
+      "border-radius:50%;background:rgba(255,200,80,0.25);border:2px solid rgba(255,200,80,0.5);" +
+      "display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:bold;color:#ffd060;" +
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(interactBtn);
+    interactBtn.addEventListener("touchstart", e => {
+      e.preventDefault();
+      this._tryInteract();
+      if (!this._started) this._doStart();
+    }, { passive: false });
   }
 
   private _tryInteract(): void { this._aimedAt?.onInteract(); }
@@ -1891,6 +2005,7 @@ export class GardenBanban2 {
     document.removeEventListener("mousemove", this._mm);
     this._canvas.removeEventListener("pointerdown", this._mc);
     window.removeEventListener("resize", this._rz);
+    this._touchHud?.remove();
     this._engine.stopRenderLoop();
     this._scene.dispose();
     this._engine.dispose();
