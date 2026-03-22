@@ -190,6 +190,7 @@ export class NightForest {
   private _cleanupKeys  = () => {};
   private _cleanupClick = () => {};
   private _cleanupWheel = () => {};
+  private _cleanupTouch = () => {};
   private _userZoom     = 1.3;  // scroll-wheel zoom multiplier
 
   constructor(game: Game, cls: NightForestClass = "survivor") {
@@ -306,6 +307,8 @@ export class NightForest {
     };
     this._canvas.addEventListener("wheel", onWheel, { passive: false });
     this._cleanupWheel = () => this._canvas.removeEventListener("wheel", onWheel);
+
+    if (window.matchMedia("(pointer:coarse)").matches) this._setupTouchControls();
 
     this._g.inMiniGame        = true;
     this._g.autoClickCallback = () => {};
@@ -2840,6 +2843,93 @@ export class NightForest {
     ctx.restore();
   }
 
+  private _setupTouchControls(): void {
+    const root = this._canvas.parentElement!;
+    const hud = document.createElement("div");
+    hud.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:50;";
+    root.appendChild(hud);
+
+    // Joystick
+    const joyBase = document.createElement("div");
+    joyBase.style.cssText =
+      "position:absolute;bottom:90px;left:30px;width:110px;height:110px;" +
+      "border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.25);" +
+      "pointer-events:all;touch-action:none;";
+    const joyDot = document.createElement("div");
+    joyDot.style.cssText =
+      "position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;" +
+      "border-radius:50%;background:rgba(255,255,255,0.5);pointer-events:none;";
+    joyBase.appendChild(joyDot);
+    hud.appendChild(joyBase);
+
+    const KEYS_MOVE = ["KeyW","KeyS","KeyA","KeyD"] as const;
+    let joyId = -1, joyOriginX = 0, joyOriginY = 0;
+    const joyMove = (cx: number, cy: number) => {
+      const dx = cx - joyOriginX, dy = cy - joyOriginY;
+      const dist = Math.min(Math.sqrt(dx*dx+dy*dy), 40);
+      const ang  = Math.atan2(dy, dx);
+      joyDot.style.transform = `translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px)`;
+      const thr = 12;
+      KEYS_MOVE.forEach(k => this._keys.delete(k));
+      if (dy < -thr) this._keys.add("KeyW");
+      if (dy >  thr) this._keys.add("KeyS");
+      if (dx < -thr) this._keys.add("KeyA");
+      if (dx >  thr) this._keys.add("KeyD");
+    };
+    joyBase.addEventListener("touchstart", e => {
+      e.preventDefault();
+      const t = e.changedTouches[0]; joyId = t.identifier;
+      const r = joyBase.getBoundingClientRect();
+      joyOriginX = r.left + r.width/2; joyOriginY = r.top + r.height/2;
+      joyMove(t.clientX, t.clientY);
+    }, { passive: false });
+    joyBase.addEventListener("touchmove", e => {
+      e.preventDefault();
+      for (const t of Array.from(e.changedTouches))
+        if (t.identifier === joyId) joyMove(t.clientX, t.clientY);
+    }, { passive: false });
+    joyBase.addEventListener("touchend", e => {
+      for (const t of Array.from(e.changedTouches))
+        if (t.identifier === joyId) { joyId = -1; joyDot.style.transform = ""; KEYS_MOVE.forEach(k => this._keys.delete(k)); }
+    });
+
+    // Tap right side = chop/interact (simulates click)
+    const tapArea = document.createElement("div");
+    tapArea.style.cssText =
+      "position:absolute;top:0;right:0;width:55%;height:70%;pointer-events:all;touch-action:none;";
+    hud.appendChild(tapArea);
+    tapArea.addEventListener("touchend", e => {
+      const t = e.changedTouches[0];
+      this._canvas.dispatchEvent(new MouseEvent("click", { clientX: t.clientX, clientY: t.clientY, bubbles: true }));
+    });
+
+    // E button
+    const eBtn = document.createElement("div");
+    eBtn.textContent = "E";
+    eBtn.style.cssText =
+      "position:absolute;bottom:90px;right:115px;width:60px;height:60px;" +
+      "border-radius:50%;background:rgba(255,200,80,0.25);border:2px solid rgba(255,200,80,0.5);" +
+      "display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:bold;color:#ffd060;" +
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(eBtn);
+    eBtn.addEventListener("touchstart", e => { e.preventDefault(); this._keys.add("KeyE"); this._onE(); }, { passive: false });
+    eBtn.addEventListener("touchend", () => this._keys.delete("KeyE"));
+
+    // R button
+    const rBtn = document.createElement("div");
+    rBtn.textContent = "R";
+    rBtn.style.cssText =
+      "position:absolute;bottom:90px;right:30px;width:60px;height:60px;" +
+      "border-radius:50%;background:rgba(100,255,150,0.25);border:2px solid rgba(100,255,150,0.5);" +
+      "display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:bold;color:#80ffaa;" +
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(rBtn);
+    rBtn.addEventListener("touchstart", e => { e.preventDefault(); this._keys.add("KeyR"); this._onR(); }, { passive: false });
+    rBtn.addEventListener("touchend", () => this._keys.delete("KeyR"));
+
+    this._cleanupTouch = () => hud.remove();
+  }
+
   // ── End states ─────────────────────────────────────────────────────────────
   private _end(): void {
     this._done = true;
@@ -2847,6 +2937,7 @@ export class NightForest {
     this._cleanupKeys();
     this._cleanupClick();
     this._cleanupWheel();
+    this._cleanupTouch();
     this._g.inMiniGame        = false;
     this._g.autoClickCallback = null;
   }

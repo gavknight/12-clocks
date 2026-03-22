@@ -532,6 +532,20 @@ export class Roblox3DGame {
     const onLeave=()=>this._endGame();
     this._hud.addEventListener("r3d-leave",onLeave);
     this._cleanup.push(()=>this._hud.removeEventListener("r3d-leave",onLeave));
+
+    if(window.matchMedia("(pointer:coarse)").matches){
+      const jumpBtn=document.createElement("div");
+      jumpBtn.textContent="⬆";
+      jumpBtn.style.cssText=
+        "position:absolute;bottom:90px;right:30px;width:70px;height:70px;" +
+        "border-radius:50%;background:rgba(100,180,255,0.25);border:2px solid rgba(100,180,255,0.5);" +
+        "display:flex;align-items:center;justify-content:center;font-size:28px;" +
+        "pointer-events:all;touch-action:none;user-select:none;z-index:20;";
+      this._hud.appendChild(jumpBtn);
+      jumpBtn.addEventListener("touchstart",e=>{e.preventDefault();this._keys.add("Space");},{passive:false});
+      jumpBtn.addEventListener("touchend",()=>this._keys.delete("Space"));
+      this._cleanup.push(()=>jumpBtn.remove());
+    }
   }
 
   private _onTS(e:TouchEvent):void{
@@ -546,8 +560,8 @@ export class Roblox3DGame {
   private _onTM(e:TouchEvent):void{
     for(const t of Array.from(e.changedTouches)){
       if(t.identifier===this._rTouchId){
-        this._camYaw+=(t.clientX-this._rTouchX)*0.005;
-        this._camPitch=Math.max(-0.1,Math.min(1.1,this._camPitch-(t.clientY-this._rTouchY)*0.004));
+        this._camYaw+=(t.clientX-this._rTouchX)*0.009;
+        this._camPitch=Math.max(-0.1,Math.min(1.1,this._camPitch-(t.clientY-this._rTouchY)*0.007));
         this._rTouchX=t.clientX; this._rTouchY=t.clientY;
       } else if(this._joyActive){
         const cap=55;
@@ -637,7 +651,7 @@ export class Roblox3DGame {
     p.vx=dx*PLR_SPD; p.vz=dz*PLR_SPD;
     if(len>0)p.yaw=Math.atan2(dx,dz);
 
-    if((this._keys.has("Space")||this._joyDy<-0.6)&&p.onGround)p.vy=JUMP_SPD;
+    if(this._keys.has("Space")&&p.onGround)p.vy=JUMP_SPD;
 
     // Enter car (Brookhaven)
     if(this._gameId==="brookhaven"&&this._carMesh&&!p.inCar){
