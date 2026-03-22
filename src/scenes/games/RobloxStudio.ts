@@ -116,6 +116,7 @@ export class RobloxStudio {
   // Input
   private _keys       = new Set<string>();
   private _joy        = { active:false, ox:0, oy:0, dx:0, dy:0 };
+  private _joyTouchId: number | null = null;
   private _jumpHeld   = false;
   private _jumpBuffer = 0;
 
@@ -211,7 +212,7 @@ export class RobloxStudio {
     // Touch
     const onTS = (e: TouchEvent) => { e.preventDefault(); this._touchStart(e); };
     const onTM = (e: TouchEvent) => { e.preventDefault(); this._touchMove(e); };
-    const onTE = (e: TouchEvent) => { e.preventDefault(); this._touchEnd(); };
+    const onTE = (e: TouchEvent) => { e.preventDefault(); this._touchEnd(e); };
     this._canvas.addEventListener("touchstart", onTS, {passive:false});
     this._canvas.addEventListener("touchmove",  onTM, {passive:false});
     this._canvas.addEventListener("touchend",   onTE, {passive:false});
@@ -411,23 +412,32 @@ export class RobloxStudio {
   }
 
   private _touchStart(e: TouchEvent): void {
-    Array.from(e.changedTouches).forEach(t => this._ptrDown(t.clientX, t.clientY));
+    Array.from(e.changedTouches).forEach(t => {
+      const {x} = this._cxy(t.clientX, t.clientY);
+      const W = this._canvas.width;
+      if (this._mode==="play" && x < W/2) this._joyTouchId = t.identifier;
+      this._ptrDown(t.clientX, t.clientY);
+    });
   }
   private _touchMove(e: TouchEvent): void {
     const W = this._canvas.width;
     Array.from(e.touches).forEach(t => {
       const {x,y} = this._cxy(t.clientX, t.clientY);
       if (this._mode==="edit"&&this._painting) { this._paint(x,y); }
-      else if (this._mode==="play"&&this._joy.active&&x<W/2) {
+      else if (this._mode==="play"&&this._joy.active&&t.identifier===this._joyTouchId) {
         const dx=x-this._joy.ox, cap=50;
         this._joy.dx=Math.max(-1,Math.min(1,dx/cap));
       }
     });
   }
-  private _touchEnd(): void {
-    this._painting=false;
-    this._joy={active:false,ox:0,oy:0,dx:0,dy:0};
-    this._jumpHeld=false;
+  private _touchEnd(e: TouchEvent): void {
+    Array.from(e.changedTouches).forEach(t => {
+      if (t.identifier === this._joyTouchId) {
+        this._joy={active:false,ox:0,oy:0,dx:0,dy:0};
+        this._joyTouchId=null;
+      }
+    });
+    if (e.touches.length === 0) { this._painting=false; this._jumpHeld=false; }
   }
 
   private _handleBack(): void {

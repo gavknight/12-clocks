@@ -138,7 +138,7 @@ function genChunk(cx:number,cz:number,seed:number,mods:Record<string,number>):Ui
 const MC_KEY="mc_worlds_v4";
 interface MCWorld{id:string;name:string;seed:number;px:number;py:number;pz:number;created:number;mods:Record<string,number>;}
 function loadWorlds():MCWorld[]{try{return JSON.parse(localStorage.getItem(MC_KEY)??"[]");}catch{return[];}}
-function saveWorlds(ws:MCWorld[]):void{localStorage.setItem(MC_KEY,JSON.stringify(ws));}
+function saveWorlds(ws:MCWorld[]):void{try{localStorage.setItem(MC_KEY,JSON.stringify(ws));}catch{console.warn("MC save failed: localStorage full");}}
 function saveWorld(w:MCWorld):void{const ws=loadWorlds().filter(x=>x.id!==w.id);ws.push(w);saveWorlds(ws);}
 function deleteWorld(id:string):void{saveWorlds(loadWorlds().filter(x=>x.id!==id));}
 
@@ -600,6 +600,7 @@ export class MinecraftGame {
   };
 
   // ── Input ─────────────────────────────────────────────────────
+  private _beforeUnload=():void=>{ this._doSave(); };
   private _bindEvents(g:Game):void{
     this._gRef=g;
     document.addEventListener("pointerlockchange",this._onLock);
@@ -610,6 +611,106 @@ export class MinecraftGame {
     document.addEventListener("mousedown",this._onMouseDown);
     document.addEventListener("mouseup",this._onMouseUp);
     document.addEventListener("contextmenu",e=>e.preventDefault());
+    window.addEventListener("beforeunload",this._beforeUnload);
+    if(window.matchMedia("(pointer:coarse)").matches) this._setupTouchControls();
+  }
+
+  private _touchHud:HTMLDivElement|null=null;
+  private _joyActive=false; private _joyOx=0; private _joyOy=0;
+  private _joyTouchId:number|null=null;
+  private _lookTouchId:number|null=null; private _lookPrevX=0; private _lookPrevY=0;
+
+  private _setupTouchControls():void{
+    const hud=document.createElement("div");
+    hud.style.cssText="position:absolute;inset:0;pointer-events:none;z-index:50;";
+    this._canvas.parentElement!.appendChild(hud);
+    this._touchHud=hud;
+
+    // Joystick
+    const joyBase=document.createElement("div");
+    joyBase.style.cssText=
+      "position:absolute;bottom:90px;left:30px;width:110px;height:110px;"+
+      "border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.25);"+
+      "pointer-events:all;touch-action:none;";
+    const joyDot=document.createElement("div");
+    joyDot.style.cssText=
+      "position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px;"+
+      "border-radius:50%;background:rgba(255,255,255,0.5);pointer-events:none;";
+    joyBase.appendChild(joyDot);
+    hud.appendChild(joyBase);
+
+    const KMOVE=["KeyW","KeyS","KeyA","KeyD"] as const;
+    const joyMove=(cx:number,cy:number)=>{
+      const dx=cx-this._joyOx,dy=cy-this._joyOy;
+      const dist=Math.min(Math.sqrt(dx*dx+dy*dy),40),ang=Math.atan2(dy,dx);
+      joyDot.style.transform=`translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px)`;
+      const thr=12; KMOVE.forEach(k=>this._keys.delete(k));
+      if(dy<-thr)this._keys.add("KeyW"); if(dy>thr)this._keys.add("KeyS");
+      if(dx<-thr)this._keys.add("KeyA"); if(dx>thr)this._keys.add("KeyD");
+    };
+    joyBase.addEventListener("touchstart",e=>{
+      e.preventDefault(); const t=e.changedTouches[0];
+      this._joyTouchId=t.identifier; this._joyActive=true;
+      const r=joyBase.getBoundingClientRect();
+      this._joyOx=r.left+r.width/2; this._joyOy=r.top+r.height/2;
+      joyMove(t.clientX,t.clientY);
+    },{passive:false});
+    joyBase.addEventListener("touchmove",e=>{
+      e.preventDefault();
+      for(const t of Array.from(e.changedTouches))
+        if(t.identifier===this._joyTouchId) joyMove(t.clientX,t.clientY);
+    },{passive:false});
+    joyBase.addEventListener("touchend",e=>{
+      for(const t of Array.from(e.changedTouches))
+        if(t.identifier===this._joyTouchId){this._joyActive=false;this._joyTouchId=null;joyDot.style.transform="";KMOVE.forEach(k=>this._keys.delete(k));}
+    });
+
+    // Look area
+    const lookArea=document.createElement("div");
+    lookArea.style.cssText="position:absolute;top:0;right:0;width:55%;height:100%;pointer-events:all;touch-action:none;";
+    hud.appendChild(lookArea);
+    lookArea.addEventListener("touchstart",e=>{
+      e.preventDefault(); const t=e.changedTouches[0];
+      this._lookTouchId=t.identifier; this._lookPrevX=t.clientX; this._lookPrevY=t.clientY;
+    },{passive:false});
+    lookArea.addEventListener("touchmove",e=>{
+      e.preventDefault();
+      for(const t of Array.from(e.changedTouches)){
+        if(t.identifier===this._lookTouchId){
+          this._yaw+=(t.clientX-this._lookPrevX)*0.006;
+          this._pitch=Math.max(-1.55,Math.min(1.55,this._pitch+(t.clientY-this._lookPrevY)*0.006));
+          this._lookPrevX=t.clientX; this._lookPrevY=t.clientY;
+        }
+      }
+    },{passive:false});
+    lookArea.addEventListener("touchend",e=>{
+      for(const t of Array.from(e.changedTouches))
+        if(t.identifier===this._lookTouchId) this._lookTouchId=null;
+    });
+
+    // Jump
+    const jumpBtn=document.createElement("div");
+    jumpBtn.textContent="⬆";
+    jumpBtn.style.cssText=
+      "position:absolute;bottom:90px;right:30px;width:70px;height:70px;"+
+      "border-radius:50%;background:rgba(100,180,255,0.25);border:2px solid rgba(100,180,255,0.5);"+
+      "display:flex;align-items:center;justify-content:center;font-size:28px;"+
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(jumpBtn);
+    jumpBtn.addEventListener("touchstart",e=>{e.preventDefault();this._keys.add("Space");},{passive:false});
+    jumpBtn.addEventListener("touchend",()=>this._keys.delete("Space"));
+
+    // Mine/place button (tap = mine, long press = place)
+    const mineBtn=document.createElement("div");
+    mineBtn.textContent="⛏";
+    mineBtn.style.cssText=
+      "position:absolute;bottom:90px;right:115px;width:60px;height:60px;"+
+      "border-radius:50%;background:rgba(180,120,60,0.25);border:2px solid rgba(180,120,60,0.5);"+
+      "display:flex;align-items:center;justify-content:center;font-size:26px;"+
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(mineBtn);
+    mineBtn.addEventListener("touchstart",e=>{e.preventDefault();this._keys.add("__mine__");document.dispatchEvent(new MouseEvent("mousedown",{button:0,bubbles:true}));},{passive:false});
+    mineBtn.addEventListener("touchend",()=>{this._keys.delete("__mine__");document.dispatchEvent(new MouseEvent("mouseup",{button:0,bubbles:true}));});
   }
   private _onMove=(e:MouseEvent):void=>{
     if(!this._locked) return;
@@ -1100,6 +1201,8 @@ export class MinecraftGame {
     document.removeEventListener("mousedown",this._onMouseDown);
     document.removeEventListener("mouseup",this._onMouseUp);
     window.removeEventListener("resize",this._onResize);
+    window.removeEventListener("beforeunload",this._beforeUnload);
+    this._touchHud?.remove();
     if(this._engine){this._engine.stopRenderLoop();this._scene?.dispose();this._engine.dispose();}
     g.ui.innerHTML=""; g.inMiniGame=false;
     import("../ArcadeScene").then(m=>new m.ArcadeScene(g));
