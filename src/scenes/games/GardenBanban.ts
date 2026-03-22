@@ -1535,6 +1535,20 @@ export class GardenBanban {
       this._tryInteract();
       if (!this._started) this._doStart();
     }, { passive: false });
+
+    const droneBtn = document.createElement("div");
+    droneBtn.textContent = "🚁";
+    droneBtn.style.cssText =
+      "position:absolute;bottom:170px;right:30px;width:60px;height:60px;" +
+      "border-radius:50%;background:rgba(180,100,255,0.25);border:2px solid rgba(180,100,255,0.5);" +
+      "display:flex;align-items:center;justify-content:center;font-size:26px;" +
+      "pointer-events:all;touch-action:none;user-select:none;";
+    hud.appendChild(droneBtn);
+    droneBtn.addEventListener("touchstart", e => {
+      e.preventDefault();
+      if (!this._started) this._doStart();
+      this._sendDrone();
+    }, { passive: false });
   }
 
   private _tryInteract(): void {
