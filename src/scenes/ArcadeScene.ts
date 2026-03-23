@@ -353,6 +353,21 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Chess -->
+          <button id="chessBtn" style="
+            background:linear-gradient(135deg,rgba(10,10,10,0.9),rgba(50,50,50,0.7));
+            border:2px solid rgba(200,200,200,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">♟️</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Chess</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Play online, vs bots, or with friends!</div>
+              <div style="color:#FFD700;font-size:12px;margin-top:4px;">♟ Online • Bots • Friends • Spectate</div>
+            </div>
+          </button>
+
           <!-- Minecraft Bee — Coming Soon -->
           <button id="minecraftBeeBtn" style="
             background:linear-gradient(135deg,rgba(40,40,40,0.7),rgba(60,60,60,0.5));
@@ -475,6 +490,12 @@ export class ArcadeScene {
     };
     document.getElementById("gdBtn")!.onclick = () => {
       import("./games/GeometryDash").then(m => new m.GeometryDash(game));
+    };
+    document.getElementById("chessBtn")!.onclick = () => {
+      import("./games/Chess").then(m => {
+        game.ui.innerHTML = "";
+        new m.Chess(game);
+      });
     };
     // Queen Bee is coming soon — no onclick
     document.getElementById("fireFighterBtn")!.onclick = () => {
