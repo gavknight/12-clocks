@@ -626,6 +626,7 @@ export class MinecraftGame {
     this._isMobile=true;
     this._locked=true;   // bypass pointer lock on mobile
     this._started=true;  // skip waiting for pointer lock to start
+    this._startOv?.remove(); this._startOv=null;
     const hud=document.createElement("div");
     hud.style.cssText="position:absolute;inset:0;pointer-events:none;z-index:50;";
     this._canvas.parentElement!.appendChild(hud);
