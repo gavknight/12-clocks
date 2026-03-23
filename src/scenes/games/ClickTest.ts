@@ -1,6 +1,6 @@
 import type { Game } from "../../game/Game";
 
-const TIME_LIMIT = 0.30; // seconds to get 12 clicks
+const TIME_LIMIT = 1.0; // seconds to get 12 clicks
 
 export class ClickTest {
   private _game: Game;

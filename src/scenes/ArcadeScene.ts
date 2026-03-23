@@ -452,7 +452,7 @@ export class ArcadeScene {
             <div style="font-size:40px;flex-shrink:0;">⚡</div>
             <div>
               <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Click Test</div>
-              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Click 12 times in 0.30 seconds!</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Click 12 times in 1 second!</div>
               <div style="color:#FFD700;font-size:12px;margin-top:4px;">⚡ Speed challenge • How fast are you?</div>
             </div>
           </button>
