@@ -417,6 +417,21 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Knight's Quest -->
+          <button id="knightsQuestBtn" style="
+            background:linear-gradient(135deg,rgba(80,40,0,0.9),rgba(160,100,0,0.7));
+            border:2px solid rgba(255,180,0,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">⚔️</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Knight's Quest</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Fight enemies, open chests, conquer 10 maps!</div>
+              <div style="color:#FFD700;font-size:12px;margin-top:4px;">⚔️ Sword • 🔫 Gun • 🏰 10 Maps • 💀 Survival</div>
+            </div>
+          </button>
+
           <!-- Custom games (injected by Studio) -->
           <div id="customGamesSection" style="display:none;flex-direction:column;gap:12px;width:100%;margin-top:8px;">
             <div style="color:rgba(255,255,255,0.3);font-size:12px;letter-spacing:2px;padding:0 4px;">YOUR GAMES</div>
@@ -521,6 +536,12 @@ export class ArcadeScene {
     };
     document.getElementById("duckLifeBtn")!.onclick = () => {
       import("./games/DuckLife").then(m => new m.DuckLife(game));
+    };
+    document.getElementById("knightsQuestBtn")!.onclick = () => {
+      import("./games/KnightsQuest").then(m => {
+        game.ui.innerHTML = "";
+        new m.KnightsQuest(game);
+      });
     };
 
     // ── Custom games from Studio ──────────────────────────────────────────────
