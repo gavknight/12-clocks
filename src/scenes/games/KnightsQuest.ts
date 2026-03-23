@@ -194,6 +194,7 @@ export class KnightsQuest {
         padding:16px 16px 80px;
         font-family:Arial,sans-serif;
         box-sizing:border-box;
+        pointer-events:all;
       ">
         <!-- Back -->
         <button id="kqBack" style="
