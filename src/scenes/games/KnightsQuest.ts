@@ -1041,10 +1041,10 @@ export class KnightsQuest {
       mx = this._joyDx * cy + this._joyDy * sy;
       mz = -this._joyDx * sy + this._joyDy * cy;
     } else {
-      if (this._keys.has("KeyW") || this._keys.has("ArrowUp"))    { mx += cy; mz += sy; }
-      if (this._keys.has("KeyS") || this._keys.has("ArrowDown"))  { mx -= cy; mz -= sy; }
-      if (this._keys.has("KeyA") || this._keys.has("ArrowLeft"))  { mx -= sy; mz += cy; }
-      if (this._keys.has("KeyD") || this._keys.has("ArrowRight")) { mx += sy; mz -= cy; }
+      if (this._keys.has("KeyW") || this._keys.has("ArrowUp"))    { mx += sy; mz += cy; }
+      if (this._keys.has("KeyS") || this._keys.has("ArrowDown"))  { mx -= sy; mz -= cy; }
+      if (this._keys.has("KeyA") || this._keys.has("ArrowLeft"))  { mx -= cy; mz += sy; }
+      if (this._keys.has("KeyD") || this._keys.has("ArrowRight")) { mx += cy; mz -= sy; }
     }
 
     const len = Math.hypot(mx, mz);
