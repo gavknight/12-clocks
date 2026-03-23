@@ -168,17 +168,34 @@ export class KnightsQuest {
     this._game = game;
     this._save = loadSave();
     game.inMiniGame = true;
-
-    // Apply shop upgrades
-    if (this._save.shopOwned.includes("sword")) this._swordDmg = 50;
-    if (this._save.shopOwned.includes("mag")) this._startAmmo = 60;
-    if (this._save.shopOwned.includes("shield")) this._playerMaxHp = 150;
-    if (this._save.shopOwned.includes("boots")) this._moveSpeed = 11;
-    this._playerHp = this._playerMaxHp;
-    this._playerAmmo = this._startAmmo;
-
     this._isMobile = window.matchMedia("(pointer:coarse)").matches;
-    this._showMenu();
+    this._showComingSoon();
+  }
+
+  private _showComingSoon(): void {
+    this._game.ui.innerHTML = `
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0d1117,#0d0d2e);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        font-family:Arial,sans-serif;pointer-events:all;gap:16px;">
+        <div style="font-size:64px;">⚔️</div>
+        <div style="color:#FFD700;font-size:36px;font-weight:900;letter-spacing:3px;
+          text-shadow:0 0 20px #FFD700,0 0 40px #FFD70088;">KNIGHT'S QUEST</div>
+        <div style="background:linear-gradient(135deg,#e65c00,#f9d423);
+          color:#1a0a00;font-size:22px;font-weight:900;padding:10px 32px;border-radius:20px;
+          letter-spacing:2px;">🚧 COMING SOON 🚧</div>
+        <div style="color:rgba(255,255,255,0.5);font-size:15px;text-align:center;max-width:280px;">
+          An epic first-person knight adventure is in the works. Stay tuned!
+        </div>
+        <button id="kqBack" style="margin-top:12px;background:rgba(255,255,255,0.08);
+          border:1.5px solid rgba(255,255,255,0.2);color:white;font-size:15px;
+          padding:12px 32px;border-radius:12px;cursor:pointer;">← Back</button>
+      </div>
+    `;
+    document.getElementById("kqBack")!.onclick = () => {
+      this._game.inMiniGame = false;
+      this._game.ui.innerHTML = "";
+      import("../ArcadeScene").then(m => new m.ArcadeScene(this._game));
+    };
   }
 
   // ── Menu ────────────────────────────────────────────────────────────────────
