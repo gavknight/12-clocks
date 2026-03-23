@@ -34,6 +34,7 @@ export class DuckLife {
   private _kDown = new Set<string>();
   private _kHandler?: (e: KeyboardEvent) => void;
   private _kUpHandler?: (e: KeyboardEvent) => void;
+  private _hubAnimId = 0;
 
   constructor(game: Game) {
     this._g = game;
@@ -151,89 +152,128 @@ export class DuckLife {
   // ── Hub ───────────────────────────────────────────────────────────────────
   private _showHub() {
     this._removeKeys();
+    cancelAnimationFrame(this._hubAnimId);
     this._wrap.innerHTML = "";
-    const box = this._card();
+    this._wrap.style.overflow = "hidden";
 
-    // Header
-    const hdr = document.createElement("div");
-    hdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;";
-    const back = this._btn("← Back", "rgba(0,0,0,0.25)");
-    back.onclick = () => this._exit();
-    const title = document.createElement("div");
-    title.style.cssText = "color:white;font-size:22px;font-weight:900;text-shadow:0 2px 4px rgba(0,0,0,0.3);";
-    title.textContent = "🦆 Duck Life";
-    const seedsBadge = document.createElement("div");
-    seedsBadge.style.cssText = "background:rgba(255,200,0,0.25);border:1.5px solid rgba(255,200,0,0.6);border-radius:12px;padding:4px 12px;color:#FFD700;font-size:14px;font-weight:bold;";
-    seedsBadge.textContent = `🌱 ${this._save.seeds}`;
-    hdr.appendChild(back); hdr.appendChild(title); hdr.appendChild(seedsBadge);
-    box.appendChild(hdr);
-
-    // Duck card
-    const duckCard = document.createElement("div");
-    duckCard.style.cssText = "background:linear-gradient(135deg,#4a90d9,#357abd);border-radius:20px;padding:18px;margin-bottom:14px;display:flex;align-items:center;gap:16px;";
-
+    // Full-screen canvas background
     const canv = document.createElement("canvas");
-    canv.width = 90; canv.height = 72; canv.style.cssText = "flex-shrink:0;border-radius:12px;background:rgba(255,255,255,0.1);";
+    canv.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;";
+    canv.width = this._wrap.clientWidth || window.innerWidth;
+    canv.height = this._wrap.clientHeight || window.innerHeight;
+    this._wrap.appendChild(canv);
     const ctx = canv.getContext("2d")!;
-    ctx.fillStyle = "rgba(255,255,255,0.1)"; ctx.fillRect(0,0,90,72);
-    this._drawDuck(ctx, 38, 46, 32);
-    duckCard.appendChild(canv);
 
-    const info = document.createElement("div");
-    info.style.cssText = "flex:1;min-width:0;";
+    const segBar = (x:number,y:number,val:number,w:number,h:number) => {
+      const segs=8, filled=Math.round(val/100*segs), sw=(w-(segs-1)*2)/segs;
+      for(let i=0;i<segs;i++){
+        ctx.fillStyle=i<filled?"#4fc3f7":"rgba(255,255,255,0.2)";
+        ctx.fillRect(x+i*(sw+2),y,sw,h);
+      }
+    };
 
-    const nameInp = document.createElement("input");
-    nameInp.value = this._save.name;
-    nameInp.style.cssText = "background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);border-radius:8px;color:white;font-size:15px;font-weight:bold;padding:4px 8px;width:100%;outline:none;box-sizing:border-box;margin-bottom:8px;";
-    nameInp.onchange = () => { this._save.name = nameInp.value.trim() || "Duck"; this._persist(); };
-    info.appendChild(nameInp);
+    let elapsed=0, lastT=performance.now();
+    const loop=(t:number)=>{
+      const dt=(t-lastT)/1000; lastT=t; elapsed+=dt;
+      const cw=canv.width, ch=canv.height;
 
-    for (const s of [
-      {label:"🏃", val:this._save.run, color:"#ff6b35"},
-      {label:"🪶", val:this._save.fly, color:"#4fc3f7"},
-      {label:"🏊", val:this._save.swim, color:"#26c6da"},
-    ]) {
-      const row = document.createElement("div");
-      row.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:3px;";
-      row.innerHTML = `<span style="font-size:13px;">${s.label}</span>`+
-        `<div style="flex:1;background:rgba(0,0,0,0.2);border-radius:4px;height:7px;">`+
-        `<div style="width:${s.val}%;background:${s.color};border-radius:4px;height:7px;"></div></div>`+
-        `<span style="color:white;font-size:11px;width:22px;text-align:right;">${s.val}</span>`;
-      info.appendChild(row);
+      // Sky
+      const sky=ctx.createLinearGradient(0,0,0,ch);
+      sky.addColorStop(0,"#5BA3DC"); sky.addColorStop(1,"#87CEEB");
+      ctx.fillStyle=sky; ctx.fillRect(0,0,cw,ch);
+
+      // Clouds
+      ctx.fillStyle="rgba(255,255,255,0.88)";
+      for(const [cx,cy,r] of [[0.1,0.1,44],[0.38,0.06,36],[0.62,0.12,40],[0.85,0.07,32]] as [number,number,number][]){
+        const x=((cx*cw-elapsed*18)%(cw+120)+cw+120)%(cw+120);
+        ctx.beginPath(); ctx.arc(x,cy*ch,r,0,Math.PI*2); ctx.arc(x+r*.7,cy*ch-r*.3,r*.7,0,Math.PI*2); ctx.fill();
+      }
+
+      // Back hills
+      ctx.fillStyle="#5aad5a";
+      ctx.beginPath(); ctx.moveTo(0,ch*0.72);
+      for(let i=0;i<=cw;i+=18)
+        ctx.lineTo(i, ch*0.72 - Math.sin(i/cw*Math.PI*2.6+0.4)*ch*0.09 - Math.sin(i/cw*Math.PI*1.1)*ch*0.05);
+      ctx.lineTo(cw,ch); ctx.lineTo(0,ch); ctx.closePath(); ctx.fill();
+
+      // Ground
+      ctx.fillStyle="#43A047"; ctx.fillRect(0,ch*0.78,cw,ch);
+      ctx.fillStyle="#66BB6A"; ctx.fillRect(0,ch*0.78,cw,7);
+
+      // Duck (gentle bob)
+      const ds=Math.min(cw*0.13,62);
+      this._drawDuck(ctx, cw*0.52, ch*0.78-ds*0.38+Math.sin(elapsed*2.2)*2, ds);
+
+      // Stats panel (top-left, Duck Life style)
+      const pw=Math.min(cw*0.44,185), px=10, py=10, rowH=32, pad=8;
+      const stats=[
+        {label:`Running: Lvl ${Math.floor(this._save.run/10)}`,val:this._save.run},
+        {label:`Flying:  Lvl ${Math.floor(this._save.fly/10)}`, val:this._save.fly},
+        {label:`Swim:    Lvl ${Math.floor(this._save.swim/10)}`,val:this._save.swim},
+      ];
+      const ph=stats.length*rowH+pad*2;
+      ctx.fillStyle="rgba(20,60,130,0.84)";
+      ctx.beginPath(); ctx.roundRect(px,py,pw,ph,5); ctx.fill();
+      ctx.strokeStyle="rgba(100,160,255,0.55)"; ctx.lineWidth=1.5; ctx.stroke();
+      for(let i=0;i<stats.length;i++){
+        const sy=py+pad+i*rowH;
+        ctx.fillStyle="white"; ctx.font="bold 11px Arial";
+        ctx.fillText(stats[i].label,px+pad,sy+12);
+        segBar(px+pad,sy+16,stats[i].val,pw-pad*2,7);
+      }
+      // Seeds row
+      const seedY=py+ph+4;
+      ctx.fillStyle="rgba(20,60,130,0.84)";
+      ctx.beginPath(); ctx.roundRect(px,seedY,pw,26,5); ctx.fill();
+      ctx.strokeStyle="rgba(100,160,255,0.55)"; ctx.stroke();
+      ctx.fillStyle="#FFD700"; ctx.font="bold 12px Arial";
+      ctx.fillText(`Seeds: ${this._save.seeds}`,px+pad,seedY+18);
+
+      this._hubAnimId=requestAnimationFrame(loop);
+    };
+    this._hubAnimId=requestAnimationFrame(loop);
+
+    // HTML button overlay
+    const ui=document.createElement("div");
+    ui.style.cssText="position:absolute;inset:0;pointer-events:none;font-family:Arial,sans-serif;";
+    this._wrap.appendChild(ui);
+
+    const stop=()=>cancelAnimationFrame(this._hubAnimId);
+    const mkBtn=(label:string,fn:()=>void)=>{
+      const b=document.createElement("button");
+      b.textContent=label;
+      b.style.cssText="background:rgba(20,60,130,0.88);color:white;border:1.5px solid rgba(100,160,255,0.6);border-radius:6px;padding:9px 10px;cursor:pointer;font-size:12px;font-weight:bold;pointer-events:all;white-space:nowrap;";
+      b.onmouseenter=()=>b.style.background="rgba(50,110,210,0.96)";
+      b.onmouseleave=()=>b.style.background="rgba(20,60,130,0.88)";
+      b.onclick=()=>{stop();fn();};
+      return b;
+    };
+
+    // Buttons grid top-right
+    const grid=document.createElement("div");
+    grid.style.cssText="position:absolute;top:10px;right:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;pointer-events:none;";
+    for(const [label,fn] of [
+      ["Train Running",()=>this._startTraining("run")],
+      ["Enter Race",   ()=>this._showRaceMenu()],
+      ["Train Flying", ()=>this._startTraining("fly")],
+      ["Train Swimming",()=>this._startTraining("swim")],
+      ["Shop",         ()=>this._showShop()],
+    ] as [string,()=>void][]){
+      grid.appendChild(mkBtn(label,fn));
     }
-    duckCard.appendChild(info);
-    box.appendChild(duckCard);
+    ui.appendChild(grid);
 
-    // Race progress
-    const raceNames = ["Beginner Cup","Amateur Cup","Pro Cup","Champion Cup","World Cup","🏆 Champion!"];
-    const prog = document.createElement("div");
-    prog.style.cssText = "background:rgba(0,0,0,0.15);border-radius:12px;padding:9px 14px;margin-bottom:14px;color:white;font-size:13px;text-align:center;";
-    prog.innerHTML = this._save.raceLevel >= 5
-      ? "🏆 <b>You're the World Champion!</b>"
-      : `🏁 Next: <b>${raceNames[this._save.raceLevel]}</b>`;
-    box.appendChild(prog);
+    // Duck name input bottom-center
+    const nameInp=document.createElement("input");
+    nameInp.value=this._save.name;
+    nameInp.style.cssText="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(20,60,130,0.85);border:1.5px solid rgba(100,160,255,0.6);border-radius:6px;color:#FFD700;font-size:14px;font-weight:bold;padding:6px 12px;width:140px;text-align:center;outline:none;pointer-events:all;";
+    nameInp.onchange=()=>{this._save.name=nameInp.value.trim()||"Duck";this._persist();};
+    ui.appendChild(nameInp);
 
-    // Menu buttons
-    const btnRow = document.createElement("div");
-    btnRow.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:10px;";
-    const btns = [
-      {label:"🏃 Train", bg:"linear-gradient(135deg,#ff6b35,#f7931e)", id:"trainBtn"},
-      {label:"🏁 Race",  bg:"linear-gradient(135deg,#4caf50,#2e7d32)", id:"raceBtn"},
-      {label:"🛒 Shop",  bg:"linear-gradient(135deg,#9c27b0,#6a0080)", id:"shopBtn"},
-    ];
-    for (const b of btns) {
-      const btn = document.createElement("button");
-      btn.id = b.id;
-      btn.style.cssText = `background:${b.bg};color:white;border:none;border-radius:14px;padding:16px 4px;cursor:pointer;font-size:14px;font-weight:bold;box-shadow:0 3px 8px rgba(0,0,0,0.2);`;
-      btn.textContent = b.label;
-      btnRow.appendChild(btn);
-    }
-    box.appendChild(btnRow);
-    this._wrap.appendChild(box);
-
-    document.getElementById("trainBtn")!.onclick = () => this._showTrainMenu();
-    document.getElementById("raceBtn")!.onclick  = () => this._showRaceMenu();
-    document.getElementById("shopBtn")!.onclick  = () => this._showShop();
+    // Back button bottom-left
+    const backBtn=mkBtn("← Back",()=>this._exit());
+    backBtn.style.position="absolute"; backBtn.style.bottom="14px"; backBtn.style.left="14px";
+    ui.appendChild(backBtn);
   }
 
   // ── Training menu ─────────────────────────────────────────────────────────
