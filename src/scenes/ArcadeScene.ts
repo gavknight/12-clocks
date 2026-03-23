@@ -442,6 +442,21 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Click Test -->
+          <button id="clickTestBtn" style="
+            background:linear-gradient(135deg,rgba(40,0,80,0.9),rgba(80,0,160,0.7));
+            border:2px solid rgba(150,80,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">⚡</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Click Test</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Click 12 times in 0.30 seconds!</div>
+              <div style="color:#FFD700;font-size:12px;margin-top:4px;">⚡ Speed challenge • How fast are you?</div>
+            </div>
+          </button>
+
           <!-- Custom games (injected by Studio) -->
           <div id="customGamesSection" style="display:none;flex-direction:column;gap:12px;width:100%;margin-top:8px;">
             <div style="color:rgba(255,255,255,0.3);font-size:12px;letter-spacing:2px;padding:0 4px;">YOUR GAMES</div>
@@ -551,6 +566,13 @@ export class ArcadeScene {
       import("./games/KnightsQuest").then(m => {
         game.ui.innerHTML = "";
         new m.KnightsQuest(game);
+      });
+    };
+
+    document.getElementById("clickTestBtn")!.onclick = () => {
+      import("./games/ClickTest").then(m => {
+        game.ui.innerHTML = "";
+        new m.ClickTest(game);
       });
     };
 
