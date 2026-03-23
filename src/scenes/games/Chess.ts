@@ -368,18 +368,53 @@ export class Chess {
       box.appendChild(b);
     }
 
+    // Incoming challenge banner (polls every 3s)
+    const challengeDiv=document.createElement("div");
+    box.insertBefore(challengeDiv, box.children[1]);
+    let lobbyPoll:any=null;
+    const checkChallenges=async()=>{
+      try{
+        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&invite_to=eq.${encodeURIComponent(this._username)}&select=id,host_user&limit=5`,{
+          headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
+        });
+        const rows=await res.json();
+        challengeDiv.innerHTML="";
+        if(Array.isArray(rows)&&rows.length>0){
+          for(const r of rows){
+            const banner=document.createElement("div");
+            banner.style.cssText="background:rgba(33,150,243,0.2);border:2px solid #2196f3;border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;";
+            banner.innerHTML=`<div style="flex:1;color:white;font-size:14px;">⚔️ <b>${r.host_user}</b> challenged you!</div>`;
+            const acceptBtn=this._btn("Accept ✔","#2196f3");
+            acceptBtn.style.cssText+="padding:8px 16px;font-size:13px;font-weight:bold;";
+            acceptBtn.onclick=async()=>{
+              clearInterval(lobbyPoll);
+              await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${r.id}`,{
+                method:"PATCH",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json"},
+                body:JSON.stringify({status:"active",guest_user:this._username})
+              });
+              this._startGame(r.id,null,"online-black");
+            };
+            banner.appendChild(acceptBtn);
+            challengeDiv.appendChild(banner);
+          }
+        }
+      }catch{}
+    };
+    checkChallenges();
+    lobbyPoll=setInterval(checkChallenges,3000);
+
     // Back
     const backBtn = this._btn("← Back to Arcade","rgba(255,255,255,0.08)");
     backBtn.style.marginTop = "6px";
-    backBtn.onclick = () => this._exit();
+    backBtn.onclick = () => { clearInterval(lobbyPoll); this._exit(); };
     box.appendChild(backBtn);
     this._wrap.appendChild(box);
 
-    box.querySelector("#chgUser")!.addEventListener("click",()=>{localStorage.removeItem("chess_username");this._askUsername();});
-    box.querySelector("#botBtn")!.addEventListener("click",()=>this._showBotSelect());
-    box.querySelector("#onlineBtn")!.addEventListener("click",()=>this._showOnline());
-    box.querySelector("#friendsBtn")!.addEventListener("click",()=>this._showFriends());
-    box.querySelector("#localBtn")!.addEventListener("click",()=>this._startGame(null,null,"local"));
+    box.querySelector("#chgUser")!.addEventListener("click",()=>{clearInterval(lobbyPoll);localStorage.removeItem("chess_username");this._askUsername();});
+    box.querySelector("#botBtn")!.addEventListener("click",()=>{clearInterval(lobbyPoll);this._showBotSelect();});
+    box.querySelector("#onlineBtn")!.addEventListener("click",()=>{clearInterval(lobbyPoll);this._showOnline();});
+    box.querySelector("#friendsBtn")!.addEventListener("click",()=>{clearInterval(lobbyPoll);this._showFriends();});
+    box.querySelector("#localBtn")!.addEventListener("click",()=>{clearInterval(lobbyPoll);this._startGame(null,null,"local");});
   }
 
   // ── Bot select ────────────────────────────────────────────────────────────
