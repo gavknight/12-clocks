@@ -682,9 +682,9 @@ class ChessGame {
 
     // Board container
     const boardWrap=document.createElement("div");
-    boardWrap.style.cssText="display:flex;justify-content:center;align-items:center;padding:16px 8px;";
+    boardWrap.style.cssText="display:flex;justify-content:center;align-items:center;padding:8px;";
     this._boardEl=document.createElement("div");
-    this._boardEl.style.cssText="display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;width:min(95vw,480px);border:3px solid rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;";
+    this._boardEl.style.cssText="display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;width:min(96vw,calc(100svh - 80px),460px);border:3px solid rgba(255,255,255,0.2);border-radius:6px;overflow:hidden;";
     boardWrap.appendChild(this._boardEl);
     this._wrap.appendChild(boardWrap);
 
@@ -709,14 +709,14 @@ class ChessGame {
         const light=(r+c)%2===0;
         const cell=document.createElement("div");
         cell.style.cssText=
-          `display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;`+
+          `display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;aspect-ratio:1;`+
           `background:${this._cellColor(r,c,light)};`;
 
         const p=this._state.board[r][c];
         if(p){
           const span=document.createElement("span");
           span.textContent=PIECE_UNICODE[p.color][p.type]??"";
-          span.style.cssText=`font-size:clamp(20px,5vw,38px);line-height:1;user-select:none;`+
+          span.style.cssText=`font-size:clamp(18px,10vmin,42px);line-height:1;user-select:none;`+
             (p.color===WHITE?"filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8));":"");
           cell.appendChild(span);
         }
