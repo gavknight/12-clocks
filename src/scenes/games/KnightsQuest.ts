@@ -834,7 +834,7 @@ export class KnightsQuest {
       const onMouseMove = (e: MouseEvent) => {
         if (!this._pointerLocked || this._phase !== "playing") return;
         this._yaw   += e.movementX * 0.002;
-        this._pitch -= e.movementY * 0.002;
+        this._pitch += e.movementY * 0.002;
         this._pitch = Math.max(-1.4, Math.min(1.4, this._pitch));
       };
       document.addEventListener("mousemove", onMouseMove);
