@@ -1,5 +1,6 @@
 import type { Game } from "../game/Game";
 import { IS_BEDROCK, enterBedrock, exitBedrock } from "../bedrock";
+import { TIME_MACHINE_KEY, VERSION_NAMES } from "./VersionHistory";
 
 export class TitleScene {
   constructor(game: Game) {
@@ -183,6 +184,20 @@ export class TitleScene {
           12 puzzles hidden in a room · Find them all to unlock 3 AM 👀
         </p>
 
+        ${sessionStorage.getItem(TIME_MACHINE_KEY) ? `
+        <div id="timeMachineBanner" style="
+          margin-top:16px;background:linear-gradient(135deg,#0a2a4a,#1a5a8a);
+          border:2px solid rgba(100,180,255,0.6);border-radius:16px;
+          padding:12px 20px;text-align:center;max-width:320px;width:100%;">
+          <div style="color:#7dd3fc;font-size:13px;font-weight:bold;">
+            ⏳ TIME MACHINE — ${sessionStorage.getItem(TIME_MACHINE_KEY)} · ${VERSION_NAMES[sessionStorage.getItem(TIME_MACHINE_KEY)!] ?? ""}
+          </div>
+          <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:3px;">Mini-Games shows only what existed then</div>
+          <button id="exitTimeMachine" style="margin-top:8px;background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.3);color:white;font-size:12px;
+            padding:5px 14px;border-radius:8px;cursor:pointer;">✕ Exit Time Machine</button>
+        </div>` : ""}
+
         <!-- Bottom bar: sign out + admin -->
         <div style="position:absolute;bottom:12px;left:0;right:0;
           display:flex;justify-content:space-between;padding:0 12px;">
@@ -259,6 +274,11 @@ export class TitleScene {
       document.getElementById("realBtn")!.onclick    = () => exitBedrock();
     }
     document.getElementById("shopBtn")!.onclick    = () => game.goShop();
+    document.getElementById("exitTimeMachine")?.addEventListener("click", () => {
+      sessionStorage.removeItem(TIME_MACHINE_KEY);
+      game.ui.innerHTML = "";
+      new TitleScene(game);
+    });
     document.getElementById("versionBtn")!.onclick = () => {
       game.ui.innerHTML = "";
       import("./VersionHistory").then(m => new m.VersionHistory(game));

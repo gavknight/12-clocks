@@ -1,5 +1,6 @@
 import type { Game } from "../game/Game";
 import { IS_BEDROCK, exitBedrock } from "../bedrock";
+import { TIME_MACHINE_KEY, VERSION_GAMES, VERSION_NAMES } from "./VersionHistory";
 
 export class ArcadeScene {
   constructor(game: Game) {
@@ -111,6 +112,15 @@ export class ArcadeScene {
           font-size:14px;padding:7px 14px;border-radius:12px;
           border:1px solid rgba(255,255,255,0.2);cursor:pointer;
           font-family:Arial,sans-serif;">← Back</button>
+
+        ${sessionStorage.getItem(TIME_MACHINE_KEY) ? `
+        <div style="background:linear-gradient(135deg,#0a2a4a,#1a5a8a);border:2px solid rgba(100,180,255,0.5);
+          border-radius:12px;padding:8px 16px;margin-bottom:12px;text-align:center;max-width:360px;width:100%;">
+          <div style="color:#7dd3fc;font-size:13px;font-weight:bold;">
+            ⏳ ${sessionStorage.getItem(TIME_MACHINE_KEY)} — ${VERSION_NAMES[sessionStorage.getItem(TIME_MACHINE_KEY)!] ?? ""}
+          </div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;">Showing only games that existed in this version</div>
+        </div>` : ""}
 
         <div style="font-size:44px;margin-bottom:6px;">🕹️</div>
         <h1 style="color:white;font-size:32px;margin-bottom:6px;">Mini-Games</h1>
@@ -543,6 +553,25 @@ export class ArcadeScene {
         new m.KnightsQuest(game);
       });
     };
+
+    // ── Time Machine filtering ────────────────────────────────────────────────
+    const tmVersion = sessionStorage.getItem(TIME_MACHINE_KEY);
+    if (tmVersion) {
+      const allowed = new Set(VERSION_GAMES[tmVersion] ?? []);
+      const btnMap: Record<string, string> = {
+        banbanBtn:"banban", cookieBtn:"cookie", coinJumpBtn:"coinJump",
+        fruitSliceBtn:"fruitSlice", nightForestBtn:"nightForest", coinRainBtn:"coinRain",
+        justDrawBtn:"justDraw", itemCreatorBtn:"itemCreator", robloxStudioBtn:"robloxStudio",
+        robloxGamesBtn:"robloxGames", minecraftBtn:"minecraft", gdBtn:"geomDash",
+        boldyBtn:"boldy", mrTomatoBtn:"mrTomato", chessBtn:"chess",
+        minecraftBeeBtn:"bee", fireFighterBtn:"fireFighter",
+        duckLifeBtn:"duckLife", knightsQuestBtn:"knightsQuest",
+      };
+      for (const [btnId, gameId] of Object.entries(btnMap)) {
+        const el = document.getElementById(btnId);
+        if (el && !allowed.has(gameId)) el.style.display = "none";
+      }
+    }
 
     // ── Custom games from Studio ──────────────────────────────────────────────
     import("./games/Studio").then(m => {
