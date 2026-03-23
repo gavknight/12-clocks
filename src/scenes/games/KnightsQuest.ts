@@ -469,7 +469,7 @@ export class KnightsQuest {
 
     this._game.ui.innerHTML = `
       <div style="position:absolute;inset:0;background:#0d1117;display:flex;flex-direction:column;
-        align-items:center;padding:60px 16px 40px;font-family:Arial,sans-serif;overflow-y:auto;box-sizing:border-box;">
+        align-items:center;padding:60px 16px 40px;font-family:Arial,sans-serif;overflow-y:auto;box-sizing:border-box;pointer-events:all;">
         <button id="achBack" style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,0.08);
           border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:13px;
           padding:7px 14px;border-radius:10px;cursor:pointer;">← Back</button>
@@ -502,7 +502,7 @@ export class KnightsQuest {
   private _initBabylon(): void {
     this._canvas = document.createElement("canvas");
     this._canvas.style.cssText =
-      "position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;touch-action:none;outline:none;";
+      "position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;touch-action:none;outline:none;pointer-events:all;";
     this._canvas.setAttribute("tabindex", "0");
     this._game.ui.appendChild(this._canvas);
 
@@ -1316,7 +1316,7 @@ export class KnightsQuest {
     this._game.ui.innerHTML = `
       <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0d1117,#1a1a00);
         display:flex;flex-direction:column;align-items:center;justify-content:center;
-        font-family:Arial,sans-serif;">
+        font-family:Arial,sans-serif;pointer-events:all;">
         <div style="font-size:64px;margin-bottom:16px;">🏆</div>
         <div style="color:#FFD700;font-size:32px;font-weight:900;margin-bottom:8px;">QUEST COMPLETE!</div>
         <div style="color:rgba(255,255,255,0.6);font-size:16px;margin-bottom:24px;">All 10 maps conquered!</div>
