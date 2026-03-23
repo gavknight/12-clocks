@@ -447,63 +447,64 @@ export class Chess {
   private _onlineGameId:string|null=null;
   private _cancelSearch=false;
 
+  private _pollTimer:any=null;
   private async _findOnlineGame(statusEl:HTMLElement,cancelBtn:HTMLElement):Promise<void>{
     this._cancelSearch=false;
-    try{
-      // Look for a waiting game
-      const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&select=id,host_user&limit=1`,{
-        headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
-      });
-      if(this._cancelSearch) return;
-      const games=await res.json();
-
-      if(Array.isArray(games)&&games.length>0&&games[0].host_user!==this._username){
-        // Join existing game
-        const gid=games[0].id;
-        await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${gid}`,{
-          method:"PATCH",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json"},
-          body:JSON.stringify({status:"active",guest_user:this._username})
-        });
-        if(this._cancelSearch) return;
-        statusEl.textContent=`Joined game vs ${games[0].host_user}!`;
-        setTimeout(()=>this._startGame(gid,null,"online-black"),300);
-      } else {
-        // Create new waiting room
-        const gid=`chess_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-        this._onlineGameId=gid;
-        await fetch(`${SB_URL}/rest/v1/chess_games`,{
-          method:"POST",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json","Prefer":"return=minimal"},
-          body:JSON.stringify({id:gid,status:"waiting",host_user:this._username,guest_user:null,moves:[],created_at:new Date().toISOString()})
-        });
-        if(this._cancelSearch) return;
-        statusEl.textContent="Waiting for someone to join...";
-        // Poll for guest
-        this._pollForGuest(gid,statusEl);
-      }
-    }catch(e){
-      statusEl.textContent="Connection error. Try again.";
-      cancelBtn.textContent="← Back";
-    }
-  }
-
-  private _pollTimer:any=null;
-  private async _pollForGuest(gid:string,statusEl:HTMLElement):Promise<void>{
-    const check=async()=>{
+    const poll=async()=>{
       if(this._cancelSearch) return;
       try{
-        const res=await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${gid}&select=status,guest_user`,{
+        // Check for any waiting game that isn't ours
+        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&select=id,host_user&limit=20`,{
           headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
         });
-        const data=await res.json();
-        if(Array.isArray(data)&&data[0]?.status==="active"&&data[0]?.guest_user){
-          statusEl.textContent=`${data[0].guest_user} joined!`;
-          setTimeout(()=>this._startGame(gid,null,"online-white"),300);
-          return;
+        if(this._cancelSearch) return;
+        const games=await res.json();
+        if(Array.isArray(games)){
+          const other=games.find(g=>g.host_user!==this._username);
+          if(other){
+            // Delete our own waiting room if we created one
+            if(this._onlineGameId){
+              fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${this._onlineGameId}`,{
+                method:"DELETE",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
+              }).catch(()=>{});
+              this._onlineGameId=null;
+            }
+            // Join the other player's game
+            await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${other.id}`,{
+              method:"PATCH",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json"},
+              body:JSON.stringify({status:"active",guest_user:this._username})
+            });
+            if(this._cancelSearch) return;
+            statusEl.textContent=`Joined game vs ${other.host_user}!`;
+            setTimeout(()=>this._startGame(other.id,null,"online-black"),300);
+            return;
+          }
         }
-      }catch{}
-      if(!this._cancelSearch) this._pollTimer=setTimeout(check,2000);
+        // No one to join — create our waiting room if not already done
+        if(!this._onlineGameId){
+          const gid=`chess_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+          this._onlineGameId=gid;
+          await fetch(`${SB_URL}/rest/v1/chess_games`,{
+            method:"POST",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json","Prefer":"return=minimal"},
+            body:JSON.stringify({id:gid,status:"waiting",host_user:this._username,guest_user:null,moves:[],created_at:new Date().toISOString()})
+          });
+          statusEl.textContent="Waiting for someone to join...";
+        } else {
+          // Check if someone joined our waiting room
+          const gres=await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${this._onlineGameId}&select=status,guest_user`,{
+            headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
+          });
+          const gdata=await gres.json();
+          if(Array.isArray(gdata)&&gdata[0]?.status==="active"&&gdata[0]?.guest_user){
+            statusEl.textContent=`${gdata[0].guest_user} joined!`;
+            setTimeout(()=>this._startGame(this._onlineGameId!,null,"online-white"),300);
+            return;
+          }
+        }
+      }catch(e){ /* keep polling on network error */ }
+      if(!this._cancelSearch) this._pollTimer=setTimeout(poll,2000);
     };
-    this._pollTimer=setTimeout(check,2000);
+    poll();
   }
 
   private _cancelOnlineSearch():void{
