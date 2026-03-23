@@ -12,7 +12,7 @@ interface Save {
   run: number;
   fly: number;
   swim: number;
-  seeds: number;
+  energy: number;   // 0-100, restored by buying seeds with coins
   raceLevel: number;
   ownedColors: string[];
   ownedHats: string[];
@@ -21,7 +21,7 @@ interface Save {
 function defaultSave(): Save {
   return {
     name: "Duck", color: "#f5c842", hat: "none",
-    run: 0, fly: 0, swim: 0, seeds: 50,
+    run: 0, fly: 0, swim: 0, energy: 50,
     raceLevel: 0,
     ownedColors: ["#f5c842"], ownedHats: ["none"],
   };
@@ -47,8 +47,11 @@ export class DuckLife {
       "background:linear-gradient(180deg,#87CEEB 0%,#98D8C8 100%);font-family:Arial,sans-serif;";
     game.ui.appendChild(this._wrap);
 
-    try { this._save = JSON.parse(localStorage.getItem(SAVE_KEY) || "null") || defaultSave(); }
-    catch { this._save = defaultSave(); }
+    try {
+      const raw: any = JSON.parse(localStorage.getItem(SAVE_KEY) || "null") || defaultSave();
+      if (!("energy" in raw)) raw.energy = raw.seeds ?? 50; // migrate old saves
+      this._save = raw;
+    } catch { this._save = defaultSave(); }
 
     this._showHub();
   }
@@ -207,6 +210,7 @@ export class DuckLife {
       // Stats panel (top-left, Duck Life style)
       const pw=Math.min(cw*0.44,185), px=10, py=10, rowH=32, pad=8;
       const stats=[
+        {label:`Energy:  Lvl ${Math.floor(this._save.energy/10)}`,val:this._save.energy},
         {label:`Running: Lvl ${Math.floor(this._save.run/10)}`,val:this._save.run},
         {label:`Flying:  Lvl ${Math.floor(this._save.fly/10)}`, val:this._save.fly},
         {label:`Swim:    Lvl ${Math.floor(this._save.swim/10)}`,val:this._save.swim},
@@ -227,7 +231,7 @@ export class DuckLife {
       ctx.beginPath(); ctx.roundRect(px,seedY,pw,26,5); ctx.fill();
       ctx.strokeStyle="rgba(100,160,255,0.55)"; ctx.stroke();
       ctx.fillStyle="#FFD700"; ctx.font="bold 12px Arial";
-      ctx.fillText(`Seeds: ${this._save.seeds}`,px+pad,seedY+18);
+      ctx.fillText(`Coins: ${this._g.state.coins}`,px+pad,seedY+18);
 
       this._hubAnimId=requestAnimationFrame(loop);
     };
@@ -351,9 +355,7 @@ export class DuckLife {
       cancelAnimationFrame(animId);
       this._removeKeys();
       const xpGain = Math.min(Math.floor(score * 2.5 + 3), 15);
-      const seedGain = Math.floor(score * 0.5 + 2);
       this._save[type] = Math.min(100, this._save[type] + xpGain);
-      this._save.seeds += seedGain;
       this._persist();
 
       const ov = document.createElement("div");
@@ -362,7 +364,7 @@ export class DuckLife {
         `<div style="color:white;font-size:24px;font-weight:900;">✅ Done!</div>`+
         `<div style="color:#FFD700;font-size:17px;">Score: ${score}</div>`+
         `<div style="color:#4fc3f7;font-size:15px;">+${xpGain} ${type==="run"?"🏃 Run":type==="fly"?"🪶 Fly":"🏊 Swim"} XP</div>`+
-        `<div style="color:#FFD700;font-size:15px;">+${seedGain} 🌱 Seeds</div>`;
+        `<div style="color:rgba(255,255,255,0.5);font-size:13px;margin-top:4px;">Buy seeds in the Shop to restore energy for racing!</div>`;
       const cont = document.createElement("button");
       cont.textContent = "Continue";
       cont.style.cssText = "background:#4caf50;color:white;border:none;border-radius:12px;padding:12px 36px;font-size:16px;cursor:pointer;font-weight:bold;margin-top:8px;";
@@ -561,36 +563,50 @@ export class DuckLife {
     box.appendChild(hdr);
 
     const races = [
-      {name:"Beginner Cup",  emoji:"🌱",color:"#4caf50",opps:[{name:"Daffy",  color:"#4169E1",spd:32},{name:"Donald", color:"#1E90FF",spd:36}]},
-      {name:"Amateur Cup",   emoji:"⭐",color:"#2196f3",opps:[{name:"Quackers",color:"#9B59B6",spd:50},{name:"Puddles",color:"#E74C3C",spd:55}]},
-      {name:"Pro Cup",       emoji:"🔥",color:"#ff9800",opps:[{name:"Splash", color:"#E67E22",spd:65},{name:"Wings",  color:"#1ABC9C",spd:70}]},
-      {name:"Champion Cup",  emoji:"💎",color:"#9c27b0",opps:[{name:"Turbo",  color:"#C0392B",spd:80},{name:"Blaze",  color:"#8E44AD",spd:85}]},
-      {name:"World Cup",     emoji:"🏆",color:"#f44336",opps:[{name:"Ace",    color:"#2C3E50",spd:92},{name:"Legend", color:"#E74C3C",spd:96}]},
+      {name:"Beginner Cup",  emoji:"🌱",color:"#4caf50",energy:10,coinReward:3, opps:[{name:"Daffy",  color:"#4169E1",spd:32},{name:"Donald", color:"#1E90FF",spd:36}]},
+      {name:"Amateur Cup",   emoji:"⭐",color:"#2196f3",energy:15,coinReward:5, opps:[{name:"Quackers",color:"#9B59B6",spd:50},{name:"Puddles",color:"#E74C3C",spd:55}]},
+      {name:"Pro Cup",       emoji:"🔥",color:"#ff9800",energy:20,coinReward:8, opps:[{name:"Splash", color:"#E67E22",spd:65},{name:"Wings",  color:"#1ABC9C",spd:70}]},
+      {name:"Champion Cup",  emoji:"💎",color:"#9c27b0",energy:25,coinReward:12,opps:[{name:"Turbo",  color:"#C0392B",spd:80},{name:"Blaze",  color:"#8E44AD",spd:85}]},
+      {name:"World Cup",     emoji:"🏆",color:"#f44336",energy:30,coinReward:20,opps:[{name:"Ace",    color:"#2C3E50",spd:92},{name:"Legend", color:"#E74C3C",spd:96}]},
     ];
+
+    // Energy display
+    const energyBar = document.createElement("div");
+    energyBar.style.cssText = "background:rgba(0,0,0,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;";
+    energyBar.innerHTML =
+      `<span style="color:white;font-size:13px;font-weight:bold;">⚡ Energy:</span>`+
+      `<div style="flex:1;background:rgba(0,0,0,0.3);border-radius:4px;height:10px;">`+
+      `<div style="width:${this._save.energy}%;background:${this._save.energy>30?"#4caf50":"#ff5722"};border-radius:4px;height:10px;transition:width 0.3s;"></div></div>`+
+      `<span style="color:white;font-size:13px;font-weight:bold;">${this._save.energy}/100</span>`;
+    box.appendChild(energyBar);
 
     for (let i = 0; i < races.length; i++) {
       const r = races[i];
       const locked = i > this._save.raceLevel;
+      const noEnergy = !locked && this._save.energy < r.energy;
       const isNext = i === this._save.raceLevel;
       const btn = document.createElement("button");
       btn.style.cssText =
         `width:100%;background:${locked ? "rgba(60,60,60,0.5)" : `linear-gradient(135deg,${r.color}cc,${r.color}88)`};`+
         `color:white;border:${locked ? "1px solid rgba(255,255,255,0.08)" : `2px solid ${r.color}`};`+
-        `border-radius:16px;padding:14px 18px;cursor:${locked?"not-allowed":"pointer"};text-align:left;`+
-        `margin-bottom:10px;opacity:${locked?0.45:1};display:flex;align-items:center;gap:12px;`;
+        `border-radius:16px;padding:14px 18px;cursor:${locked||noEnergy?"not-allowed":"pointer"};text-align:left;`+
+        `margin-bottom:10px;opacity:${locked?0.45:noEnergy?0.6:1};display:flex;align-items:center;gap:12px;`;
       btn.innerHTML =
         `<div style="font-size:28px;">${locked?"🔒":r.emoji}</div>`+
         `<div style="flex:1;"><div style="font-size:15px;font-weight:bold;">${r.name}</div>`+
-        `<div style="font-size:12px;opacity:0.75;">vs ${r.opps.map(o=>o.name).join(" & ")}</div></div>`+
-        (isNext ? `<div style="background:rgba(255,255,0,0.25);border-radius:8px;padding:2px 10px;font-size:12px;font-weight:bold;">► Next</div>` : "");
-      if (!locked) btn.onclick = () => this._startRace(r.opps, r.name);
+        `<div style="font-size:12px;opacity:0.75;">vs ${r.opps.map(o=>o.name).join(" & ")} • ⚡${r.energy} • 🪙+${r.coinReward}</div></div>`+
+        (noEnergy ? `<div style="background:rgba(255,80,0,0.4);border-radius:8px;padding:2px 8px;font-size:11px;">Need ⚡${r.energy}</div>` :
+         isNext   ? `<div style="background:rgba(255,255,0,0.25);border-radius:8px;padding:2px 10px;font-size:12px;font-weight:bold;">► Next</div>` : "");
+      if (!locked && !noEnergy) btn.onclick = () => this._startRace(r.opps, r.name, r.energy, r.coinReward);
       box.appendChild(btn);
     }
     this._wrap.appendChild(box);
   }
 
-  private _startRace(opponents:{name:string,color:string,spd:number}[], raceName:string) {
+  private _startRace(opponents:{name:string,color:string,spd:number}[], raceName:string, energyCost=10, coinReward=5) {
     this._removeKeys();
+    this._save.energy = Math.max(0, this._save.energy - energyCost);
+    this._persist();
     this._wrap.innerHTML = "";
 
     const TRACK = 1200;
@@ -683,9 +699,8 @@ export class DuckLife {
           const finish = () => {
             cancelAnimationFrame(animId);
             if (winner === "you") {
-              this._save.seeds += 20;
               if (this._save.raceLevel < 5) this._save.raceLevel++;
-              this._g.state.coins = (this._g.state.coins || 0) + 5;
+              this._g.state.coins = (this._g.state.coins || 0) + coinReward;
               this._persist();
             }
             this._showRaceMenu();
@@ -709,11 +724,21 @@ export class DuckLife {
     hdr.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;";
     const back = this._btn("← Back","rgba(0,0,0,0.25)"); back.onclick = () => this._showHub();
     const t = document.createElement("div"); t.style.cssText = "color:white;font-size:20px;font-weight:900;"; t.textContent = "🛒 Shop";
-    const seeds = document.createElement("div");
-    seeds.style.cssText = "background:rgba(255,200,0,0.25);border:1.5px solid rgba(255,200,0,0.6);border-radius:12px;padding:4px 12px;color:#FFD700;font-size:14px;font-weight:bold;";
-    seeds.textContent = `🌱 ${this._save.seeds}`;
-    hdr.appendChild(back); hdr.appendChild(t); hdr.appendChild(seeds);
+    const coinBadge = document.createElement("div");
+    coinBadge.style.cssText = "background:rgba(255,200,0,0.25);border:1.5px solid rgba(255,200,0,0.6);border-radius:12px;padding:4px 12px;color:#FFD700;font-size:14px;font-weight:bold;";
+    coinBadge.textContent = `🪙 ${this._g.state.coins}`;
+    hdr.appendChild(back); hdr.appendChild(t); hdr.appendChild(coinBadge);
     box.appendChild(hdr);
+
+    // Energy bar
+    const energyRow = document.createElement("div");
+    energyRow.style.cssText = "background:rgba(0,0,0,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;";
+    energyRow.innerHTML =
+      `<span style="color:white;font-size:13px;font-weight:bold;">⚡ Energy:</span>`+
+      `<div style="flex:1;background:rgba(0,0,0,0.3);border-radius:4px;height:10px;">`+
+      `<div style="width:${this._save.energy}%;background:${this._save.energy>30?"#4caf50":"#ff5722"};border-radius:4px;height:10px;"></div></div>`+
+      `<span style="color:white;font-size:13px;">${this._save.energy}/100</span>`;
+    box.appendChild(energyRow);
 
     const secTitle = (txt:string) => {
       const d = document.createElement("div");
@@ -721,83 +746,110 @@ export class DuckLife {
       d.textContent = txt; box.appendChild(d);
     };
 
+    // ── Seeds (buy with coins → restore energy) ────────────────────────────
+    secTitle("SEEDS  —  spend coins to restore energy");
+    const seedItems = [
+      {name:"Small Seed",  emoji:"🌱", cost:1,  energy:15, desc:"+15 energy"},
+      {name:"Big Seed",    emoji:"🌾", cost:4,  energy:40, desc:"+40 energy"},
+      {name:"Bag of Seeds",emoji:"🎒", cost:10, energy:100,desc:"Full energy!"},
+    ];
+    const seedGrid = document.createElement("div");
+    seedGrid.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;";
+    for (const s of seedItems) {
+      const canAfford = this._g.state.coins >= s.cost;
+      const btn = document.createElement("button");
+      btn.style.cssText = `background:rgba(100,200,80,0.12);border:2px solid rgba(100,200,80,${canAfford?"0.5":"0.2"});border-radius:12px;padding:12px 6px;cursor:${canAfford?"pointer":"not-allowed"};display:flex;flex-direction:column;align-items:center;gap:4px;opacity:${canAfford?1:0.45};`;
+      btn.innerHTML =
+        `<div style="font-size:26px;">${s.emoji}</div>`+
+        `<div style="color:white;font-size:11px;font-weight:bold;">${s.name}</div>`+
+        `<div style="color:#7fff7f;font-size:11px;">${s.desc}</div>`+
+        `<div style="color:#FFD700;font-size:12px;font-weight:bold;">🪙 ${s.cost}</div>`;
+      btn.onclick = () => {
+        if (this._g.state.coins < s.cost) return;
+        this._g.state.coins -= s.cost;
+        this._save.energy = Math.min(100, this._save.energy + s.energy);
+        this._persist();
+        this._showShop();
+      };
+      seedGrid.appendChild(btn);
+    }
+    box.appendChild(seedGrid);
+
     // Duck preview
+    secTitle("CUSTOMIZE");
     const prev = document.createElement("canvas");
     prev.width = 80; prev.height = 64;
-    prev.style.cssText = "display:block;margin:0 auto 14px;border-radius:12px;background:rgba(255,255,255,0.1);";
+    prev.style.cssText = "display:block;margin:0 auto 10px;border-radius:12px;background:rgba(255,255,255,0.1);";
     box.appendChild(prev);
     const redraw = () => {
-      const c = prev.getContext("2d")!;
-      c.clearRect(0,0,80,64);
+      const c = prev.getContext("2d")!; c.clearRect(0,0,80,64);
       this._drawDuck(c, 32, 42, 28);
     };
     redraw();
 
     // Colors
-    secTitle("DUCK COLOR");
+    secTitle("DUCK COLOR  —  costs coins");
     const colors = [
       {name:"Yellow",color:"#f5c842",cost:0},
-      {name:"White", color:"#f0f0f0",cost:15},
-      {name:"Orange",color:"#ff8c42",cost:15},
-      {name:"Teal",  color:"#42c5c5",cost:20},
-      {name:"Purple",color:"#9b59b6",cost:20},
-      {name:"Pink",  color:"#ff69b4",cost:25},
+      {name:"White", color:"#f0f0f0",cost:8},
+      {name:"Orange",color:"#ff8c42",cost:8},
+      {name:"Teal",  color:"#42c5c5",cost:12},
+      {name:"Purple",color:"#9b59b6",cost:12},
+      {name:"Pink",  color:"#ff69b4",cost:15},
     ];
     const colorGrid = document.createElement("div");
     colorGrid.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;";
     for (const c of colors) {
       const owned = this._save.ownedColors.includes(c.color);
       const sel = this._save.color === c.color;
+      const canAfford = owned || this._g.state.coins >= c.cost;
       const btn = document.createElement("button");
-      btn.style.cssText = `background:${c.color}22;border:2px solid ${sel ? c.color : "rgba(255,255,255,0.14)"};border-radius:12px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:${!owned && this._save.seeds < c.cost ? 0.45 : 1};`;
+      btn.style.cssText = `background:${c.color}22;border:2px solid ${sel ? c.color : "rgba(255,255,255,0.14)"};border-radius:12px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:${!canAfford?0.45:1};`;
       btn.innerHTML =
         `<div style="width:26px;height:26px;border-radius:50%;background:${c.color};border:2px solid rgba(255,255,255,0.3);"></div>`+
         `<div style="color:white;font-size:11px;">${c.name}</div>`+
-        `<div style="color:#FFD700;font-size:11px;">${owned||c.cost===0 ? (sel?"✔":"Owned") : `🌱${c.cost}`}</div>`;
+        `<div style="color:#FFD700;font-size:11px;">${owned||c.cost===0?(sel?"✔":"Owned"):`🪙${c.cost}`}</div>`;
       btn.onclick = () => {
         if (!owned && c.cost > 0) {
-          if (this._save.seeds < c.cost) return;
-          this._save.seeds -= c.cost;
+          if (this._g.state.coins < c.cost) return;
+          this._g.state.coins -= c.cost;
           this._save.ownedColors.push(c.color);
         }
         this._save.color = c.color;
-        this._persist();
-        redraw();
-        this._showShop();
+        this._persist(); redraw(); this._showShop();
       };
       colorGrid.appendChild(btn);
     }
     box.appendChild(colorGrid);
 
     // Hats
-    secTitle("HATS");
+    secTitle("HATS  —  costs coins");
     const hats = [
       {name:"None",  hat:"none",  cost:0,  emoji:"🚫"},
-      {name:"Cap",   hat:"cap",   cost:20, emoji:"🧢"},
-      {name:"Crown", hat:"crown", cost:40, emoji:"👑"},
-      {name:"Bow",   hat:"bow",   cost:30, emoji:"🎀"},
+      {name:"Cap",   hat:"cap",   cost:12, emoji:"🧢"},
+      {name:"Crown", hat:"crown", cost:25, emoji:"👑"},
+      {name:"Bow",   hat:"bow",   cost:18, emoji:"🎀"},
     ];
     const hatGrid = document.createElement("div");
     hatGrid.style.cssText = "display:grid;grid-template-columns:repeat(4,1fr);gap:8px;";
     for (const h of hats) {
       const owned = this._save.ownedHats.includes(h.hat);
       const sel = this._save.hat === h.hat;
+      const canAfford = owned || this._g.state.coins >= h.cost;
       const btn = document.createElement("button");
-      btn.style.cssText = `background:rgba(255,255,255,0.06);border:2px solid ${sel ? "#FFD700" : "rgba(255,255,255,0.14)"};border-radius:12px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:${!owned && this._save.seeds < h.cost ? 0.45 : 1};`;
+      btn.style.cssText = `background:rgba(255,255,255,0.06);border:2px solid ${sel?"#FFD700":"rgba(255,255,255,0.14)"};border-radius:12px;padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:${!canAfford?0.45:1};`;
       btn.innerHTML =
         `<div style="font-size:22px;">${h.emoji}</div>`+
         `<div style="color:white;font-size:11px;">${h.name}</div>`+
-        `<div style="color:#FFD700;font-size:11px;">${owned||h.cost===0 ? (sel?"✔":"Owned") : `🌱${h.cost}`}</div>`;
+        `<div style="color:#FFD700;font-size:11px;">${owned||h.cost===0?(sel?"✔":"Owned"):`🪙${h.cost}`}</div>`;
       btn.onclick = () => {
         if (!owned && h.cost > 0) {
-          if (this._save.seeds < h.cost) return;
-          this._save.seeds -= h.cost;
+          if (this._g.state.coins < h.cost) return;
+          this._g.state.coins -= h.cost;
           this._save.ownedHats.push(h.hat);
         }
         this._save.hat = h.hat;
-        this._persist();
-        redraw();
-        this._showShop();
+        this._persist(); redraw(); this._showShop();
       };
       hatGrid.appendChild(btn);
     }
