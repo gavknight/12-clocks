@@ -200,7 +200,7 @@ export class MinecraftGame {
 
     if(window.matchMedia("(pointer:coarse)").matches){
       const ov=document.createElement("div");
-      ov.style.cssText="position:absolute;inset:0;background:linear-gradient(160deg,#1a0000,#2a0a00);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:all;font-family:Arial,sans-serif;gap:14px;padding:32px;text-align:center;";
+      ov.style.cssText="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#1a0000,#2a0a00);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Arial,sans-serif;gap:14px;padding:32px;text-align:center;";
       ov.innerHTML=
         `<div style="font-size:64px;">💻</div>`+
         `<div style="color:#ff4444;font-size:22px;font-weight:900;font-family:'Arial Black',Arial,sans-serif;">NOT FOR MOBILE</div>`+
@@ -208,9 +208,11 @@ export class MinecraftGame {
       const backBtn=document.createElement("button");
       backBtn.textContent="← Back to Arcade";
       backBtn.style.cssText="margin-top:8px;background:rgba(255,255,255,0.1);color:white;font-size:15px;font-weight:bold;padding:12px 28px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.25);cursor:pointer;";
-      backBtn.onclick=()=>{ g.ui.innerHTML=""; g.inMiniGame=false; import("../ArcadeScene").then(m=>new m.ArcadeScene(g)); };
+      const goBack=()=>{ ov.remove(); g.ui.innerHTML=""; g.inMiniGame=false; import("../ArcadeScene").then(m=>new m.ArcadeScene(g)); };
+      backBtn.onclick=goBack;
+      backBtn.addEventListener("touchend",e=>{e.preventDefault();goBack();});
       ov.appendChild(backBtn);
-      this._wrap.appendChild(ov);
+      document.body.appendChild(ov);
       return;
     }
 
