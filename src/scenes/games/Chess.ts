@@ -5,7 +5,7 @@ import type { Game } from "../../game/Game";
 
 // ── Supabase (lazy) ───────────────────────────────────────────────────────────
 const SB_URL = "https://xgzgqdhkjcsrgzhjyiss.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzM0MzQ2NjQsImV4cCI6MjA0OTAxMDY2NH0.Jm7nNSNXNpjdVdvGHFNYxb3r8QRqOE3HrxqtJmLRjcY";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
 
 // ── Piece constants ───────────────────────────────────────────────────────────
 const EMPTY=0,P=1,N=2,B=3,R=4,Q=5,K=6;
