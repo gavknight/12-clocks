@@ -571,6 +571,7 @@ export class MinecraftGame {
 
   // ── Pause overlay ─────────────────────────────────────────────
   private _onLock=():void=>{
+    if(this._isMobile){this._locked=true;return;}
     this._locked=document.pointerLockElement===this._canvas;
     if(this._locked){
       this._started=true;
@@ -615,12 +616,16 @@ export class MinecraftGame {
     if(window.matchMedia("(pointer:coarse)").matches) this._setupTouchControls();
   }
 
+  private _isMobile=false;
   private _touchHud:HTMLDivElement|null=null;
   private _joyActive=false; private _joyOx=0; private _joyOy=0;
   private _joyTouchId:number|null=null;
   private _lookTouchId:number|null=null; private _lookPrevX=0; private _lookPrevY=0;
 
   private _setupTouchControls():void{
+    this._isMobile=true;
+    this._locked=true;   // bypass pointer lock on mobile
+    this._started=true;  // skip waiting for pointer lock to start
     const hud=document.createElement("div");
     hud.style.cssText="position:absolute;inset:0;pointer-events:none;z-index:50;";
     this._canvas.parentElement!.appendChild(hud);
@@ -820,6 +825,7 @@ export class MinecraftGame {
   private _onMouseDown=(e:MouseEvent):void=>{
     if(e.button===0){
       if(!this._locked){
+        if(this._isMobile){this._locked=true;return;}
         this._startOv?.remove(); this._startOv=null;
         this._canvas.requestPointerLock(); return;
       }
