@@ -374,7 +374,7 @@ export class Chess {
     let lobbyPoll:any=null;
     const checkChallenges=async()=>{
       try{
-        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&invite_to=eq.${encodeURIComponent(this._username)}&select=id,host_user&limit=5`,{
+        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&invite_to=ilike.${encodeURIComponent(this._username)}&select=id,host_user&limit=5`,{
           headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
         });
         const rows=await res.json();
@@ -568,7 +568,7 @@ export class Chess {
     box.appendChild(incomingDiv);
     const checkIncoming=async()=>{
       try{
-        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&invite_to=eq.${encodeURIComponent(this._username)}&select=id,host_user&limit=5`,{
+        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&invite_to=ilike.${encodeURIComponent(this._username)}&select=id,host_user&limit=5`,{
           headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
         });
         const rows=await res.json();
