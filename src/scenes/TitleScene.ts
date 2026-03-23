@@ -157,6 +157,7 @@ export class TitleScene {
           ⏳ Version History
         </button>
 
+
         ${!IS_BEDROCK ? `
         <!-- Play Bedrock Edition button -->
         <button id="bedrockBtn" style="

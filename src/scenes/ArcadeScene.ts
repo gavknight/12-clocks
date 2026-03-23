@@ -570,10 +570,7 @@ export class ArcadeScene {
     };
 
     document.getElementById("clickTestBtn")!.onclick = () => {
-      import("./games/ClickTest").then(m => {
-        game.ui.innerHTML = "";
-        new m.ClickTest(game);
-      });
+      import("./games/ClickTest").then(m => { game.ui.innerHTML = ""; new m.ClickTest(game); });
     };
 
     // ── Time Machine filtering ────────────────────────────────────────────────
