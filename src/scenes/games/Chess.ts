@@ -340,8 +340,8 @@ export class Chess {
     hdr.innerHTML =
       `<div style="font-size:36px;">♟️</div>`+
       `<div><div style="color:white;font-size:20px;font-weight:900;">Chess</div>`+
-      `<div style="color:rgba(255,255,255,0.4);font-size:12px;">Playing as <b style="color:#80cfff;">${this._username}</b>`+
-      ` <span id="chgUser" style="color:rgba(255,255,255,0.3);font-size:11px;cursor:pointer;text-decoration:underline;">change</span></div></div>`;
+      `<div style="color:rgba(255,255,255,0.4);font-size:12px;display:flex;align-items:center;gap:8px;">Playing as <b style="color:#80cfff;">${this._username}</b>`+
+      ` <button id="chgUser" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;font-size:11px;padding:2px 10px;border-radius:20px;cursor:pointer;">✏️ Change</button></div></div>`;
     box.appendChild(hdr);
 
     // Menu options
@@ -520,11 +520,47 @@ export class Chess {
   }
 
   // ── Friends ───────────────────────────────────────────────────────────────
+  private _friendsPollTimer: any = null;
   private _showFriends(): void {
     this._wrap.innerHTML = "";
+    clearInterval(this._friendsPollTimer);
     const box = this._card();
     box.innerHTML=`<div style="color:white;font-size:18px;font-weight:900;margin-bottom:4px;">👥 Friends</div>`+
       `<div style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:16px;">Add friends by username to challenge or spectate them</div>`;
+
+    // Incoming challenges banner
+    const incomingDiv=document.createElement("div");
+    box.appendChild(incomingDiv);
+    const checkIncoming=async()=>{
+      try{
+        const res=await fetch(`${SB_URL}/rest/v1/chess_games?status=eq.waiting&invite_to=eq.${encodeURIComponent(this._username)}&select=id,host_user&limit=5`,{
+          headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
+        });
+        const rows=await res.json();
+        incomingDiv.innerHTML="";
+        if(Array.isArray(rows)&&rows.length>0){
+          for(const r of rows){
+            const banner=document.createElement("div");
+            banner.style.cssText="background:rgba(33,150,243,0.15);border:1.5px solid rgba(33,150,243,0.5);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;";
+            banner.innerHTML=`<div style="flex:1;color:white;font-size:14px;">⚔️ <b>${r.host_user}</b> challenged you!</div>`;
+            const acceptBtn=this._btn("Accept ✔","#2196f3");
+            acceptBtn.style.cssText+="padding:7px 14px;font-size:13px;";
+            acceptBtn.onclick=async()=>{
+              clearInterval(this._friendsPollTimer);
+              await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${r.id}`,{
+                method:"PATCH",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json"},
+                body:JSON.stringify({status:"active",guest_user:this._username})
+              });
+              this._startGame(r.id,null,"online-black");
+            };
+            banner.appendChild(acceptBtn);
+            incomingDiv.appendChild(banner);
+          }
+        }
+      }catch{}
+    };
+    checkIncoming();
+    this._friendsPollTimer=setInterval(checkIncoming,3000);
 
     // Add friend input
     const row=document.createElement("div");
@@ -552,7 +588,7 @@ export class Chess {
     };
 
     const back=this._btn("← Back","rgba(255,255,255,0.08)");
-    back.onclick=()=>this._showLobby();
+    back.onclick=()=>{ clearInterval(this._friendsPollTimer); this._showLobby(); };
     box.appendChild(back);
     this._wrap.appendChild(box);
   }
@@ -587,20 +623,46 @@ export class Chess {
     }
   }
 
-  private _challengeFriend(friend:string):void{
+  private async _challengeFriend(friend:string):Promise<void>{
+    clearInterval(this._friendsPollTimer);
     const gid=`chess_friend_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-    // Create a game room tagged with the friend's name
-    fetch(`${SB_URL}/rest/v1/chess_games`,{
-      method:"POST",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify({id:gid,status:"waiting",host_user:this._username,guest_user:null,invite_to:friend,moves:[],created_at:new Date().toISOString()})
-    }).catch(()=>{});
-    this._showLobby();
-    // Show confirmation
-    const toast=document.createElement("div");
-    toast.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:10px 20px;border-radius:20px;font-size:14px;z-index:9999;";
-    toast.textContent=`Challenge sent to ${friend}!`;
-    document.body.appendChild(toast);
-    setTimeout(()=>toast.remove(),2500);
+    try{
+      await fetch(`${SB_URL}/rest/v1/chess_games`,{
+        method:"POST",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({id:gid,status:"waiting",host_user:this._username,guest_user:null,invite_to:friend,moves:[],created_at:new Date().toISOString()})
+      });
+    }catch{ this._showFriends(); return; }
+
+    // Show waiting screen
+    this._wrap.innerHTML="";
+    const box=this._card();
+    const statusEl=document.createElement("div");
+    statusEl.style.cssText="color:rgba(255,255,255,0.7);font-size:15px;text-align:center;margin:24px 0;";
+    statusEl.textContent=`Waiting for ${friend} to accept...`;
+    box.innerHTML=`<div style="color:white;font-size:18px;font-weight:900;text-align:center;margin-bottom:8px;">⚔️ Challenge Sent!</div>`;
+    box.appendChild(statusEl);
+    const cancelBtn=this._btn("Cancel","rgba(255,60,60,0.3)");
+    cancelBtn.onclick=()=>{
+      clearInterval(waitPoll);
+      fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${gid}`,{method:"DELETE",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}}).catch(()=>{});
+      this._showFriends();
+    };
+    box.appendChild(cancelBtn);
+    this._wrap.appendChild(box);
+
+    const waitPoll=setInterval(async()=>{
+      try{
+        const res=await fetch(`${SB_URL}/rest/v1/chess_games?id=eq.${gid}&select=status,guest_user`,{
+          headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`}
+        });
+        const data=await res.json();
+        if(Array.isArray(data)&&data[0]?.status==="active"&&data[0]?.guest_user){
+          clearInterval(waitPoll);
+          statusEl.textContent=`${data[0].guest_user} accepted! Starting...`;
+          setTimeout(()=>this._startGame(gid,null,"online-white"),400);
+        }
+      }catch{}
+    },2000);
   }
 
   // ── Game ──────────────────────────────────────────────────────────────────
