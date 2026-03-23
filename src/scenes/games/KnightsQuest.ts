@@ -304,53 +304,131 @@ export class KnightsQuest {
 
   // ── Shop ───────────────────────────────────────────────────────────────────
 
+  private _shopTab = "Weapons";
   private _showShop(): void {
-    this._game.ui.innerHTML = `
-      <div style="position:absolute;inset:0;background:#0d1117;display:flex;flex-direction:column;
-        align-items:center;padding:60px 16px 40px;font-family:Arial,sans-serif;overflow-y:auto;box-sizing:border-box;">
-        <button id="shopBack" style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,0.08);
-          border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:13px;
-          padding:7px 14px;border-radius:10px;cursor:pointer;">← Back</button>
-        <div style="color:#FFD700;font-size:24px;font-weight:bold;margin-bottom:4px;">💰 SHOP</div>
-        <div style="color:rgba(255,255,255,0.4);font-size:13px;margin-bottom:20px;">Coins: ${this._save.coins} 🪙</div>
+    const username = localStorage.getItem("chess_username") || localStorage.getItem("kq_username") || "Knight";
+    const tabs = ["Weapons","Powers","Pets","Upgrades","Potions","Emotes","Skins"];
 
-        ${this._shopItem("sword",  "Better Sword",  "⚔️",  20, "Sword damage 35→50",  "#c0392b")}
-        ${this._shopItem("mag",    "Extended Mag",  "🔫",  15, "Start ammo 30→60",    "#2980b9")}
-        ${this._shopItem("shield", "Shield",        "🛡️", 25, "HP 100→150",          "#27ae60")}
-        ${this._shopItem("boots",  "Speed Boots",   "👟",  10, "Move faster",         "#8e44ad")}
-      </div>
-    `;
-    document.getElementById("shopBack")!.onclick = () => this._showMenu();
-    document.querySelectorAll("[data-buy]").forEach(btn => {
-      (btn as HTMLButtonElement).onclick = () => {
-        const id = (btn as HTMLElement).dataset.buy!;
-        const costs: Record<string,number> = { sword:20, mag:15, shield:25, boots:10 };
-        const cost = costs[id];
-        if (this._save.shopOwned.includes(id)) return;
-        if (this._save.coins < cost) { alert("Not enough coins!"); return; }
-        this._save.coins -= cost;
-        this._save.shopOwned.push(id);
-        writeSave(this._save);
-        this._showShop();
-      };
-    });
-  }
+    const allItems: Record<string, {id:string,icon:string,name:string,desc:string,cost:number}[]> = {
+      Weapons: [
+        {id:"shotgun",     icon:"🔫", name:"Shotgun",          desc:"5 pellets per shot! Great close range.",        cost:150},
+        {id:"rocket",      icon:"🚀", name:"Rocket Launcher",  desc:"Huge explosion damage! Uses 5 ammo.",           cost:300},
+        {id:"minigun",     icon:"⚙️", name:"Minigun",          desc:"Rapid fire! 5 shots per second.",               cost:400},
+        {id:"laser",       icon:"💠", name:"Laser Beam",       desc:"Instant hit laser! Best for accuracy.",         cost:500},
+        {id:"crossbow",    icon:"🏹", name:"Crossbow",         desc:"Slow but devastating! 3x damage.",              cost:250},
+        {id:"flame",       icon:"🔥", name:"Flamethrower",     desc:"Spray fire in a cone! Burns enemies.",          cost:350},
+        {id:"sword2",      icon:"⚔️", name:"Holy Sword",       desc:"Blessed blade! Double sword damage.",           cost:200},
+        {id:"grenade",     icon:"💣", name:"Grenade",          desc:"Throw and explode! Area damage.",               cost:180},
+        {id:"sniper",      icon:"🎯", name:"Sniper Rifle",     desc:"One-shot, long range. Uses 1 ammo.",            cost:450},
+      ],
+      Powers: [
+        {id:"shield_pw",   icon:"🛡️", name:"Force Shield",    desc:"Block 50% of damage for 3 seconds.",            cost:300},
+        {id:"speed_pw",    icon:"⚡", name:"Speed Surge",      desc:"Double move speed for 5 seconds.",              cost:200},
+        {id:"heal_pw",     icon:"💊", name:"Healing Aura",     desc:"Heal 20 HP per second for 5 seconds.",          cost:250},
+        {id:"rage_pw",     icon:"💢", name:"Berserker Rage",   desc:"Triple attack damage for 4 seconds.",           cost:400},
+      ],
+      Pets: [
+        {id:"pet_dog",     icon:"🐕", name:"War Hound",        desc:"Attacks enemies for 10 dmg/sec.",               cost:500},
+        {id:"pet_eagle",   icon:"🦅", name:"Battle Eagle",     desc:"Scouts ahead, warns of enemies.",               cost:400},
+        {id:"pet_dragon",  icon:"🐉", name:"Mini Dragon",      desc:"Breathes fire! 20 dmg/sec to nearby enemies.",  cost:800},
+      ],
+      Upgrades: [
+        {id:"mag",         icon:"🔋", name:"Extended Mag",     desc:"Start ammo 30→60 bullets.",                     cost:150},
+        {id:"boots",       icon:"👟", name:"Speed Boots",      desc:"Move 25% faster permanently.",                  cost:100},
+        {id:"armor",       icon:"🪖", name:"Heavy Armor",      desc:"HP 100→150.",                                   cost:250},
+        {id:"luck",        icon:"🍀", name:"Lucky Charm",      desc:"Chests give 2x ammo.",                          cost:120},
+      ],
+      Potions: [
+        {id:"pot_hp",      icon:"❤️", name:"Health Potion",    desc:"Restore 50 HP instantly. Single use.",          cost:50},
+        {id:"pot_ammo",    icon:"💛", name:"Ammo Potion",      desc:"Restore 30 ammo instantly. Single use.",        cost:40},
+        {id:"pot_big",     icon:"💜", name:"Mega Potion",      desc:"Full HP + full ammo. Single use.",              cost:120},
+      ],
+      Emotes: [
+        {id:"em_wave",     icon:"👋", name:"Wave",             desc:"Wave at your enemies before defeating them.",   cost:80},
+        {id:"em_dance",    icon:"🕺", name:"Victory Dance",    desc:"Dance after winning a map.",                    cost:150},
+        {id:"em_bow",      icon:"🙇", name:"Noble Bow",        desc:"A respectful bow to fallen enemies.",           cost:100},
+      ],
+      Skins: [
+        {id:"skin_gold",   icon:"👑", name:"Gold Knight",      desc:"Shiny golden armor skin.",                      cost:500},
+        {id:"skin_dark",   icon:"🖤", name:"Dark Knight",      desc:"Shadow armor. Very menacing.",                  cost:600},
+        {id:"skin_ice",    icon:"❄️", name:"Ice Knight",       desc:"Frozen blue armor skin.",                       cost:550},
+        {id:"skin_fire",   icon:"🔥", name:"Fire Knight",      desc:"Blazing red and orange armor.",                 cost:600},
+      ],
+    };
 
-  private _shopItem(id: string, name: string, icon: string, cost: number, desc: string, col: string): string {
-    const owned = this._save.shopOwned.includes(id);
-    return `
-      <div style="background:rgba(255,255,255,0.04);border:2px solid ${col}44;border-radius:14px;
-        padding:16px 20px;width:100%;max-width:320px;margin-bottom:12px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:36px;">${icon}</div>
-        <div style="flex:1;">
-          <div style="color:white;font-size:16px;font-weight:bold;">${name}</div>
-          <div style="color:rgba(255,255,255,0.5);font-size:12px;">${desc}</div>
-        </div>
-        <button data-buy="${id}" style="background:${owned ? "rgba(80,80,80,0.6)" : col};border:none;
-          border-radius:10px;color:white;font-size:13px;font-weight:bold;padding:8px 14px;cursor:pointer;">
-          ${owned ? "Owned" : `${cost} 🪙`}
-        </button>
-      </div>`;
+    const ui = this._game.ui;
+    ui.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "position:absolute;inset:0;background:linear-gradient(135deg,#0d1117,#0d0d2e,#0d1a0d);font-family:Arial,sans-serif;display:flex;flex-direction:column;pointer-events:all;";
+
+    // Top bar
+    const topBar = document.createElement("div");
+    topBar.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;";
+    topBar.innerHTML =
+      `<div></div>`+
+      `<div style="text-align:center;"><div style="color:#FFD700;font-size:32px;font-weight:900;text-shadow:0 0 20px #FFD700,0 0 40px #FFD70088;letter-spacing:3px;">SHOP</div>`+
+      `<div style="color:#FFD700;font-size:15px;margin-top:2px;">Coins: ${this._save.coins.toLocaleString()}</div></div>`+
+      `<div style="background:rgba(0,0,0,0.4);border:1.5px solid rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:right;">`+
+      `<span style="color:#00ff88;font-size:12px;">Signed in as </span><span style="color:white;font-size:12px;font-weight:bold;">${username.toUpperCase()}</span></div>`;
+    wrap.appendChild(topBar);
+
+    // Tab bar
+    const tabBar = document.createElement("div");
+    tabBar.style.cssText = "display:flex;gap:6px;padding:12px 16px;flex-shrink:0;overflow-x:auto;";
+    for (const tab of tabs) {
+      const tb = document.createElement("button");
+      const active = tab === this._shopTab;
+      tb.textContent = tab;
+      tb.style.cssText = `background:${active ? "transparent" : "rgba(255,255,255,0.04)"};color:${active ? "#FFD700" : "rgba(255,255,255,0.7)"};border:${active ? "2px solid #FFD700" : "1.5px solid rgba(255,255,255,0.15)"};border-radius:10px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:bold;white-space:nowrap;`;
+      tb.onclick = () => { this._shopTab = tab; this._showShop(); };
+      tabBar.appendChild(tb);
+    }
+    wrap.appendChild(tabBar);
+
+    // Grid
+    const grid = document.createElement("div");
+    grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:0 16px 16px;overflow-y:auto;flex:1;";
+    const items = allItems[this._shopTab] || [];
+    for (const item of items) {
+      const owned = this._save.shopOwned.includes(item.id);
+      const card = document.createElement("div");
+      card.style.cssText = "background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;";
+      card.innerHTML =
+        `<div style="font-size:36px;">${item.icon}</div>`+
+        `<div style="color:#FFD700;font-size:15px;font-weight:bold;text-align:center;">${item.name}</div>`+
+        `<div style="color:rgba(255,255,255,0.5);font-size:12px;text-align:center;flex:1;">${item.desc}</div>`;
+      const btnRow = document.createElement("div");
+      btnRow.style.cssText = "display:flex;gap:6px;width:100%;";
+      const buyBtn = document.createElement("button");
+      buyBtn.style.cssText = `flex:1;border:none;border-radius:8px;padding:8px;cursor:${owned?"default":"pointer"};font-size:13px;font-weight:bold;background:${owned?"rgba(80,80,80,0.6)":"#27ae60"};color:white;`;
+      buyBtn.textContent = owned ? "OWNED" : `${item.cost} coins`;
+      if (!owned) {
+        buyBtn.onclick = () => {
+          if (this._save.coins < item.cost) { buyBtn.textContent = "Need more coins!"; setTimeout(()=>buyBtn.textContent=`${item.cost} coins`,1200); return; }
+          this._save.coins -= item.cost;
+          this._save.shopOwned.push(item.id);
+          writeSave(this._save);
+          this._showShop();
+        };
+      }
+      const giftBtn = document.createElement("button");
+      giftBtn.style.cssText = "background:linear-gradient(135deg,#e91e8c,#c2185b);border:none;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:12px;font-weight:bold;color:white;white-space:nowrap;";
+      giftBtn.textContent = `🎁 GIFT`;
+      giftBtn.onclick = () => { giftBtn.textContent = "Coming Soon!"; setTimeout(()=>giftBtn.textContent="🎁 GIFT",1500); };
+      btnRow.appendChild(buyBtn); btnRow.appendChild(giftBtn);
+      card.appendChild(btnRow);
+      grid.appendChild(card);
+    }
+    wrap.appendChild(grid);
+
+    // Back button
+    const backBtn = document.createElement("button");
+    backBtn.textContent = "← BACK";
+    backBtn.style.cssText = "margin:0 auto 16px;background:linear-gradient(135deg,#e53935,#b71c1c);color:white;border:none;border-radius:14px;padding:14px 60px;font-size:16px;font-weight:bold;cursor:pointer;flex-shrink:0;";
+    backBtn.onclick = () => this._showMenu();
+    wrap.appendChild(backBtn);
+
+    ui.appendChild(wrap);
   }
 
   // ── Achievements ───────────────────────────────────────────────────────────
