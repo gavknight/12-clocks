@@ -73,7 +73,7 @@ export class DuckLife {
   }
 
   // ── Duck drawing ──────────────────────────────────────────────────────────
-  private _drawDuck(ctx: CanvasRenderingContext2D, x: number, y: number, size = 36, color?: string) {
+  private _drawDuck(ctx: CanvasRenderingContext2D, x: number, y: number, size = 36, color?: string, showHat = true) {
     const c = color ?? this._save.color;
     ctx.save();
     ctx.translate(x, y);
@@ -117,18 +117,18 @@ export class DuckLife {
       ctx.closePath(); ctx.fill();
     });
 
-    // Hat
-    if (this._save.hat === "cap") {
+    // Hat (hidden during training)
+    if (showHat && this._save.hat === "cap") {
       ctx.fillStyle = "#cc0000";
       ctx.fillRect(size*.3, -size*.68, size*.52, size*.11);
       ctx.fillRect(size*.36, -size*.95, size*.36, size*.29);
-    } else if (this._save.hat === "crown") {
+    } else if (showHat && this._save.hat === "crown") {
       ctx.fillStyle = "#FFD700";
       ctx.beginPath();
       ctx.moveTo(size*.3,-size*.64); ctx.lineTo(size*.3,-size*.94); ctx.lineTo(size*.44,-size*.80);
       ctx.lineTo(size*.57,-size*.94); ctx.lineTo(size*.70,-size*.80); ctx.lineTo(size*.84,-size*.94);
       ctx.lineTo(size*.84,-size*.64); ctx.closePath(); ctx.fill();
-    } else if (this._save.hat === "bow") {
+    } else if (showHat && this._save.hat === "bow") {
       ctx.fillStyle = "#ff69b4";
       ctx.beginPath(); ctx.ellipse(size*.44,-size*.70,size*.16,size*.09,-0.5,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(size*.64,-size*.70,size*.16,size*.09,0.5,0,Math.PI*2); ctx.fill();
@@ -427,7 +427,7 @@ export class DuckLife {
           ctx.beginPath(); ctx.roundRect(o.x, GROUND - o.h + 14, o.w, o.h, 4); ctx.fill();
           ctx.fillStyle = "#bbb"; ctx.fillRect(o.x + 3, GROUND - o.h + 17, 6, 4);
         }
-        this._drawDuck(ctx, W * 0.2, duckY - 6, 30);
+        this._drawDuck(ctx, W * 0.2, duckY - 6, 30, undefined, false);
         animId = requestAnimationFrame(loop);
       };
       animId = requestAnimationFrame(loop);
@@ -480,7 +480,7 @@ export class DuckLife {
           ctx.fillStyle = "#2e7d32"; ctx.fillRect(p.x, p.gap + GAP + 4, 38, H - p.gap - GAP);
           ctx.fillStyle = "#388e3c"; ctx.fillRect(p.x - 4, p.gap + GAP + 4, 46, 18);
         }
-        this._drawDuck(ctx, W * 0.2, duckY, 27);
+        this._drawDuck(ctx, W * 0.2, duckY, 27, undefined, false);
         animId = requestAnimationFrame(loop);
       };
       animId = requestAnimationFrame(loop);
@@ -543,7 +543,7 @@ export class DuckLife {
           ctx.fillStyle = "#FFA500"; ctx.fill();
           ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(f.x+3,f.y-2,1.8,0,Math.PI*2); ctx.fill();
         }
-        this._drawDuck(ctx, W * 0.2, duckY, 27);
+        this._drawDuck(ctx, W * 0.2, duckY, 27, undefined, false);
         animId = requestAnimationFrame(loop);
       };
       animId = requestAnimationFrame(loop);
