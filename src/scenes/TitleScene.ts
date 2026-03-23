@@ -147,6 +147,15 @@ export class TitleScene {
           🛍️ Shop
         </button>
 
+        <!-- Version History button -->
+        <button id="versionBtn" style="
+          background:linear-gradient(135deg,#0a2a4a,#1a5a8a);color:white;font-size:18px;
+          padding:12px 32px;border-radius:40px;
+          border:2px solid rgba(100,180,255,0.5);cursor:pointer;
+          display:block;margin-top:8px;">
+          ⏳ Version History
+        </button>
+
         ${!IS_BEDROCK ? `
         <!-- Play Bedrock Edition button -->
         <button id="bedrockBtn" style="
@@ -249,6 +258,10 @@ export class TitleScene {
     } else {
       document.getElementById("realBtn")!.onclick    = () => exitBedrock();
     }
-    document.getElementById("shopBtn")!.onclick   = () => game.goShop();
+    document.getElementById("shopBtn")!.onclick    = () => game.goShop();
+    document.getElementById("versionBtn")!.onclick = () => {
+      game.ui.innerHTML = "";
+      import("./VersionHistory").then(m => new m.VersionHistory(game));
+    };
   }
 }
