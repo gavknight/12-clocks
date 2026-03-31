@@ -10,6 +10,7 @@ export const VERSION_GAMES: Record<string, string[]> = {
   "v0.7": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess"],
   "v0.8": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife"],
   "v0.9": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife","knightsQuest"],
+  "v1.0": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife","knightsQuest","clickTest","youtube"],
 };
 
 export const VERSION_NAMES: Record<string, string> = {
@@ -22,16 +23,17 @@ export const VERSION_NAMES: Record<string, string> = {
   "v0.7": "Online Play",
   "v0.8": "Duck Life",
   "v0.9": "Knight's Quest",
+  "v1.0": "YouTube Era",
 };
 
 const VERSION_EMOJIS: Record<string, string> = {
   "v0.1":"🌱","v0.2":"🎮","v0.3":"🎨","v0.4":"🔨",
-  "v0.5":"⛏️","v0.6":"🌲","v0.7":"♟️","v0.8":"🦆","v0.9":"⚔️",
+  "v0.5":"⛏️","v0.6":"🌲","v0.7":"♟️","v0.8":"🦆","v0.9":"⚔️","v1.0":"▶️",
 };
 
 const VERSION_COLORS: Record<string, string> = {
   "v0.1":"#27ae60","v0.2":"#2980b9","v0.3":"#8e44ad","v0.4":"#e67e22",
-  "v0.5":"#16a085","v0.6":"#2c3e50","v0.7":"#7f8c8d","v0.8":"#3498db","v0.9":"#f39c12",
+  "v0.5":"#16a085","v0.6":"#2c3e50","v0.7":"#7f8c8d","v0.8":"#3498db","v0.9":"#f39c12","v1.0":"#cc0000",
 };
 
 export const TIME_MACHINE_KEY = "12clocks_timemachine";
@@ -72,8 +74,8 @@ export class VersionHistory {
       const emoji  = VERSION_EMOJIS[tag];
       const color  = VERSION_COLORS[tag];
       const games  = VERSION_GAMES[tag];
-      const isLatest = tag === "v0.9";
-      const noGames  = games.length === 0;
+      const isLatest = tag === "v1.0";
+      const noGames  = false;
 
       const btn = document.createElement("button");
       btn.style.cssText =
@@ -91,17 +93,15 @@ export class VersionHistory {
             `<span style="color:white;font-size:15px;font-weight:bold;">${name}</span>` +
             (isLatest ? `<span style="background:#e74c3c;color:white;font-size:10px;font-weight:bold;padding:2px 8px;border-radius:20px;">LATEST</span>` : "") +
           `</div>` +
-          `<div style="color:${color};font-size:12px;">${noGames ? "No games yet" : `${games.length} game${games.length===1?"":"s"} • Tap to enter this version`}</div>` +
+          `<div style="color:${color};font-size:12px;">${games.length === 0 ? "The very beginning • Tap to enter" : `${games.length} game${games.length===1?"":"s"} • Tap to enter this version`}</div>` +
         `</div>` +
-        `${noGames ? "" : `<div style="color:rgba(255,255,255,0.4);font-size:22px;">▶</div>`}`;
+        `<div style="color:rgba(255,255,255,0.4);font-size:22px;">▶</div>`;
 
-      if (!noGames) {
-        btn.onclick = () => {
-          sessionStorage.setItem(TIME_MACHINE_KEY, tag);
-          ui.innerHTML = "";
-          import("./TitleScene").then(m => new m.TitleScene(game));
-        };
-      }
+      btn.onclick = () => {
+        sessionStorage.setItem(TIME_MACHINE_KEY, tag);
+        ui.innerHTML = "";
+        import("./TitleScene").then(m => new m.TitleScene(game));
+      };
 
       scroll.appendChild(btn);
     }

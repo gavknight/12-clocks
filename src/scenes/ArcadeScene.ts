@@ -457,6 +457,66 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- YouTube -->
+          <button id="youtubeBtn" style="
+            background:linear-gradient(135deg,rgba(120,0,0,0.9),rgba(200,0,0,0.7));
+            border:2px solid rgba(255,80,80,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">▶️</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">YouTube</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Build a channel, upload videos, get famous!</div>
+              <div style="color:#FFD700;font-size:12px;margin-top:4px;">📈 Views • 👥 Subscribers • 🪙 Cash out coins</div>
+            </div>
+          </button>
+
+          <!-- Duck Clicker -->
+          <button id="duckClickerBtn" style="
+            background:linear-gradient(135deg,rgba(80,60,0,0.9),rgba(180,140,0,0.7));
+            border:2px solid rgba(255,200,0,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🦆</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Duck Clicker</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Click ducks, find golden ducks, grow turnips, rebirth!</div>
+              <div style="color:#ffcc00;font-size:12px;margin-top:4px;">✨ Golden duck • 🌱 Garden • ♻️ Rebirth • 🏆 Ranks</div>
+            </div>
+          </button>
+
+          <!-- Collect the Apples -->
+          <button id="collectApplesBtn" style="
+            background:linear-gradient(135deg,rgba(0,80,0,0.9),rgba(20,160,20,0.7));
+            border:2px solid rgba(80,220,80,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🍎</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Collect the Apples</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Move the cat and collect apples — the bat teacher is watching!</div>
+              <div style="color:#7fff7f;font-size:12px;margin-top:4px;">🐱 WASD • 🍎 Infinite apples • 🦇 Teacher bat</div>
+            </div>
+          </button>
+
+          <!-- Astro Bot -->
+          <button id="astroBotBtn" style="
+            background:linear-gradient(135deg,rgba(0,30,80,0.9),rgba(20,80,200,0.7));
+            border:2px solid rgba(68,170,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🤖</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Astro Bot</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Crash-landed on Mars — rescue your 500 friends!</div>
+              <div style="color:#44aaff;font-size:12px;margin-top:4px;">🪐 18 Worlds • 3rd Person • 🛸 Epic Adventure</div>
+            </div>
+          </button>
+
           <!-- Custom games (injected by Studio) -->
           <div id="customGamesSection" style="display:none;flex-direction:column;gap:12px;width:100%;margin-top:8px;">
             <div style="color:rgba(255,255,255,0.3);font-size:12px;letter-spacing:2px;padding:0 4px;">YOUR GAMES</div>
@@ -572,6 +632,18 @@ export class ArcadeScene {
     document.getElementById("clickTestBtn")!.onclick = () => {
       import("./games/ClickTest").then(m => { game.ui.innerHTML = ""; new m.ClickTest(game); });
     };
+    document.getElementById("duckClickerBtn")!.onclick = () => {
+      import("./games/DuckClicker").then(m => { game.ui.innerHTML = ""; new m.DuckClicker(game); });
+    };
+    document.getElementById("collectApplesBtn")!.onclick = () => {
+      import("./games/CollectTheApples").then(m => { game.ui.innerHTML = ""; new m.CollectTheApples(game); });
+    };
+    document.getElementById("astroBotBtn")!.onclick = () => {
+      import("./games/AstroBot").then(m => { game.ui.innerHTML = ""; new m.AstroBot(game); });
+    };
+    document.getElementById("youtubeBtn")!.onclick = () => {
+      import("./games/YouTubeGame").then(m => { game.ui.innerHTML = ""; new m.YouTubeGame(game); });
+    };
 
     // ── Time Machine filtering ────────────────────────────────────────────────
     const tmVersion = sessionStorage.getItem(TIME_MACHINE_KEY);
@@ -585,6 +657,7 @@ export class ArcadeScene {
         boldyBtn:"boldy", mrTomatoBtn:"mrTomato", chessBtn:"chess",
         minecraftBeeBtn:"bee", fireFighterBtn:"fireFighter",
         duckLifeBtn:"duckLife", knightsQuestBtn:"knightsQuest",
+        youtubeBtn:"youtube",
       };
       for (const [btnId, gameId] of Object.entries(btnMap)) {
         const el = document.getElementById(btnId);
