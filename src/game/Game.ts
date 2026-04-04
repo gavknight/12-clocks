@@ -99,6 +99,7 @@ export class Game {
     window.addEventListener("resize", () => this.engine.resize());
     this._initDevButton();
     this._startReportPoller();
+    this._startIdleWatcher();
   }
 
   private _lastReportId = 0;
@@ -140,6 +141,45 @@ export class Game {
     toast.onclick = () => { document.body.removeChild(toast); this.goAdmin(); };
     document.body.appendChild(toast);
     setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 10_000);
+  }
+
+  // ── Idle disconnect ────────────────────────────────────────────────────────
+  // TODO: change IDLE_MS to 2 * 24 * 60 * 60 * 1000 for real (2 days)
+  private static readonly IDLE_MS = 1 * 60 * 1000; // 1 minute for playtesting
+  private _idleTimer = 0;
+
+  private _startIdleWatcher(): void {
+    const reset = () => {
+      clearTimeout(this._idleTimer);
+      this._idleTimer = window.setTimeout(() => this._showIdleDisconnect(), Game.IDLE_MS);
+    };
+    ["mousemove","mousedown","keydown","touchstart","touchmove","scroll","click"].forEach(e => {
+      window.addEventListener(e, reset, { passive: true });
+    });
+    reset();
+  }
+
+  private _showIdleDisconnect(): void {
+    const ov = document.createElement("div");
+    ov.style.cssText =
+      "position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,0.92);" +
+      "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
+      "gap:16px;font-family:Arial,sans-serif;text-align:center;padding:24px;";
+    ov.innerHTML =
+      `<div style="font-size:56px;">💤</div>` +
+      `<div style="color:white;font-size:22px;font-weight:bold;">You have been disconnected</div>` +
+      `<div style="color:rgba(255,255,255,0.6);font-size:15px;">for being idle for 1 minute</div>` +
+      `<div style="display:flex;gap:12px;margin-top:8px;">` +
+      `<button id="idleReconnect" style="background:#FFD700;color:#1a0060;` +
+      `font-size:16px;font-weight:bold;padding:12px 28px;border-radius:30px;` +
+      `border:none;cursor:pointer;">▶ Reconnect</button>` +
+      `<button id="idleClose" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);` +
+      `font-size:16px;font-weight:bold;padding:12px 28px;border-radius:30px;` +
+      `border:1px solid rgba(255,255,255,0.25);cursor:pointer;">✕ Close App</button>` +
+      `</div>`;
+    document.body.appendChild(ov);
+    document.getElementById("idleReconnect")!.onclick = () => location.reload();
+    document.getElementById("idleClose")!.onclick = () => window.close();
   }
 
   private _initDevButton(): void {
