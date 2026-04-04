@@ -2,6 +2,7 @@ import type { Game } from "../game/Game";
 import { IS_BEDROCK, enterBedrock, exitBedrock } from "../bedrock";
 import { TIME_MACHINE_KEY, VERSION_NAMES } from "./VersionHistory";
 import { getMemberCount } from "../game/members";
+import { rulesHTML, bindReportButtons } from "../game/rules";
 
 const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/game_likes";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
@@ -83,18 +84,11 @@ export class TitleScene {
 
         <!-- Rules panel (hidden by default) -->
         <div id="rulesPanel" style="display:none;position:absolute;top:46px;right:14px;z-index:21;
-          background:rgba(10,0,30,0.95);border:1.5px solid rgba(180,100,255,0.4);
-          border-radius:16px;padding:16px 18px;max-width:240px;pointer-events:all;
-          box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-          <div style="color:white;font-size:15px;font-weight:bold;margin-bottom:10px;font-family:'Arial Black',Arial,sans-serif;">📋 How to Play</div>
-          <ul style="color:rgba(255,255,255,0.8);font-size:13px;font-family:Arial,sans-serif;padding-left:18px;margin:0;line-height:1.8;">
-            <li>Explore the town to find <b style="color:#FFD700;">clocks</b></li>
-            <li>Each clock is a locked safe — enter the right number to unlock it</li>
-            <li>Earn <b style="color:#FFD700;">🪙 coins</b> by playing Mini-Games in the Arcade</li>
-            <li>Use coins to buy hints if you're stuck</li>
-            <li>Unlock all 12 clocks to win!</li>
-          </ul>
-          <button id="closeRules" style="margin-top:12px;width:100%;background:rgba(255,255,255,0.1);
+          background:rgba(10,0,30,0.97);border:1.5px solid rgba(180,100,255,0.4);
+          border-radius:16px;padding:16px 18px;width:260px;pointer-events:all;
+          box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+          <div id="rulesPanelContent"></div>
+          <button id="closeRules" style="margin-top:8px;width:100%;background:rgba(255,255,255,0.1);
             border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);
             padding:6px;border-radius:10px;cursor:pointer;font-size:12px;font-family:Arial,sans-serif;">
             ✕ Close
@@ -365,7 +359,13 @@ export class TitleScene {
 
     document.getElementById("rulesBtn")!.onclick = () => {
       const p = document.getElementById("rulesPanel")!;
-      p.style.display = p.style.display === "none" ? "block" : "none";
+      if (p.style.display === "none") {
+        document.getElementById("rulesPanelContent")!.innerHTML = rulesHTML(name);
+        bindReportButtons(name);
+        p.style.display = "block";
+      } else {
+        p.style.display = "none";
+      }
     };
     document.getElementById("closeRules")!.onclick = () => {
       document.getElementById("rulesPanel")!.style.display = "none";

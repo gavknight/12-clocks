@@ -167,6 +167,24 @@ export class AdminPanel {
           <div id="accountList" style="display:flex;flex-direction:column;gap:6px;"></div>
         </div>
 
+        <!-- Rule reports -->
+        <div style="
+          width:100%;max-width:360px;
+          background:rgba(255,60,60,0.08);
+          border:2px solid rgba(255,80,80,0.35);border-radius:16px;
+          padding:16px;display:flex;flex-direction:column;gap:8px;
+        ">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="color:#ff8888;font-size:14px;font-weight:bold;">🚩 Rule Reports</div>
+            <button id="refreshReports" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);
+              color:rgba(255,255,255,0.6);font-size:11px;padding:4px 10px;border-radius:8px;cursor:pointer;
+              font-family:Arial,sans-serif;">↻ Refresh</button>
+          </div>
+          <div id="reportsList" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="color:rgba(255,255,255,0.3);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+
         <!-- Update alert -->
         <div style="
           width:100%;max-width:360px;
@@ -198,10 +216,61 @@ export class AdminPanel {
 
     renderAccounts();
 
-    // Update alert buttons
-    const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/update_alerts";
     const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
     const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
+
+    // Rule reports
+    const loadReports = () => {
+      const el = document.getElementById("reportsList");
+      if (!el) return;
+      fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/rule_reports?order=reported_at.desc&limit=20`, {
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+      }).then(r => r.json()).then((rows: { id: number; reported_at: string; reporter: string; rule_text: string; seen: boolean }[]) => {
+        if (!rows.length) {
+          el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No reports yet.</div>`;
+          return;
+        }
+        el.innerHTML = rows.map(row => `
+          <div style="padding:8px 10px;border-radius:10px;
+            background:${row.seen ? "rgba(255,255,255,0.04)" : "rgba(255,60,60,0.12)"};
+            border:1px solid ${row.seen ? "rgba(255,255,255,0.08)" : "rgba(255,80,80,0.4)"};">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div>
+                <span style="color:${row.seen ? "rgba(255,255,255,0.5)" : "#ffaaaa"};font-size:13px;font-weight:bold;">
+                  ${row.seen ? "" : "🔴 "}${row.reporter}
+                </span>
+                <div style="color:rgba(255,255,255,0.45);font-size:11px;margin-top:2px;">
+                  ${row.rule_text}
+                </div>
+                <div style="color:rgba(255,255,255,0.25);font-size:10px;margin-top:2px;">
+                  ${new Date(row.reported_at).toLocaleString()}
+                </div>
+              </div>
+              ${!row.seen ? `<button data-reportid="${row.id}" style="
+                background:rgba(0,200,0,0.15);border:1px solid rgba(0,200,0,0.4);
+                color:#80ff80;font-size:11px;padding:4px 8px;border-radius:8px;
+                cursor:pointer;white-space:nowrap;font-family:Arial,sans-serif;">✓ Seen</button>` : ""}
+            </div>
+          </div>
+        `).join("");
+        el.querySelectorAll<HTMLElement>("[data-reportid]").forEach(b => {
+          b.onclick = () => {
+            const id = b.dataset.reportid;
+            fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/rule_reports?id=eq.${id}`, {
+              method: "PATCH", headers: { ...H, "Prefer": "return=minimal" },
+              body: JSON.stringify({ seen: true })
+            }).then(() => loadReports());
+          };
+        });
+      }).catch(() => {
+        if (el) el.innerHTML = `<div style="color:#ff8888;font-size:12px;">Failed to load reports.</div>`;
+      });
+    };
+    loadReports();
+    document.getElementById("refreshReports")!.onclick = loadReports;
+
+    // Update alert buttons
+    const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/update_alerts";
     document.querySelectorAll("#alertTimeBtns button").forEach(b => {
       b.addEventListener("click", () => {
         const secs = parseInt((b as HTMLElement).dataset.secs ?? "60");
