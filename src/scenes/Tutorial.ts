@@ -89,6 +89,6 @@ export function showTutorial(onDone: () => void): void {
     onDone();
   };
 
-  render();
   document.body.appendChild(ov);
+  render();
 }
