@@ -134,6 +134,34 @@ if (IS_BEDROCK) {
   }, 1800);
 }
 
+// ── PWA install prompt ─────────────────────────────────────────────────────
+let _installPrompt: Event & { prompt: () => void; userChoice: Promise<{ outcome: string }> } | null = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  _installPrompt = e as typeof _installPrompt;
+  // Show install button if not already in standalone mode
+  if (window.matchMedia("(display-mode: standalone)").matches) return;
+  const btn = document.createElement("button");
+  btn.textContent = "📲 Install App";
+  btn.style.cssText =
+    "position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99997;" +
+    "background:linear-gradient(135deg,#6a20a0,#3a106f);color:white;" +
+    "font-size:14px;font-weight:bold;padding:10px 24px;border-radius:30px;" +
+    "border:2px solid rgba(180,100,255,0.5);cursor:pointer;" +
+    "box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:Arial,sans-serif;" +
+    "white-space:nowrap;";
+  btn.onclick = async () => {
+    if (!_installPrompt) return;
+    _installPrompt.prompt();
+    const { outcome } = await _installPrompt.userChoice;
+    if (outcome === "accepted") btn.remove();
+    _installPrompt = null;
+  };
+  document.body.appendChild(btn);
+  // Auto-hide after 10 seconds
+  setTimeout(() => { if (document.body.contains(btn)) btn.remove(); }, 10_000);
+});
+
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const game = new Game(canvas);
 game.start();

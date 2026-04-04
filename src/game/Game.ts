@@ -169,18 +169,11 @@ export class Game {
       `<div style="font-size:56px;">💤</div>` +
       `<div style="color:white;font-size:22px;font-weight:bold;">You have been disconnected</div>` +
       `<div style="color:rgba(255,255,255,0.6);font-size:15px;">for being idle for 1 minute</div>` +
-      `<div style="display:flex;gap:12px;margin-top:8px;">` +
-      `<button id="idleReconnect" style="background:#FFD700;color:#1a0060;` +
-      `font-size:16px;font-weight:bold;padding:12px 28px;border-radius:30px;` +
-      `border:none;cursor:pointer;">▶ Reconnect</button>` +
-      (window.matchMedia("(pointer:coarse)").matches ?
-      `<button id="idleClose" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);` +
-      `font-size:16px;font-weight:bold;padding:12px 28px;border-radius:30px;` +
-      `border:1px solid rgba(255,255,255,0.25);cursor:pointer;">✕ Close App</button>` : "") +
-      `</div>`;
+      `<button id="idleReconnect" style="margin-top:8px;background:#FFD700;color:#1a0060;` +
+      `font-size:16px;font-weight:bold;padding:12px 32px;border-radius:30px;` +
+      `border:none;cursor:pointer;">▶ Reconnect</button>`;
     document.body.appendChild(ov);
     document.getElementById("idleReconnect")!.onclick = () => location.reload();
-    document.getElementById("idleClose")?.addEventListener("click", () => window.close());
   }
 
   private _initDevButton(): void {
