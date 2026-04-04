@@ -621,8 +621,23 @@ export class ArcadeScene {
     document.getElementById("closeArcadeRules")!.onclick = () => {
       document.getElementById("arcadeRulesPanel")!.style.display = "none";
     };
+    // Tutorial: mark "minigame" step when any game button is clicked
+    const _tut = () => import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("minigame"));
+    document.querySelector(".screen")?.addEventListener("click", e => {
+      if ((e.target as HTMLElement).closest("button[id]")) _tut();
+    }, { once: true });
+    // Tutorial: watch for coins increasing (step "coins")
+    const _prevCoins = game.state.coins;
+    const _coinWatch = setInterval(() => {
+      if (game.state.coins > _prevCoins) {
+        clearInterval(_coinWatch);
+        import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("coins"));
+      }
+    }, 2000);
+
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
     document.getElementById("banbanBtn")!.onclick  = () => {
+      _tut();
       import("./games/GardenBanban").then(m => {
         game.ui.innerHTML = "";
         new m.GardenBanban(game);
@@ -695,6 +710,7 @@ export class ArcadeScene {
       });
     };
     document.getElementById("mm2Btn")!.onclick = () => {
+      _tut();
       import("./games/MurderMystery").then(m => {
         game.ui.innerHTML = "";
         new m.MurderMystery(game.ui, (_won, _msg) => {

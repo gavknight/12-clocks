@@ -100,6 +100,7 @@ export class LevelSelect {
       btn.onclick = () => {
         popup.style.display = "none";
         const diff = parseInt(btn.dataset["diff"]!);
+        if (diff === 4) import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("easy"));
         game.goLevel(selectedLevel, diff);
       };
     });

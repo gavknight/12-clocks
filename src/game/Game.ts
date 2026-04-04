@@ -1123,11 +1123,11 @@ export class ${className} {
     this.goIntro();
   }
 
-  goArcade():           void { this._nav(() => import("../scenes/ArcadeScene").then(m => new m.ArcadeScene(this))); }
+  goArcade():           void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("arcade")); this._nav(() => import("../scenes/ArcadeScene").then(m => new m.ArcadeScene(this))); }
   goAuth():             void { this._nav(() => import("../scenes/AuthScene").then(m => new m.AuthScene(this))); }
   goLobby():            void { this._nav(() => import("../scenes/LobbyScene").then(m => new m.LobbyScene(this))); }
-  goTitle():            void { this._nav(() => import("../scenes/TitleScene").then(m => new m.TitleScene(this))); }
-  goLevelSelect():      void { this._nav(() => import("../scenes/LevelSelect").then(m => new m.LevelSelect(this))); }
+  goTitle():            void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("back")); this._nav(() => import("../scenes/TitleScene").then(m => new m.TitleScene(this))); }
+  goLevelSelect():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("start")); this._nav(() => import("../scenes/LevelSelect").then(m => new m.LevelSelect(this))); }
   goLeaderboard():      void { this._nav(() => import("../scenes/LeaderboardScene").then(m => new m.LeaderboardScene(this))); }
   goCoinLeaderboard():  void { this._nav(() => import("../scenes/CoinLeaderboardScene").then(m => new m.CoinLeaderboardScene(this))); }
   goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this))); }
@@ -1137,11 +1137,12 @@ export class ${className} {
   }
   goExplore():     void {
     if (this._runStart === 0) this.startTimer();
+    import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("map"));
     this._nav(() => import("../scenes/ExploreScene").then(m => new m.ExploreScene(this)));
   }
   goClock():       void { this._nav(() => import("../scenes/ClockScene").then(m => new m.ClockScene(this))); }
   goPuzzle(i: number): void { this._nav(() => import("../scenes/MiniPuzzle").then(m => new m.MiniPuzzle(this, i))); }
-  goEnding():      void { this._nav(() => import("../scenes/EndingScene").then(m => new m.EndingScene(this))); }
+  goEnding():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("win")); this._nav(() => import("../scenes/EndingScene").then(m => new m.EndingScene(this))); }
   goAdmin():       void { this._nav(() => import("../scenes/AdminPanel").then(m => new m.AdminPanel(this))); }
   goBanned():      void { this._nav(() => import("../scenes/BannedScreen").then(m => new m.BannedScreen(this))); }
 

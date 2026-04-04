@@ -120,9 +120,8 @@ export class AuthScene {
         const acc = game.register(user, pass);
         game.login(acc.id);
         // Show tutorial for brand new players
-        import("./Tutorial").then(({ showTutorial }) => {
-          showTutorial(() => game.goTitle());
-        });
+        import("./Tutorial").then(({ startTutorial }) => startTutorial());
+        game.goTitle();
         return;
       }
     };

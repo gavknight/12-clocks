@@ -1,94 +1,117 @@
-const TUTORIAL_KEY = "12clocks_tutorial_done";
+const STEP_KEY = "12clocks_tutorial_step";
 
-const STEPS = [
-  { emoji: "🎮", title: "Start a game", desc: "Tap the big yellow ▶ START GAME button on the main menu to begin your adventure!" },
-  { emoji: "🗺️", title: "Choose a map", desc: "Pick a map to play on — each one has a different layout to explore." },
-  { emoji: "😊", title: "Choose Easy", desc: "Select Easy mode to start. You'll need to find fewer clocks to win — great for beginners!" },
-  { emoji: "🏆", title: "Win!", desc: "Find all the clocks and unlock them by entering the correct number. Unlock them all to win!" },
-  { emoji: "🕹️", title: "Go to the Arcade", desc: "Head to the Arcade from the main menu — it's packed with fun mini-games!" },
-  { emoji: "🎯", title: "Play a mini-game", desc: "Pick any mini-game and give it a go. Each one has different controls shown in-game." },
-  { emoji: "🪙", title: "Earn coins", desc: "Playing mini-games earns you coins. Coins can be used to buy hints if you get stuck on a clock!" },
-  { emoji: "⬅️", title: "Go back", desc: "When you're done in the Arcade, tap ← Back to return to the main menu and keep playing." },
-  { emoji: "🎉", title: "Enjoy!", desc: "That's everything! You're ready to play 12 Clocks. Have fun and good luck finding all the clocks!" },
+export const TUTORIAL_STEPS = [
+  { id: "start",   instruction: "Tap ▶ START GAME to begin!" },
+  { id: "map",     instruction: "Choose a map to play on!" },
+  { id: "easy",    instruction: "Select Easy mode!" },
+  { id: "win",     instruction: "Find all the clocks and WIN!" },
+  { id: "arcade",  instruction: "Go to the 🕹️ Arcade!" },
+  { id: "minigame",instruction: "Play any mini-game!" },
+  { id: "coins",   instruction: "Earn coins by playing!" },
+  { id: "back",    instruction: "Tap ← Back to leave the Arcade!" },
+  { id: "enjoy",   instruction: "🎉 You're all set — Enjoy 12 Clocks!" },
 ];
 
-export function shouldShowTutorial(): boolean {
-  return !localStorage.getItem(TUTORIAL_KEY);
+export function getTutorialStep(): number {
+  const v = parseInt(localStorage.getItem(STEP_KEY) ?? "-1");
+  return isNaN(v) ? -1 : v;
 }
 
-export function showTutorial(onDone: () => void): void {
-  let step = 0;
+export function isTutorialActive(): boolean {
+  const s = getTutorialStep();
+  return s >= 0 && s < TUTORIAL_STEPS.length;
+}
 
-  const ov = document.createElement("div");
-  ov.style.cssText =
-    "position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.85);" +
-    "display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;padding:20px;";
+export function startTutorial(): void {
+  localStorage.setItem(STEP_KEY, "0");
+  _renderBanner();
+}
 
-  const render = () => {
-    const s = STEPS[step];
-    const isLast = step === STEPS.length - 1;
-    ov.innerHTML = `
-      <div style="background:linear-gradient(160deg,#1a0a3e,#3a106f);
-        border:2px solid rgba(180,100,255,0.5);border-radius:24px;
-        padding:32px 28px;max-width:340px;width:100%;text-align:center;
-        box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+export function doneTutorial(): void {
+  localStorage.setItem(STEP_KEY, String(TUTORIAL_STEPS.length));
+  _removeBanner();
+}
 
-        <!-- Step counter -->
-        <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:16px;letter-spacing:1px;">
-          STEP ${step + 1} OF ${STEPS.length}
+export function advanceTutorial(expectedId: string): void {
+  const step = getTutorialStep();
+  if (step < 0 || step >= TUTORIAL_STEPS.length) return;
+  if (TUTORIAL_STEPS[step].id !== expectedId) return;
+
+  // Show "Step Complete!" then advance
+  const banner = document.getElementById("tutBanner");
+  if (banner) {
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:22px;">✅</div>
+        <div>
+          <div style="color:#80ff80;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;">STEP COMPLETE!</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:12px;font-family:Arial,sans-serif;">
+            ${step + 1} / ${TUTORIAL_STEPS.length} done
+          </div>
         </div>
+      </div>`;
+  }
 
-        <!-- Dots -->
-        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px;">
-          ${STEPS.map((_, i) => `
-            <div style="width:8px;height:8px;border-radius:50%;
-              background:${i === step ? "#cc88ff" : "rgba(255,255,255,0.2)"};
-              transition:background 0.2s;"></div>
-          `).join("")}
-        </div>
+  const next = step + 1;
+  localStorage.setItem(STEP_KEY, String(next));
 
-        <div style="font-size:56px;margin-bottom:12px;">${s.emoji}</div>
-        <div style="color:white;font-size:22px;font-weight:900;margin-bottom:12px;
-          font-family:'Arial Black',Arial,sans-serif;">${s.title}</div>
-        <div style="color:rgba(255,255,255,0.7);font-size:14px;line-height:1.6;margin-bottom:28px;">
-          ${s.desc}
-        </div>
+  setTimeout(() => {
+    if (next >= TUTORIAL_STEPS.length) {
+      doneTutorial();
+    } else {
+      _renderBanner();
+    }
+  }, 1200);
+}
 
-        <div style="display:flex;gap:10px;justify-content:center;">
-          ${step > 0 ? `<button id="tutBack" style="
-            background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);
-            font-size:14px;padding:10px 20px;border-radius:20px;
-            border:1px solid rgba(255,255,255,0.2);cursor:pointer;">← Back</button>` : ""}
-          <button id="tutNext" style="
-            background:${isLast ? "#FFD700" : "linear-gradient(135deg,#cc88ff,#6a20a0)"};
-            color:${isLast ? "#1a0060" : "white"};
-            font-size:15px;font-weight:bold;padding:10px 28px;border-radius:20px;
-            border:none;cursor:pointer;">
-            ${isLast ? "🎉 Let's Play!" : "Next →"}
-          </button>
-        </div>
+let _banner: HTMLDivElement | null = null;
 
-        <button id="tutSkip" style="margin-top:16px;background:none;border:none;
-          color:rgba(255,255,255,0.25);font-size:12px;cursor:pointer;font-family:Arial,sans-serif;">
-          Skip tutorial
-        </button>
+function _removeBanner(): void {
+  if (_banner && document.body.contains(_banner)) document.body.removeChild(_banner);
+  _banner = null;
+}
+
+function _renderBanner(): void {
+  _removeBanner();
+  const step = getTutorialStep();
+  if (step < 0 || step >= TUTORIAL_STEPS.length) return;
+
+  _banner = document.createElement("div");
+  _banner.id = "tutBanner";
+  _banner.style.cssText =
+    "position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:99990;" +
+    "background:linear-gradient(135deg,rgba(20,0,40,0.97),rgba(60,0,80,0.97));" +
+    "border:2px solid rgba(180,100,255,0.6);border-radius:20px;" +
+    "padding:12px 20px;min-width:260px;max-width:320px;width:90%;" +
+    "box-shadow:0 4px 24px rgba(100,0,200,0.5);pointer-events:none;";
+
+  _banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="flex-shrink:0;background:rgba(180,100,255,0.25);border-radius:50%;
+        width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+        color:#cc88ff;font-size:14px;font-weight:900;font-family:'Arial Black',Arial;">
+        ${step + 1}/${TUTORIAL_STEPS.length}
       </div>
-    `;
+      <div style="flex:1;">
+        <div style="color:rgba(200,150,255,0.7);font-size:10px;font-weight:bold;
+          font-family:Arial,sans-serif;letter-spacing:1px;margin-bottom:2px;">TUTORIAL</div>
+        <div style="color:white;font-size:14px;font-weight:bold;font-family:Arial,sans-serif;">
+          ${TUTORIAL_STEPS[step].instruction}
+        </div>
+      </div>
+    </div>
+    <!-- Progress bar -->
+    <div style="margin-top:10px;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+      <div style="height:100%;width:${((step) / TUTORIAL_STEPS.length) * 100}%;
+        background:linear-gradient(90deg,#cc88ff,#6a20a0);border-radius:4px;
+        transition:width 0.4s;"></div>
+    </div>`;
 
-    document.getElementById("tutNext")!.onclick = () => {
-      if (isLast) finish();
-      else { step++; render(); }
-    };
-    document.getElementById("tutBack")?.addEventListener("click", () => { step--; render(); });
-    document.getElementById("tutSkip")!.onclick = finish;
-  };
+  document.body.appendChild(_banner);
+}
 
-  const finish = () => {
-    localStorage.setItem(TUTORIAL_KEY, "1");
-    document.body.removeChild(ov);
-    onDone();
-  };
-
-  document.body.appendChild(ov);
-  render();
+// Re-show banner on page load if tutorial is in progress
+if (isTutorialActive()) {
+  // Small delay so the game UI loads first
+  setTimeout(_renderBanner, 800);
 }
