@@ -234,28 +234,38 @@ export class AdminPanel {
           <div style="padding:8px 10px;border-radius:10px;
             background:${row.seen ? "rgba(255,255,255,0.04)" : "rgba(255,60,60,0.12)"};
             border:1px solid ${row.seen ? "rgba(255,255,255,0.08)" : "rgba(255,80,80,0.4)"};">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <div>
-                <span style="color:${row.seen ? "rgba(255,255,255,0.5)" : "#ffaaaa"};font-size:13px;font-weight:bold;">
-                  ${row.seen ? "" : "🔴 "}${row.reporter}
-                </span>
-                <div style="color:rgba(255,255,255,0.45);font-size:11px;margin-top:2px;">
-                  ${row.rule_text}
-                </div>
-                <div style="color:rgba(255,255,255,0.25);font-size:10px;margin-top:2px;">
-                  ${new Date(row.reported_at).toLocaleString()}
-                </div>
-              </div>
-              ${!row.seen ? `<button data-reportid="${row.id}" style="
-                background:rgba(0,200,0,0.15);border:1px solid rgba(0,200,0,0.4);
-                color:#80ff80;font-size:11px;padding:4px 8px;border-radius:8px;
-                cursor:pointer;white-space:nowrap;font-family:Arial,sans-serif;">✓ Seen</button>` : ""}
-            </div>
+            <span style="color:${row.seen ? "rgba(255,255,255,0.5)" : "#ffaaaa"};font-size:13px;font-weight:bold;">
+              ${row.seen ? "" : "🔴 "}${row.reporter}
+            </span>
+            <div style="color:rgba(255,255,255,0.45);font-size:11px;margin-top:2px;">${row.rule_text}</div>
+            <div style="color:rgba(255,255,255,0.25);font-size:10px;margin-top:2px;">${new Date(row.reported_at).toLocaleString()}</div>
+            ${!row.seen ? `
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button data-ban="${row.reporter}" style="
+                flex:1;background:rgba(180,0,0,0.3);color:#ff8888;font-size:12px;font-weight:bold;
+                border:1px solid #ff4444;border-radius:8px;padding:5px;cursor:pointer;
+                font-family:Arial,sans-serif;">🚫 Ban</button>
+              <button data-letgo="${row.id}" style="
+                flex:1;background:rgba(0,180,0,0.15);color:#88ff88;font-size:12px;font-weight:bold;
+                border:1px solid #4CAF50;border-radius:8px;padding:5px;cursor:pointer;
+                font-family:Arial,sans-serif;">✅ Let them be</button>
+            </div>` : `<div style="color:rgba(255,255,255,0.2);font-size:11px;margin-top:4px;">Resolved</div>`}
           </div>
         `).join("");
-        el.querySelectorAll<HTMLElement>("[data-reportid]").forEach(b => {
+        el.querySelectorAll<HTMLElement>("[data-ban]").forEach(b => {
           b.onclick = () => {
-            const id = b.dataset.reportid;
+            const username = b.dataset.ban!;
+            const acc = game.getAllAccounts().find(a => a.username === username);
+            if (acc) { game.banUser(acc.id); renderAccounts(); }
+            // also mark report seen
+            const reportDiv = b.closest("[style*='border']") as HTMLElement;
+            const letgoBtn = reportDiv?.querySelector<HTMLElement>("[data-letgo]");
+            if (letgoBtn) letgoBtn.click();
+          };
+        });
+        el.querySelectorAll<HTMLElement>("[data-letgo]").forEach(b => {
+          b.onclick = () => {
+            const id = b.dataset.letgo;
             fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/rule_reports?id=eq.${id}`, {
               method: "PATCH", headers: { ...H, "Prefer": "return=minimal" },
               body: JSON.stringify({ seen: true })

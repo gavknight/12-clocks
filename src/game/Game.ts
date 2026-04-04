@@ -98,6 +98,48 @@ export class Game {
     this.ui = document.getElementById("ui")!;
     window.addEventListener("resize", () => this.engine.resize());
     this._initDevButton();
+    this._startReportPoller();
+  }
+
+  private _lastReportId = 0;
+  private _startReportPoller(): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const check = () => {
+      if (!this.currentAccount?.isOwner) return;
+      fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/rule_reports?seen=eq.false&order=id.desc&limit=5`, {
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+      }).then(r => r.json()).then((rows: { id: number; reporter: string; rule_text: string }[]) => {
+        if (!rows.length) return;
+        const newest = rows[0];
+        if (newest.id <= this._lastReportId) return;
+        this._lastReportId = newest.id;
+        this._showReportToast(newest.reporter, newest.rule_text);
+      }).catch(() => {});
+    };
+    // seed the last seen ID on first load so old reports don't pop up
+    fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/rule_reports?order=id.desc&limit=1`, {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+    }).then(r => r.json()).then((rows: { id: number }[]) => {
+      this._lastReportId = rows[0]?.id ?? 0;
+    }).catch(() => {});
+    setInterval(check, 15_000);
+  }
+
+  private _showReportToast(reporter: string, ruleText: string): void {
+    const toast = document.createElement("div");
+    toast.style.cssText =
+      "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);" +
+      "background:rgba(180,0,0,0.95);border:2px solid #ff4444;border-radius:14px;" +
+      "padding:12px 20px;z-index:999999;cursor:pointer;max-width:300px;width:90%;" +
+      "box-shadow:0 4px 24px rgba(0,0,0,0.6);font-family:Arial,sans-serif;text-align:center;";
+    toast.innerHTML =
+      `<div style="color:white;font-size:15px;font-weight:bold;">🚩 Rule Report!</div>` +
+      `<div style="color:#ffaaaa;font-size:13px;margin-top:4px;"><b>${reporter}</b> was reported</div>` +
+      `<div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px;">${ruleText}</div>` +
+      `<div style="color:rgba(255,255,255,0.45);font-size:11px;margin-top:6px;">Tap to open Admin Panel →</div>`;
+    toast.onclick = () => { document.body.removeChild(toast); this.goAdmin(); };
+    document.body.appendChild(toast);
+    setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 10_000);
   }
 
   private _initDevButton(): void {
