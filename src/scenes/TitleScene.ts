@@ -73,6 +73,34 @@ export class TitleScene {
     game.ui.innerHTML = `
       <div class="screen" style="background:${bgStyle};overflow-y:auto;justify-content:flex-start;padding:40px 0 80px;">
 
+        <!-- Rules button -->
+        <button id="rulesBtn" style="position:absolute;top:14px;right:14px;z-index:20;
+          background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);
+          color:rgba(255,255,255,0.85);font-size:13px;font-weight:bold;padding:6px 14px;
+          border-radius:20px;cursor:pointer;font-family:Arial,sans-serif;pointer-events:all;">
+          📋 Rules
+        </button>
+
+        <!-- Rules panel (hidden by default) -->
+        <div id="rulesPanel" style="display:none;position:absolute;top:46px;right:14px;z-index:21;
+          background:rgba(10,0,30,0.95);border:1.5px solid rgba(180,100,255,0.4);
+          border-radius:16px;padding:16px 18px;max-width:240px;pointer-events:all;
+          box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+          <div style="color:white;font-size:15px;font-weight:bold;margin-bottom:10px;font-family:'Arial Black',Arial,sans-serif;">📋 How to Play</div>
+          <ul style="color:rgba(255,255,255,0.8);font-size:13px;font-family:Arial,sans-serif;padding-left:18px;margin:0;line-height:1.8;">
+            <li>Explore the town to find <b style="color:#FFD700;">clocks</b></li>
+            <li>Each clock is a locked safe — enter the right number to unlock it</li>
+            <li>Earn <b style="color:#FFD700;">🪙 coins</b> by playing Mini-Games in the Arcade</li>
+            <li>Use coins to buy hints if you're stuck</li>
+            <li>Unlock all 12 clocks to win!</li>
+          </ul>
+          <button id="closeRules" style="margin-top:12px;width:100%;background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);
+            padding:6px;border-radius:10px;cursor:pointer;font-size:12px;font-family:Arial,sans-serif;">
+            ✕ Close
+          </button>
+        </div>
+
         ${isOldEra ? `
         <!-- Old era clouds -->
         <div style="position:absolute;top:6%;left:4%;width:130px;height:48px;background:white;border-radius:40px;opacity:0.92;box-shadow:44px 0 0 22px white,88px 0 0 12px white;pointer-events:none;"></div>
@@ -334,6 +362,14 @@ export class TitleScene {
     };
     document.getElementById("renameSave")!.onclick = saveRename;
     renameInput.addEventListener("keydown", e => { if (e.key === "Enter") saveRename(); });
+
+    document.getElementById("rulesBtn")!.onclick = () => {
+      const p = document.getElementById("rulesPanel")!;
+      p.style.display = p.style.display === "none" ? "block" : "none";
+    };
+    document.getElementById("closeRules")!.onclick = () => {
+      document.getElementById("rulesPanel")!.style.display = "none";
+    };
 
     document.getElementById("playBtn")!.onclick = () => {
       game.resetSave();

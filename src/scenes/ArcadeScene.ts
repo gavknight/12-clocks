@@ -94,8 +94,8 @@ export class ArcadeScene {
     game.ui.innerHTML = `
       <div style="position:absolute;inset:0;background:linear-gradient(160deg,#0a0020,#0a2010,#101808);display:flex;flex-direction:column;">
 
-        <!-- Top bar: back + search -->
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;flex-shrink:0;pointer-events:all;">
+        <!-- Top bar: back + search + rules -->
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;flex-shrink:0;pointer-events:all;position:relative;">
           <button id="backBtn" style="
             background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);
             font-size:14px;padding:7px 14px;border-radius:12px;
@@ -108,6 +108,33 @@ export class ArcadeScene {
             <input id="gameSearch" type="text" placeholder="Search games…" style="
               background:none;border:none;outline:none;color:white;caret-color:white;
               font-size:13px;font-family:Arial,sans-serif;width:100%;min-width:0;" />
+          </div>
+          <button id="arcadeRulesBtn" style="
+            background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.25);
+            color:rgba(255,255,255,0.85);font-size:13px;font-weight:bold;padding:6px 14px;
+            border-radius:12px;cursor:pointer;white-space:nowrap;font-family:Arial,sans-serif;">
+            📋 Rules
+          </button>
+
+          <!-- Rules panel -->
+          <div id="arcadeRulesPanel" style="display:none;position:absolute;top:52px;right:16px;z-index:30;
+            background:rgba(5,0,20,0.97);border:1.5px solid rgba(100,255,150,0.35);
+            border-radius:16px;padding:16px 18px;width:240px;pointer-events:all;
+            box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+            <div style="color:white;font-size:15px;font-weight:bold;margin-bottom:10px;font-family:'Arial Black',Arial,sans-serif;">📋 Arcade Rules</div>
+            <ul style="color:rgba(255,255,255,0.8);font-size:13px;font-family:Arial,sans-serif;padding-left:18px;margin:0;line-height:1.9;">
+              <li>Play mini-games to earn <b style="color:#FFD700;">🪙 coins</b></li>
+              <li>Coins unlock hints in the main game</li>
+              <li>Each game has its own controls shown in-game</li>
+              <li><b style="color:#cc88ff;">MM2</b> — survive as Innocent, kill as Murderer, or protect as Sheriff</li>
+              <li>Search games by name using the 🔍 bar</li>
+            </ul>
+            <button id="closeArcadeRules" style="margin-top:12px;width:100%;
+              background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+              color:rgba(255,255,255,0.7);padding:6px;border-radius:10px;
+              cursor:pointer;font-size:12px;font-family:Arial,sans-serif;">
+              ✕ Close
+            </button>
           </div>
         </div>
 
@@ -587,6 +614,13 @@ export class ArcadeScene {
     `;
 
     document.getElementById("backBtn")!.onclick    = () => game.goTitle();
+    document.getElementById("arcadeRulesBtn")!.onclick = () => {
+      const p = document.getElementById("arcadeRulesPanel")!;
+      p.style.display = p.style.display === "none" ? "block" : "none";
+    };
+    document.getElementById("closeArcadeRules")!.onclick = () => {
+      document.getElementById("arcadeRulesPanel")!.style.display = "none";
+    };
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
     document.getElementById("banbanBtn")!.onclick  = () => {
       import("./games/GardenBanban").then(m => {
