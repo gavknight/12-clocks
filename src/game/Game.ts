@@ -173,20 +173,14 @@ export class Game {
       `<button id="idleReconnect" style="background:#FFD700;color:#1a0060;` +
       `font-size:16px;font-weight:bold;padding:12px 28px;border-radius:30px;` +
       `border:none;cursor:pointer;">▶ Reconnect</button>` +
+      (window.matchMedia("(pointer:coarse)").matches ?
       `<button id="idleClose" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);` +
       `font-size:16px;font-weight:bold;padding:12px 28px;border-radius:30px;` +
-      `border:1px solid rgba(255,255,255,0.25);cursor:pointer;">✕ Close App</button>` +
+      `border:1px solid rgba(255,255,255,0.25);cursor:pointer;">✕ Close App</button>` : "") +
       `</div>`;
     document.body.appendChild(ov);
     document.getElementById("idleReconnect")!.onclick = () => location.reload();
-    document.getElementById("idleClose")!.onclick = () => {
-      window.close();
-      // Chrome blocks window.close() on non-script-opened tabs — show fallback
-      setTimeout(() => {
-        const btn = document.getElementById("idleClose");
-        if (btn) { btn.textContent = "Press Ctrl+W / ⌘W to close"; btn.style.fontSize = "13px"; }
-      }, 300);
-    };
+    document.getElementById("idleClose")?.addEventListener("click", () => window.close());
   }
 
   private _initDevButton(): void {
