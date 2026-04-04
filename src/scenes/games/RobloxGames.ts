@@ -37,7 +37,6 @@ const FAKE_GAMES: { name: string; emoji: string; desc: string; players: string; 
   { name: "Brookhaven RP",                 emoji: "🏡", desc: "Live your best life in Brookhaven",            players: "415,003", bg: "#0a1f0a" },
   { name: "Bloxburg",                      emoji: "🏠", desc: "Build your dream house",                       players: "312,004", bg: "#1a1400" },
   { name: "Tower of Hell",                 emoji: "🗼", desc: "Climb the randomly generated tower",          players: "289,872", bg: "#1a0000" },
-  { name: "Murder Mystery 2",              emoji: "🔪", desc: "Innocent, Sheriff or Murderer?",              players: "178,344", bg: "#0d0014" },
   { name: "Arsenal",                       emoji: "🔫", desc: "Progress through every weapon to win",        players: "154,902", bg: "#001414" },
   { name: "Jailbreak",                     emoji: "🚔", desc: "Escape prison or chase criminals",            players: "143,211", bg: "#0d0d00" },
   { name: "Pet Simulator X",               emoji: "🐶", desc: "Hatch and upgrade pets",                      players: "134,567", bg: "#14001a" },
@@ -519,14 +518,9 @@ export class RobloxGames {
           const modes: GameId[] = ["steal", "lava", "bombs", "coins", "brookhaven"];
           this._lobbyConnecting = FAKE_GAMES[fakeIdx].name;
           this._lobbyConnectT   = 0;
-          if (fakeIdx === 4) {
-            // Murder Mystery 2 — launches the real MM2 3D game
-            this._lobbyConnectMM2  = true;
-          } else {
-            this._lobbyConnectMM2  = false;
-            // Brookhaven RP (index 1) always launches brookhaven
-            this._lobbyConnectMode = fakeIdx === 1 ? "brookhaven" : modes[fakeIdx % 4];
-          }
+          this._lobbyConnectMM2  = false;
+          // Brookhaven RP (index 1) always launches brookhaven
+          this._lobbyConnectMode = fakeIdx === 1 ? "brookhaven" : modes[fakeIdx % 4];
         }
       }
     }

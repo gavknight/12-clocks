@@ -64,7 +64,7 @@ export class MurderMystery {
   private _onEnd: (won: boolean, msg: string) => void;
 
   private _phase: "countdown" | "playing" | "done" = "countdown";
-  private _countdown = 3;
+  private _countdown = 5;
   private _timer = 120;
   private _hudTs = 0;
 
