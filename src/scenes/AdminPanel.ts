@@ -256,7 +256,12 @@ export class AdminPanel {
           b.onclick = () => {
             const username = b.dataset.ban!;
             const acc = game.getAllAccounts().find(a => a.username === username);
-            if (acc) { game.banUser(acc.id); renderAccounts(); }
+            if (!acc) return;
+            if (acc.isOwner || acc.id === game.currentAccountId) {
+              alert("You can't ban yourself!");
+              return;
+            }
+            game.banUser(acc.id); renderAccounts();
             // also mark report seen
             const reportDiv = b.closest("[style*='border']") as HTMLElement;
             const letgoBtn = reportDiv?.querySelector<HTMLElement>("[data-letgo]");
