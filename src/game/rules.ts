@@ -2,11 +2,11 @@ const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/rule_reports";
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
 const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" };
 
-// ── TEST rules — easy to break on purpose so you can verify notifications ──
+// ── Rules (Rule 2 will be removed when switching to real rules) ──
 export const RULES: { id: number; text: string }[] = [
-  { id: 1, text: "🧪 TEST: Always say hi before playing" },
-  { id: 2, text: "🧪 TEST: Never leave without earning coins" },
-  { id: 3, text: "🧪 TEST: Don't open the rules more than once" },
+  { id: 1, text: "Your name must NOT start with 00" },
+  { id: 2, text: "No sending update alerts" },
+  { id: 3, text: "No threatening Mr. Tomato in chat 🍅" },
 ];
 
 export async function sendReport(reporter: string, rule: { id: number; text: string }): Promise<void> {
