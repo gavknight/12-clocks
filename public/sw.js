@@ -1,4 +1,4 @@
-const CACHE = "12clocks-v1";
+const CACHE = "12clocks-v2";
 const PRECACHE = ["/", "/index.html"];
 
 self.addEventListener("install", e => {

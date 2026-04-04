@@ -1,6 +1,7 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import type { MultiplayerManager } from "../multiplayer/MultiplayerManager";
 import { upsertRecord, fetchRecords, upsertCoinRecord, fetchCoinLeaderboard, type CoinRecord } from "./cloudRecords";
+import { pingMember, setBanStatus } from "./members";
 import { unlockCost, LEVEL_COUNT } from "./levelData";
 import { IS_BEDROCK } from "../bedrock";
 
@@ -93,7 +94,7 @@ export class Game {
   private _levelSaves: Record<string, { locks: number[]; inv: number[]; completed: boolean }> = {};
 
   constructor(canvas: HTMLCanvasElement) {
-    this.engine = new Engine(canvas, true);
+    this.engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
     this.ui = document.getElementById("ui")!;
     window.addEventListener("resize", () => this.engine.resize());
     this._initDevButton();
@@ -789,7 +790,7 @@ export class ${className} {
     localStorage.setItem(SESSION_KEY, id);
     this._loadForAccount(id);
     const acc = this._getAccounts().find(a => a.id === id);
-    if (acc) this.state.username = acc.username;
+    if (acc) { this.state.username = acc.username; pingMember(id, acc.username); }
   }
 
   loginAsGuest(): void {
@@ -942,9 +943,11 @@ export class ${className} {
       list.push(accountId);
       localStorage.setItem(BANS_KEY, JSON.stringify(list));
     }
+    setBanStatus(accountId, true);
   }
   unbanUser(accountId: string): void {
     localStorage.setItem(BANS_KEY, JSON.stringify(this.getBannedIds().filter(id => id !== accountId)));
+    setBanStatus(accountId, false);
   }
 
   // ── World records ─────────────────────────────────────────────────────────
@@ -1009,6 +1012,7 @@ export class ${className} {
       this._loadForAccount(acc.id);
       this.state.username = acc.username;
       if (this.isBanned(acc.id)) { this.goBanned(); return; }
+      pingMember(acc.id, acc.username);
       this.goTitle();
     } else {
       this.goAuth();

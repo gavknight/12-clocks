@@ -92,26 +92,40 @@ export class ArcadeScene {
     }
 
     game.ui.innerHTML = `
+      <div style="position:absolute;inset:0;background:linear-gradient(160deg,#0a0020,#0a2010,#101808);display:flex;flex-direction:column;">
+
+        <!-- Top bar: back + search -->
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;flex-shrink:0;pointer-events:all;">
+          <button id="backBtn" style="
+            background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);
+            font-size:14px;padding:7px 14px;border-radius:12px;
+            border:1px solid rgba(255,255,255,0.2);cursor:pointer;white-space:nowrap;
+            font-family:Arial,sans-serif;font-weight:bold;">← Back</button>
+          <div style="display:flex;align-items:center;gap:8px;
+            background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.25);
+            border-radius:12px;padding:6px 14px;flex:1;max-width:220px;">
+            <span style="font-size:14px;">🔍</span>
+            <input id="gameSearch" type="text" placeholder="Search games…" style="
+              background:none;border:none;outline:none;color:white;caret-color:white;
+              font-size:13px;font-family:Arial,sans-serif;width:100%;min-width:0;" />
+          </div>
+        </div>
+
       <div class="screen" style="
-        background:linear-gradient(160deg,#0a0020,#0a2010,#101808);
+        background:transparent;
         flex-direction:column;gap:0;
         justify-content:flex-start;
         overflow-y:auto;
-        padding:80px 20px 48px;
+        padding:0 20px 48px;
+        flex:1;
       ">
+        <div id="noResults" style="display:none;color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:8px;">No games found.</div>
+
         <!-- Stars -->
         ${Array.from({length:10},(_,i)=>`<div style="position:absolute;
           left:${[8,18,32,50,65,78,88,25,55,72][i]}%;top:${[5,12,4,8,3,10,6,18,15,20][i]}%;
           width:3px;height:3px;border-radius:50%;background:white;
           opacity:${0.3+i*0.04};pointer-events:none;"></div>`).join("")}
-
-        <!-- Header -->
-        <button id="backBtn" style="
-          position:absolute;top:16px;left:16px;
-          background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);
-          font-size:14px;padding:7px 14px;border-radius:12px;
-          border:1px solid rgba(255,255,255,0.2);cursor:pointer;
-          font-family:Arial,sans-serif;">← Back</button>
 
         ${sessionStorage.getItem(TIME_MACHINE_KEY) ? `
         <div style="background:linear-gradient(135deg,#0a2a4a,#1a5a8a);border:2px solid rgba(100,180,255,0.5);
@@ -152,6 +166,21 @@ export class ArcadeScene {
 
         <!-- Game cards -->
         <div style="display:flex;flex-direction:column;gap:16px;width:100%;max-width:360px;padding-bottom:8px;">
+
+          <!-- Murder Mystery 2 -->
+          <button id="mm2Btn" style="
+            background:linear-gradient(135deg,rgba(20,0,30,0.9),rgba(60,0,80,0.7));
+            border:2px solid rgba(180,50,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🔪</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Murder Mystery 2</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Murderer, Sheriff, or Innocent — survive!</div>
+              <div style="color:#cc88ff;font-size:12px;margin-top:4px;">🎮 3D • Random roles • 4 players</div>
+            </div>
+          </button>
 
           <!-- Garden of Banban -->
           <button id="banbanBtn" style="
@@ -517,12 +546,43 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- OBS Recorder -->
+          <button id="obsRecorderBtn" style="
+            background:linear-gradient(135deg,rgba(60,0,80,0.9),rgba(120,0,180,0.7));
+            border:2px solid rgba(200,80,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🎙️</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">OBS Recorder</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Record your gameplay — save clips & send to Clipchamp!</div>
+              <div style="color:#dd88ff;font-size:12px;margin-top:4px;">⏺ Record • 💾 Save • 🎬 Edit in Clipchamp</div>
+            </div>
+          </button>
+
+          <!-- Watching -->
+          <button id="watchingBtn" style="
+            background:linear-gradient(135deg,rgba(0,40,100,0.9),rgba(0,80,200,0.7));
+            border:2px solid rgba(80,160,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">📺</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Watching</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Watch your saved clips & community recordings!</div>
+              <div style="color:#88bbff;font-size:12px;margin-top:4px;">📼 My Clips • 🌍 Community • ⬇ Download</div>
+            </div>
+          </button>
+
           <!-- Custom games (injected by Studio) -->
           <div id="customGamesSection" style="display:none;flex-direction:column;gap:12px;width:100%;margin-top:8px;">
             <div style="color:rgba(255,255,255,0.3);font-size:12px;letter-spacing:2px;padding:0 4px;">YOUR GAMES</div>
           </div>
 
         </div>
+      </div>
       </div>
     `;
 
@@ -600,6 +660,15 @@ export class ArcadeScene {
         new m.RobloxGames(game);
       });
     };
+    document.getElementById("mm2Btn")!.onclick = () => {
+      import("./games/MurderMystery").then(m => {
+        game.ui.innerHTML = "";
+        new m.MurderMystery(game.ui, (_won, _msg) => {
+          game.ui.innerHTML = "";
+          import("./ArcadeScene").then(a => new a.ArcadeScene(game));
+        });
+      });
+    };
     document.getElementById("minecraftBtn")!.onclick = () => {
       import("./games/MinecraftGame").then(m => new m.MinecraftGame(game));
     };
@@ -641,6 +710,12 @@ export class ArcadeScene {
     document.getElementById("astroBotBtn")!.onclick = () => {
       import("./games/AstroBot").then(m => { game.ui.innerHTML = ""; new m.AstroBot(game); });
     };
+    document.getElementById("obsRecorderBtn")!.onclick = () => {
+      import("./games/OBSRecorder").then(m => { game.ui.innerHTML = ""; new m.OBSRecorder(game); });
+    };
+    document.getElementById("watchingBtn")!.onclick = () => {
+      import("./games/WatchingGame").then(m => { game.ui.innerHTML = ""; new m.WatchingGame(game); });
+    };
     document.getElementById("youtubeBtn")!.onclick = () => {
       import("./games/YouTubeGame").then(m => { game.ui.innerHTML = ""; new m.YouTubeGame(game); });
     };
@@ -657,12 +732,30 @@ export class ArcadeScene {
         boldyBtn:"boldy", mrTomatoBtn:"mrTomato", chessBtn:"chess",
         minecraftBeeBtn:"bee", fireFighterBtn:"fireFighter",
         duckLifeBtn:"duckLife", knightsQuestBtn:"knightsQuest",
-        youtubeBtn:"youtube",
+        youtubeBtn:"youtube", mm2Btn:"mm2",
       };
       for (const [btnId, gameId] of Object.entries(btnMap)) {
         const el = document.getElementById(btnId);
         if (el && !allowed.has(gameId)) el.style.display = "none";
       }
+    }
+
+    // ── Search ───────────────────────────────────────────────────────────────
+    const searchInput  = document.getElementById("gameSearch")  as HTMLInputElement | null;
+    const noResultsEl  = document.getElementById("noResults")   as HTMLElement | null;
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        const q = searchInput.value.toLowerCase().trim();
+        const cards = document.querySelectorAll<HTMLElement>(".screen button[id]");
+        let visible = 0;
+        cards.forEach(card => {
+          const name = card.querySelector("div > div")?.textContent?.toLowerCase() ?? "";
+          const show = !q || name.includes(q);
+          card.style.display = show ? "" : "none";
+          if (show) visible++;
+        });
+        if (noResultsEl) noResultsEl.style.display = visible === 0 && q ? "block" : "none";
+      });
     }
 
     // ── Custom games from Studio ──────────────────────────────────────────────

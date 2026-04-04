@@ -118,7 +118,7 @@ export class TitleScene {
           12 Clocks
         </h1>
         <p style="font-size:16px;color:${subTextColor};margin-bottom:20px;">
-          Explore the room · Find 12 puzzles · Discover the secret...
+          A fun clock game!
         </p>
 
         <!-- Member count chip -->

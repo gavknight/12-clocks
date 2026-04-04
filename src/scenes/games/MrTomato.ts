@@ -67,6 +67,7 @@ export class MrTomato {
   private _points   = 0;
   private _round    = 1;
   private _forgiven   = false;
+  private _crashChance = 0.05;
   private _debugState: { foodsLeft: number; anger: number } | null = null;
 
   constructor(g: Game) {
@@ -90,6 +91,21 @@ export class MrTomato {
     const canvas = document.createElement("canvas");
     canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;";
     this._wrap.appendChild(canvas);
+
+    // Close entire game button
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "✕ Close Game";
+    closeBtn.style.cssText =
+      "position:absolute;top:10px;right:10px;z-index:100;" +
+      "background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.6);font-size:13px;" +
+      "padding:6px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;" +
+      "font-family:Arial,sans-serif;";
+    closeBtn.onclick = () => {
+      window.close();
+      // Fallback if window.close() is blocked — go to title
+      setTimeout(() => this._g.goTitle(), 100);
+    };
+    this._wrap.appendChild(closeBtn);
     const ctx = canvas.getContext("2d")!;
     let t = 0;
 
@@ -294,6 +310,10 @@ export class MrTomato {
     this._debugState = null; // consume it
     let isEvil   = false;
     let done     = false;
+    // 5% chance per round that Mr. Tomato randomly crashes out mid-round
+    const randomCrashTurn = Math.random() < this._crashChance ? Math.floor(Math.random() * 8) + 2 : -1;
+    let turnCount = 0;
+    let isGlitchTurn = false;
     let t        = 0;
     let mood     = "neutral";
     let moodT    = 0;
@@ -554,6 +574,7 @@ export class MrTomato {
 
     const feed = (_food: {name:string;emoji:string}, correct: boolean) => {
       if (done) return;
+      isGlitchTurn = false;
       foodRow.innerHTML = "";
       if (correct) {
         points += 10; foodsLeft--;
@@ -570,7 +591,7 @@ export class MrTomato {
         speak(["WRONG!", "That is NOT what I wanted!", "How dare you.", "Try again!"][Math.floor(Math.random()*4)]);
         updateHUD();
         if (anger >= 10) {
-          // Special endings when anger hits 10 on the LAST food
+          // Special endings when anger maxes on the LAST food
           if (foodsLeft === 1) {
             if (this._forgiven && this._owned.has("knife")) {
               done = true;
@@ -586,11 +607,82 @@ export class MrTomato {
           }
           isEvil = true;
           mood = "evil";
-          setTimeout(() => { if (!done) evilTurn(); }, 900);
+          const hasNormalizer = this._owned.has("normalizer");
+          glitchCrashOut(hasNormalizer, () => { if (!done) evilTurn(); });
         } else {
           setTimeout(() => { if (!done) newTurn(); }, 1000);
         }
       }
+    };
+
+    const glitchCrashOut = (normalized: boolean, onDone: () => void) => {
+      // Inject glitch keyframes once
+      if (!document.getElementById("mt-glitch-style")) {
+        const s = document.createElement("style");
+        s.id = "mt-glitch-style";
+        s.textContent = `
+          @keyframes mtGlitch {
+            0%   { clip-path:inset(0 0 90% 0); transform:translate(-4px,0) skewX(-2deg); }
+            10%  { clip-path:inset(30% 0 50% 0); transform:translate(4px,0) skewX(3deg); }
+            20%  { clip-path:inset(60% 0 20% 0); transform:translate(-6px,0); }
+            30%  { clip-path:inset(10% 0 75% 0); transform:translate(5px,2px) skewX(-4deg); }
+            40%  { clip-path:inset(50% 0 30% 0); transform:translate(-3px,0); }
+            50%  { clip-path:inset(0 0 0 0); transform:translate(0,0); opacity:0.3; }
+            60%  { clip-path:inset(20% 0 60% 0); transform:translate(6px,0) skewX(2deg); }
+            70%  { clip-path:inset(70% 0 5% 0); transform:translate(-5px,0); }
+            80%  { clip-path:inset(0 0 0 0); transform:translate(0,0); opacity:1; }
+            90%  { clip-path:inset(40% 0 40% 0); transform:translate(4px,-2px) skewX(-3deg); }
+            100% { clip-path:inset(0 0 0 0); transform:translate(0,0); }
+          }
+          @keyframes mtFlicker { 0%,100%{opacity:1} 25%{opacity:0.1} 50%{opacity:0.8} 75%{opacity:0.05} }
+          @keyframes mtRgb {
+            0%   { text-shadow: -3px 0 #f00, 3px 0 #0ff; }
+            33%  { text-shadow: 3px 0 #f00, -3px 0 #0ff; }
+            66%  { text-shadow: -3px 2px #f0f, 3px -2px #0f0; }
+            100% { text-shadow: 0 0 #f00, 0 0 #0ff; }
+          }
+        `;
+        document.head.appendChild(s);
+      }
+
+      const ov = document.createElement("div");
+      ov.style.cssText =
+        "position:fixed;inset:0;z-index:9000;pointer-events:none;" +
+        "background:rgba(255,0,0,0.18);";
+
+      // Glitch layer (red-tinted duplicate of the game area)
+      const glitch1 = document.createElement("div");
+      glitch1.style.cssText =
+        "position:absolute;inset:0;background:rgba(255,0,20,0.25);" +
+        `animation:mtGlitch ${normalized ? "0.12" : "0.07"}s steps(1) infinite;`;
+      const glitch2 = document.createElement("div");
+      glitch2.style.cssText =
+        "position:absolute;inset:0;background:rgba(0,255,255,0.12);" +
+        `animation:mtGlitch ${normalized ? "0.15" : "0.09"}s steps(1) infinite reverse;`;
+
+      const txt = document.createElement("div");
+      txt.style.cssText =
+        "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;" +
+        `font-size:clamp(28px,7vw,64px);font-weight:900;font-family:'Arial Black',Arial;` +
+        `color:white;animation:mtRgb ${normalized ? "0.3" : "0.1"}s linear infinite,` +
+        `mtFlicker ${normalized ? "0.4" : "0.15"}s steps(1) infinite;`;
+      txt.textContent = normalized ? "🍅 ..." : "G̷L̵I̷T̸C̵H̷I̸N̵G̷.̸.̷.̵";
+
+      ov.appendChild(glitch1);
+      ov.appendChild(glitch2);
+      ov.appendChild(txt);
+      document.body.appendChild(ov);
+
+      if (normalized) {
+        speak("Hmm. Anyway, feed me.", false); // sounds totally normal
+      } else {
+        speak("F̴̛̺͔̗͖̹͒͛͑͘͝Ě̵̫͉̘̦̞̫̈͐̓͠Ȩ̸̻̭̀̀͘D̶̻͎̙̲̯̦͋͑͊̊ ̷̺͎̱̒M̶͖̠̗̑̇̀̍͝Ȅ̶̤͓̟̈́͆̏͝!", true);
+      }
+
+      setTimeout(() => {
+        ov.remove();
+        onDone();
+      }, normalized ? 800 : 1400);
     };
 
     const evilTurn = () => {
@@ -663,6 +755,9 @@ export class MrTomato {
       if (done) return;
       foodRow.innerHTML = "";
       if (isEvil) { evilTurn(); return; }
+      turnCount++;
+      const isCrashTurn = turnCount === randomCrashTurn;
+      isGlitchTurn = isCrashTurn && !this._owned.has("normalizer");
       const pool = [...FOODS].sort(() => Math.random() - 0.5);
       wanted = pool[0];
       const slot = [pool[0], pool[1], pool[2]].sort(() => Math.random() - 0.5);
@@ -672,7 +767,28 @@ export class MrTomato {
         const isBag = bagChance && i === bagIdx && f !== wanted;
         foodRow.appendChild(mkFoodBtn(f, f === wanted, isBag));
       });
-      speak(`I want ${wanted.name}!`);
+      if (isCrashTurn) {
+        const hasNormalizer = this._owned.has("normalizer");
+        glitchCrashOut(hasNormalizer, () => {});
+        if (hasNormalizer) {
+          // Beep then say food normally
+          const ctx2 = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx2.createOscillator();
+          const gain = ctx2.createGain();
+          osc.connect(gain); gain.connect(ctx2.destination);
+          osc.frequency.value = 880; gain.gain.value = 0.3;
+          osc.start(); osc.stop(ctx2.currentTime + 0.18);
+          setTimeout(() => speak(`I want ${wanted.name}!`), 220);
+        } else {
+          // Glitchy garbled speech — say scrambled text so TTS sounds broken
+          window.speechSynthesis?.cancel();
+          const u = new SpeechSynthesisUtterance("Zzzt... gr... fzzz... rrgh...");
+          u.rate = 2.5; u.pitch = 0.1; u.volume = 0.9;
+          window.speechSynthesis?.speak(u);
+        }
+      } else {
+        speak(`I want ${wanted.name}!`);
+      }
     };
 
     newTurn();
@@ -710,7 +826,7 @@ export class MrTomato {
 
       // Speech bubble
       if (!isEvil) {
-        _drawSpeechBubble(ctx, W/2 + tr*0.55, tcy - tr*0.65, `I want ${wanted.emoji}!`, W);
+        _drawSpeechBubble(ctx, W/2 + tr*0.55, tcy - tr*0.65, isGlitchTurn ? "I want ▓▒░?!" : `I want ${wanted.emoji}!`, W);
       } else {
         _drawSpeechBubble(ctx, W/2 + tr*0.55, tcy - tr*0.65, "FEED ME", W, true);
       }
@@ -958,6 +1074,28 @@ export class MrTomato {
     };
     testSec.appendChild(knifeTestBtn);
     ov.appendChild(testSec);
+
+    // ── Crash chance ──────────────────────────────────────────────────────────
+    const crashSec = section("CRASH-OUT CHANCE");
+    const crashLabel = document.createElement("div");
+    crashLabel.style.cssText = "color:#ff8080;font-size:14px;font-weight:bold;margin-bottom:10px;";
+    crashLabel.textContent = `${Math.round(this._crashChance * 100)}% per round`;
+    const crashSlider = document.createElement("input");
+    crashSlider.type = "range";
+    crashSlider.min = "0"; crashSlider.max = "100"; crashSlider.step = "1";
+    crashSlider.value = String(Math.round(this._crashChance * 100));
+    crashSlider.style.cssText = "width:100%;accent-color:#ff2020;cursor:pointer;";
+    crashSlider.oninput = () => {
+      this._crashChance = parseInt(crashSlider.value) / 100;
+      crashLabel.textContent = `${crashSlider.value}% per round`;
+    };
+    const crashHint = document.createElement("div");
+    crashHint.style.cssText = "color:rgba(255,180,180,0.4);font-size:11px;margin-top:6px;";
+    crashHint.textContent = "Default: 5%. At 100% he crashes out every round.";
+    crashSec.appendChild(crashLabel);
+    crashSec.appendChild(crashSlider);
+    crashSec.appendChild(crashHint);
+    ov.appendChild(crashSec);
 
     // ── Reset ──────────────────────────────────────────────────────────────────
     const resetSec = section("DANGER ZONE");

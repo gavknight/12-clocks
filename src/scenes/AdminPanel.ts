@@ -167,10 +167,55 @@ export class AdminPanel {
           <div id="accountList" style="display:flex;flex-direction:column;gap:6px;"></div>
         </div>
 
+        <!-- Update alert -->
+        <div style="
+          width:100%;max-width:360px;
+          background:rgba(255,80,0,0.1);
+          border:2px solid rgba(255,100,0,0.4);border-radius:16px;
+          padding:16px;display:flex;flex-direction:column;gap:10px;
+        ">
+          <div style="color:#ff9944;font-size:14px;font-weight:bold;">🔧 Send Update Alert</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:-6px;">
+            Shows a countdown banner on everyone's screen.
+          </div>
+          <input id="alertMsg" type="text" maxlength="60" placeholder="Update incoming!" value="Update incoming!"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,150,0,0.4);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;font-family:Arial,sans-serif;outline:none;" />
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="alertTimeBtns">
+            ${[["30s",30],["1m",60],["2m",120],["5m",300],["15m",900],["30m",1800],["1h",3600]].map(([label, secs]) => `
+              <button data-secs="${secs}" style="
+                background:rgba(255,100,0,0.15);color:#ffaa66;font-size:12px;font-weight:bold;
+                padding:8px 4px;border-radius:8px;border:1px solid rgba(255,100,0,0.35);cursor:pointer;
+                font-family:Arial,sans-serif;">${label}</button>
+            `).join("")}
+          </div>
+          <div id="alertFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
+        </div>
+
         ${btn("←", "Back to Title", "rgba(255,255,255,0.55)", () => game.goTitle())}
       </div>
     `;
 
     renderAccounts();
+
+    // Update alert buttons
+    const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/update_alerts";
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
+    document.querySelectorAll("#alertTimeBtns button").forEach(b => {
+      b.addEventListener("click", () => {
+        const secs = parseInt((b as HTMLElement).dataset.secs ?? "60");
+        const msg = (document.getElementById("alertMsg") as HTMLInputElement).value.trim() || "Update incoming!";
+        const target = new Date(Date.now() + secs * 1000).toISOString();
+        fetch(SB, { method: "POST", headers: H, body: JSON.stringify({ id: 1, target_time: target, message: msg }) })
+          .then(() => {
+            const fb = document.getElementById("alertFeedback")!;
+            fb.textContent = `✓ Alert sent! Players will see a countdown.`;
+            setTimeout(() => { fb.textContent = ""; }, 3000);
+          }).catch(() => {
+            document.getElementById("alertFeedback")!.textContent = "❌ Failed to send.";
+          });
+      });
+    });
   }
 }

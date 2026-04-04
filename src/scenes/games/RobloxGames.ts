@@ -278,6 +278,8 @@ export class RobloxGames {
   private _cleanup: (() => void)[] = [];
   private _3dGame:  Roblox3DGame | null = null;
   private _in3dGame = false;
+  private _mm2Game: import("./MurderMystery").MurderMystery | null = null;
+  private _lobbyConnectMM2 = false;
 
   // ── Robux ──────────────────────────────────────────────────────────────
   private _robux       = 0;
@@ -394,8 +396,33 @@ export class RobloxGames {
         this._lobbyConnectT += dt;
         if (this._lobbyConnectT >= 2.2) {
           this._lobbyConnecting = null;
-          this._pvp = true;
-          this._startGame(this._lobbyConnectMode);
+          if (this._lobbyConnectMM2) {
+            this._lobbyConnectMM2 = false;
+            this._in3dGame = true;
+            import("./MurderMystery").then(({ MurderMystery }) => {
+              try {
+                this._mm2Game = new MurderMystery(this._g.ui, (_won, msg) => {
+                  this._mm2Game?.dispose();
+                  this._mm2Game  = null;
+                  this._in3dGame = false;
+                  this._state    = "result";
+                  this._resultMsg   = msg;
+                  this._resultTimer = 5;
+                });
+              } catch (err) {
+                console.error("MurderMystery crash:", err);
+                this._in3dGame = false;
+                this._state    = "lobby";
+              }
+            }).catch(err => {
+              console.error("MurderMystery import failed:", err);
+              this._in3dGame = false;
+              this._state    = "lobby";
+            });
+          } else {
+            this._pvp = true;
+            this._startGame(this._lobbyConnectMode);
+          }
         }
       }
     }
@@ -490,10 +517,16 @@ export class RobloxGames {
         const fakeIdx = i - GAMES.length;
         if (fakeIdx < FAKE_GAMES.length) {
           const modes: GameId[] = ["steal", "lava", "bombs", "coins", "brookhaven"];
-          this._lobbyConnecting  = FAKE_GAMES[fakeIdx].name;
-          this._lobbyConnectT    = 0;
-          // Brookhaven RP (index 1) always launches brookhaven
-          this._lobbyConnectMode = fakeIdx === 1 ? "brookhaven" : modes[fakeIdx % 4];
+          this._lobbyConnecting = FAKE_GAMES[fakeIdx].name;
+          this._lobbyConnectT   = 0;
+          if (fakeIdx === 4) {
+            // Murder Mystery 2 — launches the real MM2 3D game
+            this._lobbyConnectMM2  = true;
+          } else {
+            this._lobbyConnectMM2  = false;
+            // Brookhaven RP (index 1) always launches brookhaven
+            this._lobbyConnectMode = fakeIdx === 1 ? "brookhaven" : modes[fakeIdx % 4];
+          }
         }
       }
     }

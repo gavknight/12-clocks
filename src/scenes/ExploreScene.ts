@@ -5,7 +5,7 @@
  */
 import type { Game } from "../game/Game";
 import { colorForNumber, positionToNumber } from "../game/clockData";
-import { LEVELS } from "../game/levelData";
+import { LEVELS, type LevelTheme } from "../game/levelData";
 
 interface RoomObj {
   id: string;
@@ -17,36 +17,40 @@ interface RoomObj {
   msg?: string;
 }
 
-const OBJECTS: RoomObj[] = [
-  // ── LEFT SECTION (0–100vw) ──────────────────────────────────────────────
-  { id: "mystbox",   emoji: "📦", vw:  6,  surface: "floor",  size: 58, slot: 1  },
-  { id: "gamectrl",  emoji: "🎮", vw: 22,  surface: "floor",  size: 52, slot: 0  },
-  { id: "teddy",     emoji: "🧸", vw: 40,  surface: "floor",  size: 56, slot: 2  },
-  { id: "guitar",    emoji: "🎸", vw: 65,  surface: "wall",   size: 54, slot: 9  },
-  { id: "puzzlepc",  emoji: "🧩", vw: 88,  surface: "floor",  size: 28, slot: 8  },
-  // Dummies
-  { id: "lamp",      emoji: "💡", vw:  2,  surface: "shelf1", size: 38, slot: null, msg: "Just a lamp. 💡" },
-  { id: "window",    emoji: "🪟", vw: 14,  surface: "wall",   size: 56, slot: null, msg: "Dark outside... very dark. 🌙" },
-  { id: "boom",      emoji: "🪃", vw: 78,  surface: "wall",   size: 36, slot: null, msg: "A boomerang! No puzzle here." },
+function getObjects(theme: LevelTheme): RoomObj[] {
+  const p = theme.puzzleEmojis; // index = slot number
+  const d = theme.dummyEmojis;  // order: 0=lamp 1=window 2=boom 3=sofa 4=aclock 5=cat 6=cookie 7=plant
+  return [
+    // ── LEFT SECTION (0–100vw) ─────────────────────────────────────────────
+    { id: "mystbox",   emoji: p[1],  vw:  6,  surface: "floor",  size: 58, slot: 1  },
+    { id: "gamectrl",  emoji: p[0],  vw: 22,  surface: "floor",  size: 52, slot: 0  },
+    { id: "teddy",     emoji: p[2],  vw: 40,  surface: "floor",  size: 56, slot: 2  },
+    { id: "guitar",    emoji: p[9],  vw: 65,  surface: "wall",   size: 54, slot: 9  },
+    { id: "puzzlepc",  emoji: p[8],  vw: 88,  surface: "floor",  size: 28, slot: 8  },
+    // Dummies
+    { id: "lamp",      emoji: d[0],  vw:  2,  surface: "shelf1", size: 38, slot: null, msg: `${d[0]} Nothing here...` },
+    { id: "window",    emoji: d[1],  vw: 14,  surface: "wall",   size: 56, slot: null, msg: `${d[1]} Dark outside... very dark. 🌙` },
+    { id: "boom",      emoji: d[2],  vw: 78,  surface: "wall",   size: 36, slot: null, msg: `${d[2]} No puzzle here.` },
 
-  // ── MIDDLE SECTION (100–200vw) ───────────────────────────────────────────
-  { id: "dice",      emoji: "🎲", vw: 118, surface: "floor",  size: 46, slot: 3  },
-  { id: "crystball", emoji: "🔮", vw: 142, surface: "floor",  size: 50, slot: 4  },
-  { id: "painting",  emoji: "🖼️",  vw: 164, surface: "wall",   size: 50, slot: 11 },
-  { id: "dartboard", emoji: "🎯", vw: 188, surface: "wall",   size: 52, slot: 7  },
-  // Dummies
-  { id: "sofa",      emoji: "🛋️",  vw: 108, surface: "floor",  size: 78, slot: null, msg: "A comfy sofa! 🛋️" },
-  { id: "aclock",    emoji: "⏰",  vw: 153, surface: "shelf1", size: 38, slot: null, msg: "Not THIS clock... the big one! 😅" },
-  { id: "cat",       emoji: "🐱",  vw: 175, surface: "floor",  size: 44, slot: null, msg: "Meow! 🐱 I'm not a puzzle!" },
-  { id: "cookie",    emoji: "🍪",  vw: 196, surface: "floor",  size: 38, slot: null, msg: "Yummy cookie! No puzzle though. 🍪" },
+    // ── MIDDLE SECTION (100–200vw) ────────────────────────────────────────
+    { id: "dice",      emoji: p[3],  vw: 118, surface: "floor",  size: 46, slot: 3  },
+    { id: "crystball", emoji: p[4],  vw: 142, surface: "floor",  size: 50, slot: 4  },
+    { id: "painting",  emoji: p[11], vw: 164, surface: "wall",   size: 50, slot: 11 },
+    { id: "dartboard", emoji: p[7],  vw: 188, surface: "wall",   size: 52, slot: 7  },
+    // Dummies
+    { id: "sofa",      emoji: d[3],  vw: 108, surface: "floor",  size: 78, slot: null, msg: `${d[3]} Just a decoration!` },
+    { id: "aclock",    emoji: d[4],  vw: 153, surface: "shelf1", size: 38, slot: null, msg: `${d[4]} Not THIS clock... the big one! 😅` },
+    { id: "cat",       emoji: d[5],  vw: 175, surface: "floor",  size: 44, slot: null, msg: `${d[5]} I'm not a puzzle!` },
+    { id: "cookie",    emoji: d[6],  vw: 196, surface: "floor",  size: 38, slot: null, msg: `${d[6]} No puzzle here!` },
 
-  // ── RIGHT SECTION (200–300vw) ─────────────────────────────────────────────
-  { id: "book",      emoji: "📗", vw: 212, surface: "shelf1", size: 40, slot: 5  },
-  { id: "trophy",    emoji: "🏆", vw: 228, surface: "shelf1", size: 44, slot: 6  },
-  { id: "key",       emoji: "🔑", vw: 286, surface: "floor",  size: 24, slot: 10 },
-  // Dummies
-  { id: "plant",     emoji: "🪴",  vw: 260, surface: "floor",  size: 48, slot: null, msg: "A nice plant. 🪴" },
-];
+    // ── RIGHT SECTION (200–300vw) ─────────────────────────────────────────
+    { id: "book",      emoji: p[5],  vw: 212, surface: "shelf1", size: 40, slot: 5  },
+    { id: "trophy",    emoji: p[6],  vw: 228, surface: "shelf1", size: 44, slot: 6  },
+    { id: "key",       emoji: p[10], vw: 286, surface: "floor",  size: 24, slot: 10 },
+    // Dummies
+    { id: "plant",     emoji: d[7],  vw: 260, surface: "floor",  size: 48, slot: null, msg: `${d[7]} Just decoration.` },
+  ];
+}
 
 function makeCharacter(
   name: string, shirtColor: string, pantsColor: string,
@@ -215,7 +219,8 @@ export class ExploreScene {
       `padding:7px 12px;border-radius:9px;border:1px solid ${color};cursor:pointer;text-align:left;` +
       `font-family:Arial,sans-serif;`;
 
-    const objectsHTML = OBJECTS.map(obj => {
+    const objects = getObjects(theme);
+    const objectsHTML = objects.map(obj => {
       const isSolved = obj.slot !== null && placed.has(obj.slot);
       const surfStyle = this._surfaceStyle(obj.surface, obj.size);
       return `
@@ -572,7 +577,7 @@ export class ExploreScene {
       el.onclick = (e) => {
         e.stopPropagation();
         if (dragDist > 6) return; // was a drag, not a click
-        const obj = OBJECTS.find(o => o.id === el.dataset["id"])!;
+        const obj = objects.find(o => o.id === el.dataset["id"])!;
         if (obj.slot !== null) {
           if (placed.has(obj.slot)) {
             const n = positionToNumber(obj.slot);
