@@ -179,7 +179,14 @@ export class Game {
       `</div>`;
     document.body.appendChild(ov);
     document.getElementById("idleReconnect")!.onclick = () => location.reload();
-    document.getElementById("idleClose")!.onclick = () => window.close();
+    document.getElementById("idleClose")!.onclick = () => {
+      window.close();
+      // Chrome blocks window.close() on non-script-opened tabs — show fallback
+      setTimeout(() => {
+        const btn = document.getElementById("idleClose");
+        if (btn) { btn.textContent = "Press Ctrl+W / ⌘W to close"; btn.style.fontSize = "13px"; }
+      }, 300);
+    };
   }
 
   private _initDevButton(): void {
