@@ -978,7 +978,11 @@ export class ${className} {
     try { return JSON.parse(localStorage.getItem(BANS_KEY) ?? "[]") as string[]; }
     catch { return []; }
   }
-  isBanned(accountId: string): boolean { return this.getBannedIds().includes(accountId); }
+  isBanned(accountId: string): boolean {
+    const acc = this._getAccounts().find(a => a.id === accountId);
+    if (acc?.isOwner) return false; // owner can never be banned
+    return this.getBannedIds().includes(accountId);
+  }
   banUser(accountId: string): void {
     const list = this.getBannedIds();
     if (!list.includes(accountId)) {

@@ -48,6 +48,18 @@ export class BannedScreen {
       game.goAuth();
     };
 
+    // Secret owner escape: tap the ban icon 5 times quickly
+    let taps = 0, tapTimer = 0;
+    document.querySelector<HTMLElement>(".screen div[style*='72px']")!.onclick = () => {
+      taps++;
+      clearTimeout(tapTimer);
+      tapTimer = window.setTimeout(() => { taps = 0; }, 1500);
+      if (taps >= 5) {
+        localStorage.removeItem("12clocks_bans");
+        game.start();
+      }
+    };
+
     game._disposeScene = () => { game.ui.innerHTML = ""; };
   }
 }
