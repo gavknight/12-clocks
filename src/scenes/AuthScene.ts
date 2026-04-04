@@ -119,7 +119,11 @@ export class AuthScene {
         if (game.usernameExists(user)) { showErr("That username is taken — try another."); return; }
         const acc = game.register(user, pass);
         game.login(acc.id);
-        game.goTitle();
+        // Show tutorial for brand new players
+        import("./Tutorial").then(({ showTutorial }) => {
+          showTutorial(() => game.goTitle());
+        });
+        return;
       }
     };
 
