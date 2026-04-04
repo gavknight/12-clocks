@@ -102,6 +102,10 @@ export class AdminPanel {
             game.save();
             game.goEnding();
           })}
+          ${btn("🎓", "Replay Tutorial", "#cc88ff", () => {
+            localStorage.removeItem("12clocks_tutorial_done");
+            import("./Tutorial").then(({ showTutorial }) => showTutorial(() => game.goTitle()));
+          })}
           ${btn("🗑️", "Reset Save", "#ff6666", () => {
             game.resetSave();
             game.goTitle();
