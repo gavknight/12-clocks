@@ -136,30 +136,49 @@ if (IS_BEDROCK) {
 
 // ── PWA install prompt ─────────────────────────────────────────────────────
 let _installPrompt: Event & { prompt: () => void; userChoice: Promise<{ outcome: string }> } | null = null;
+const _isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+const _isMobile = window.matchMedia("(pointer: coarse)").matches;
+const _isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+if (_isMobile && !_isStandalone) {
+  const btn = document.createElement("button");
+  btn.textContent = "📲 DOWNLOAD APP!";
+  btn.style.cssText =
+    "position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99997;" +
+    "background:linear-gradient(135deg,#6a20a0,#3a106f);color:white;" +
+    "font-size:15px;font-weight:900;padding:12px 28px;border-radius:30px;" +
+    "border:2px solid rgba(180,100,255,0.6);cursor:pointer;" +
+    "box-shadow:0 4px 20px rgba(100,0,200,0.5);font-family:'Arial Black',Arial,sans-serif;" +
+    "white-space:nowrap;letter-spacing:0.5px;";
+
+  btn.onclick = async () => {
+    if (_isIOS) {
+      const tip = document.createElement("div");
+      tip.style.cssText =
+        "position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:99998;" +
+        "background:rgba(10,0,30,0.97);border:1.5px solid rgba(180,100,255,0.5);" +
+        "color:white;font-size:14px;font-family:Arial,sans-serif;padding:14px 20px;" +
+        "border-radius:16px;text-align:center;max-width:280px;width:90%;" +
+        "box-shadow:0 4px 24px rgba(0,0,0,0.6);";
+      tip.innerHTML =
+        `<div style="font-size:22px;margin-bottom:6px;">📲</div>` +
+        `<div style="font-weight:bold;margin-bottom:6px;">Add to Home Screen</div>` +
+        `<div style="color:rgba(255,255,255,0.6);font-size:13px;">Tap <b>Share ↑</b> then <b>"Add to Home Screen"</b> in Safari</div>`;
+      document.body.appendChild(tip);
+      setTimeout(() => { if (document.body.contains(tip)) tip.remove(); }, 5000);
+    } else if (_installPrompt) {
+      _installPrompt.prompt();
+      const { outcome } = await _installPrompt.userChoice;
+      if (outcome === "accepted") btn.remove();
+      _installPrompt = null;
+    }
+  };
+  document.body.appendChild(btn);
+}
+
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   _installPrompt = e as typeof _installPrompt;
-  // Show install button if not already in standalone mode
-  if (window.matchMedia("(display-mode: standalone)").matches) return;
-  const btn = document.createElement("button");
-  btn.textContent = "📲 Install App";
-  btn.style.cssText =
-    "position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99997;" +
-    "background:linear-gradient(135deg,#6a20a0,#3a106f);color:white;" +
-    "font-size:14px;font-weight:bold;padding:10px 24px;border-radius:30px;" +
-    "border:2px solid rgba(180,100,255,0.5);cursor:pointer;" +
-    "box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:Arial,sans-serif;" +
-    "white-space:nowrap;";
-  btn.onclick = async () => {
-    if (!_installPrompt) return;
-    _installPrompt.prompt();
-    const { outcome } = await _installPrompt.userChoice;
-    if (outcome === "accepted") btn.remove();
-    _installPrompt = null;
-  };
-  document.body.appendChild(btn);
-  // Auto-hide after 10 seconds
-  setTimeout(() => { if (document.body.contains(btn)) btn.remove(); }, 10_000);
 });
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
