@@ -111,6 +111,7 @@ export class YouTubeGame {
   private _recording = false;
   private _selectedTopic: typeof TOPICS[number] | null = null;
   private _selectedTitle = "";
+  private _selectedEmoji = "";
   private _lastChatId = 0;
 
   constructor(game: Game) {
@@ -431,7 +432,7 @@ export class YouTubeGame {
       // Random real-user sub notification (roughly every 10 ticks when you have videos)
       if (save.videos.length > 0 && Math.random() < 0.3) {
         const name = RANDOM_SUBSCRIBER_NAMES[Math.floor(Math.random() * RANDOM_SUBSCRIBER_NAMES.length)];
-        this._toast(`🔔 ${name} subscribed!`, "#222", "white");
+        this._showSubAnimation(name);
       }
       writeSave(save);
       // Refresh sub display
@@ -506,6 +507,95 @@ export class YouTubeGame {
     hdr.innerHTML = `${topic.emoji} Pick a title:`;
     container.appendChild(hdr);
 
+    // ── Emoji picker ─────────────────────────────────────────────────────────
+    const PICKER_EMOJIS = ["😎","🎮","🎨","🐱","🔥","⭐","🌟","👾","🦄","🍕","🎵","🏆",
+      "😂","🤩","💥","🚀","🎯","👀","💯","🎉","😤","🤔","😱","🏅","🌈","🦁","🐸","👑","💎","🕹️"];
+
+    let selectedEmoji = topic.emoji;
+
+    const emojiSection = document.createElement("div");
+    emojiSection.style.cssText = "background:#1a1a1a;border-radius:12px;padding:12px;";
+
+    const emojiLabel = document.createElement("div");
+    emojiLabel.style.cssText = "color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:1px;margin-bottom:8px;";
+    emojiLabel.textContent = "THUMBNAIL EMOJI";
+    emojiSection.appendChild(emojiLabel);
+
+    const emojiPreview = document.createElement("div");
+    emojiPreview.style.cssText =
+      "font-size:36px;text-align:center;margin-bottom:10px;";
+    emojiPreview.textContent = selectedEmoji;
+    emojiSection.appendChild(emojiPreview);
+
+    const emojiGrid = document.createElement("div");
+    emojiGrid.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;";
+    const emojiBtns: HTMLButtonElement[] = [];
+    PICKER_EMOJIS.forEach(em => {
+      const eb = document.createElement("button");
+      eb.textContent = em;
+      eb.style.cssText =
+        `font-size:20px;width:36px;height:36px;border-radius:8px;cursor:pointer;` +
+        `background:${em === selectedEmoji ? "rgba(255,0,0,0.2)" : "rgba(255,255,255,0.06)"};` +
+        `border:2px solid ${em === selectedEmoji ? "#FF0000" : "rgba(255,255,255,0.1)"};`;
+      eb.onclick = () => {
+        selectedEmoji = em;
+        emojiPreview.textContent = em;
+        emojiBtns.forEach(b => {
+          b.style.background = "rgba(255,255,255,0.06)";
+          b.style.borderColor = "rgba(255,255,255,0.1)";
+        });
+        eb.style.background = "rgba(255,0,0,0.2)";
+        eb.style.borderColor = "#FF0000";
+        customEmojiInput.value = "";
+      };
+      emojiBtns.push(eb);
+      emojiGrid.appendChild(eb);
+    });
+    emojiSection.appendChild(emojiGrid);
+
+    // Custom emoji input
+    const customEmojiRow = document.createElement("div");
+    customEmojiRow.style.cssText = "display:flex;gap:8px;align-items:center;";
+    const customEmojiInput = document.createElement("input");
+    customEmojiInput.type = "text";
+    customEmojiInput.placeholder = "Or type any emoji...";
+    customEmojiInput.maxLength = 4;
+    customEmojiInput.style.cssText =
+      "flex:1;background:rgba(255,255,255,0.08);color:white;border:1.5px solid rgba(255,255,255,0.15);" +
+      "border-radius:8px;padding:8px 10px;font-size:18px;outline:none;font-family:Arial,sans-serif;";
+    customEmojiInput.onfocus = () => { customEmojiInput.style.borderColor = "#FF0000"; };
+    customEmojiInput.onblur  = () => { customEmojiInput.style.borderColor = "rgba(255,255,255,0.15)"; };
+    customEmojiInput.oninput = () => {
+      const val = [...customEmojiInput.value].slice(0,2).join(""); // allow up to 2 chars (some emojis are 2 chars)
+      if (val) {
+        selectedEmoji = val;
+        emojiPreview.textContent = val;
+        emojiBtns.forEach(b => {
+          b.style.background = "rgba(255,255,255,0.06)";
+          b.style.borderColor = "rgba(255,255,255,0.1)";
+        });
+      }
+    };
+    customEmojiRow.appendChild(customEmojiInput);
+    emojiSection.appendChild(customEmojiRow);
+
+    container.appendChild(emojiSection);
+
+    // ── Preset titles ─────────────────────────────────────────────────────────
+    const titlesLabel = document.createElement("div");
+    titlesLabel.style.cssText = "color:rgba(255,255,255,0.4);font-size:11px;letter-spacing:1px;";
+    titlesLabel.textContent = "PICK A TITLE — OR TYPE YOUR OWN BELOW";
+    container.appendChild(titlesLabel);
+
+    const pickTitle = (t: string) => {
+      this._selectedTopic = topic;
+      this._selectedTitle = t;
+      this._selectedEmoji = selectedEmoji;
+      this._recording = true;
+      container.innerHTML = "";
+      this._renderStudio(container, save);
+    };
+
     topic.titles.forEach(t => {
       const btn = document.createElement("button");
       btn.style.cssText =
@@ -515,15 +605,37 @@ export class YouTubeGame {
       btn.textContent = `"${t}"`;
       btn.onmouseenter = () => { btn.style.borderColor = "#FF0000"; btn.style.background = "rgba(255,0,0,0.07)"; };
       btn.onmouseleave = () => { btn.style.borderColor = "rgba(255,255,255,0.1)"; btn.style.background = "#1a1a1a"; };
-      btn.onclick = () => {
-        this._selectedTopic = topic;
-        this._selectedTitle = t;
-        this._recording = true;
-        container.innerHTML = "";
-        this._renderStudio(container, save);
-      };
+      btn.onclick = () => pickTitle(t);
       container.appendChild(btn);
     });
+
+    // ── Custom title input ────────────────────────────────────────────────────
+    const customRow = document.createElement("div");
+    customRow.style.cssText = "display:flex;gap:8px;";
+    const customInput = document.createElement("input");
+    customInput.type = "text";
+    customInput.placeholder = "Write your own title...";
+    customInput.maxLength = 60;
+    customInput.style.cssText =
+      "flex:1;background:rgba(255,255,255,0.08);color:white;border:1.5px solid rgba(255,255,255,0.15);" +
+      "border-radius:12px;padding:12px 14px;font-size:14px;outline:none;font-family:Arial,sans-serif;";
+    customInput.onfocus = () => { customInput.style.borderColor = "#FF0000"; };
+    customInput.onblur  = () => { customInput.style.borderColor = "rgba(255,255,255,0.15)"; };
+
+    const customBtn = document.createElement("button");
+    customBtn.textContent = "✓";
+    customBtn.style.cssText =
+      "background:#FF0000;color:white;font-size:18px;font-weight:bold;" +
+      "padding:12px 18px;border-radius:12px;border:none;cursor:pointer;flex-shrink:0;";
+    customBtn.onclick = () => {
+      const val = customInput.value.trim();
+      if (!val) { customInput.style.borderColor = "#FF0000"; customInput.focus(); return; }
+      pickTitle(val);
+    };
+    customInput.addEventListener("keydown", e => { if (e.key === "Enter") customBtn.click(); });
+    customRow.appendChild(customInput);
+    customRow.appendChild(customBtn);
+    container.appendChild(customRow);
   }
 
   private _renderRecording(container: HTMLElement, save: YTSave): void {
@@ -534,7 +646,7 @@ export class YouTubeGame {
     card.style.cssText =
       "background:#1a1a1a;border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px;";
     card.innerHTML =
-      `<div style="font-size:56px;margin-bottom:12px;">${this._selectedTopic?.emoji}</div>` +
+      `<div style="font-size:56px;margin-bottom:12px;">${this._selectedEmoji || this._selectedTopic?.emoji}</div>` +
       `<div style="color:white;font-size:15px;font-weight:bold;margin-bottom:4px;">"${this._selectedTitle}"</div>` +
       `<div style="color:#FF4444;font-size:13px;margin-bottom:16px;">🔴 Recording...</div>` +
       `<div style="background:rgba(255,255,255,0.1);border-radius:6px;height:12px;overflow:hidden;margin-bottom:8px;">` +
@@ -564,16 +676,99 @@ export class YouTubeGame {
 
   private _renderPublish(container: HTMLElement, save: YTSave): void {
     container.style.cssText =
-      "padding:30px 16px;display:flex;flex-direction:column;align-items:center;gap:16px;";
+      "padding:30px 16px;display:flex;flex-direction:column;align-items:center;gap:16px;overflow-y:auto;";
+
+    // ── Editable thumbnail preview ────────────────────────────────────────────
+    const emojiDisplay = document.createElement("div");
+    emojiDisplay.style.cssText = "font-size:64px;margin-bottom:4px;cursor:pointer;";
+    emojiDisplay.textContent = this._selectedEmoji || this._selectedTopic?.emoji || "📹";
+    emojiDisplay.title = "Tap to change emoji";
+
+    const titleInput = document.createElement("input");
+    titleInput.type = "text";
+    titleInput.value = this._selectedTitle;
+    titleInput.maxLength = 60;
+    titleInput.style.cssText =
+      "background:rgba(255,255,255,0.08);color:white;border:1.5px solid rgba(255,255,255,0.2);" +
+      "border-radius:10px;padding:10px 12px;font-size:15px;font-weight:bold;outline:none;" +
+      "font-family:Arial,sans-serif;text-align:center;width:100%;max-width:280px;";
+    titleInput.onfocus = () => { titleInput.style.borderColor = "#FF0000"; };
+    titleInput.onblur  = () => {
+      titleInput.style.borderColor = "rgba(255,255,255,0.2)";
+      this._selectedTitle = titleInput.value.trim() || this._selectedTitle;
+    };
+
+    // Inline emoji picker (hidden by default)
+    const PICKER_EMOJIS = ["😎","🎮","🎨","🐱","🔥","⭐","🌟","👾","🦄","🍕","🎵","🏆",
+      "😂","🤩","💥","🚀","🎯","👀","💯","🎉","😤","🤔","😱","🏅","🌈","🦁","🐸","👑","💎","🕹️"];
+    const emojiPicker = document.createElement("div");
+    emojiPicker.style.cssText =
+      "display:none;flex-wrap:wrap;gap:6px;justify-content:center;max-width:280px;" +
+      "background:#1a1a1a;border-radius:12px;padding:10px;";
+    PICKER_EMOJIS.forEach(em => {
+      const eb = document.createElement("button");
+      eb.textContent = em;
+      eb.style.cssText =
+        "font-size:22px;width:38px;height:38px;border-radius:8px;cursor:pointer;" +
+        "background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.1);";
+      eb.onclick = () => {
+        this._selectedEmoji = em;
+        emojiDisplay.textContent = em;
+        emojiPicker.style.display = "none";
+      };
+      emojiPicker.appendChild(eb);
+    });
+    // Custom emoji input row
+    const customEmojiRow = document.createElement("div");
+    customEmojiRow.style.cssText = "display:flex;gap:6px;width:100%;margin-top:4px;";
+    const customEmojiInput = document.createElement("input");
+    customEmojiInput.type = "text";
+    customEmojiInput.placeholder = "Type any emoji...";
+    customEmojiInput.maxLength = 4;
+    customEmojiInput.style.cssText =
+      "flex:1;background:rgba(255,255,255,0.08);color:white;border:1.5px solid rgba(255,255,255,0.15);" +
+      "border-radius:8px;padding:8px;font-size:18px;outline:none;font-family:Arial,sans-serif;";
+    const customEmojiBtn = document.createElement("button");
+    customEmojiBtn.textContent = "✓";
+    customEmojiBtn.style.cssText =
+      "background:#FF0000;color:white;font-size:16px;font-weight:bold;" +
+      "padding:8px 14px;border-radius:8px;border:none;cursor:pointer;";
+    customEmojiBtn.onclick = () => {
+      const val = [...customEmojiInput.value].slice(0,2).join("");
+      if (val) {
+        this._selectedEmoji = val;
+        emojiDisplay.textContent = val;
+        emojiPicker.style.display = "none";
+        customEmojiInput.value = "";
+      }
+    };
+    customEmojiRow.appendChild(customEmojiInput);
+    customEmojiRow.appendChild(customEmojiBtn);
+    emojiPicker.appendChild(customEmojiRow);
+
+    emojiDisplay.onclick = () => {
+      emojiPicker.style.display = emojiPicker.style.display === "none" ? "flex" : "none";
+    };
 
     const thumb = document.createElement("div");
     thumb.style.cssText =
-      "background:#1a1a1a;border-radius:16px;padding:24px;text-align:center;width:100%;max-width:320px;";
-    thumb.innerHTML =
-      `<div style="font-size:64px;margin-bottom:12px;">${this._selectedTopic?.emoji}</div>` +
-      `<div style="color:white;font-size:16px;font-weight:bold;margin-bottom:4px;">"${this._selectedTitle}"</div>` +
-      `<div style="color:rgba(255,255,255,0.4);font-size:13px;">by ${save.channelName}</div>` +
-      `<div style="margin-top:12px;color:#00ff88;font-size:13px;">✅ Ready to publish!</div>`;
+      "background:#1a1a1a;border-radius:16px;padding:20px;text-align:center;width:100%;max-width:320px;" +
+      "display:flex;flex-direction:column;align-items:center;gap:8px;";
+    thumb.appendChild(emojiDisplay);
+    const emojiHint = document.createElement("div");
+    emojiHint.style.cssText = "color:rgba(255,255,255,0.25);font-size:10px;margin-bottom:4px;";
+    emojiHint.textContent = "tap emoji to change";
+    thumb.appendChild(emojiHint);
+    thumb.appendChild(emojiPicker);
+    thumb.appendChild(titleInput);
+    const byLine = document.createElement("div");
+    byLine.style.cssText = "color:rgba(255,255,255,0.4);font-size:13px;";
+    byLine.textContent = `by ${save.channelName}`;
+    thumb.appendChild(byLine);
+    const readyLine = document.createElement("div");
+    readyLine.style.cssText = "color:#00ff88;font-size:13px;margin-top:4px;";
+    readyLine.textContent = "✅ Ready to publish!";
+    thumb.appendChild(readyLine);
     container.appendChild(thumb);
 
     const pubBtn = document.createElement("button");
@@ -583,10 +778,11 @@ export class YouTubeGame {
       "padding:14px 32px;border-radius:50px;border:none;cursor:pointer;" +
       "box-shadow:0 4px 20px rgba(255,0,0,0.4);width:100%;max-width:280px;";
     pubBtn.onclick = () => {
+      const finalTitle = titleInput.value.trim() || this._selectedTitle;
       const v: VideoEntry = {
         id: save.nextId++,
-        title: this._selectedTitle,
-        emoji: this._selectedTopic?.emoji ?? "📹",
+        title: finalTitle,
+        emoji: this._selectedEmoji || this._selectedTopic?.emoji || "📹",
         views: 0,
         cashedViews: 0,
       };
@@ -1144,6 +1340,41 @@ export class YouTubeGame {
     el.textContent = msg;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 2500);
+  }
+
+  private _showSubAnimation(name: string): void {
+    const el = document.createElement("div");
+    el.style.cssText =
+      "position:fixed;bottom:80px;left:50%;transform:translateX(-50%) scale(0.6);" +
+      "background:linear-gradient(135deg,#1a1a1a,#2a0000);color:white;" +
+      "padding:14px 22px;border-radius:20px;border:2px solid #FF0000;" +
+      "font-family:Arial,sans-serif;z-index:99998;pointer-events:none;" +
+      "box-shadow:0 0 30px rgba(255,0,0,0.5),0 4px 24px rgba(0,0,0,0.6);" +
+      "opacity:0;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1),opacity 0.2s;";
+    el.innerHTML =
+      `<div style="display:flex;align-items:center;gap:12px;">` +
+        `<div style="font-size:28px;animation:none;">🔔</div>` +
+        `<div>` +
+          `<div style="font-size:11px;color:#FF4444;font-weight:900;letter-spacing:1px;">NEW SUBSCRIBER!</div>` +
+          `<div style="font-size:15px;font-weight:bold;">${name}</div>` +
+          `<div style="font-size:11px;color:rgba(255,255,255,0.5);">just subscribed to your channel</div>` +
+        `</div>` +
+        `<div style="font-size:22px;">❤️</div>` +
+      `</div>`;
+    document.body.appendChild(el);
+    // Animate in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.transform = "translateX(-50%) scale(1)";
+        el.style.opacity = "1";
+      });
+    });
+    // Animate out
+    setTimeout(() => {
+      el.style.transform = "translateX(-50%) scale(0.8)";
+      el.style.opacity = "0";
+      setTimeout(() => el.remove(), 300);
+    }, 2500);
   }
 
   private _fmt(n: number): string {
