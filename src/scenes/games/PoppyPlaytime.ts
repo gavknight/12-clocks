@@ -73,20 +73,20 @@ export class PoppyPlaytime {
     this._scene  = new Scene(this._engine);
     this._scene.clearColor = new Color4(0.04, 0.03, 0.06, 1); // near-black
 
-    // Very dim ambient — spooky mansion
+    // Dim ambient — spooky but visible
     const amb = new HemisphericLight("amb", Vector3.Up(), this._scene);
-    amb.intensity   = 0.12;
-    amb.diffuse     = new Color3(0.5, 0.4, 0.7);
-    amb.groundColor = new Color3(0.1, 0.1, 0.15);
+    amb.intensity   = 0.35;
+    amb.diffuse     = new Color3(0.5, 0.45, 0.7);
+    amb.groundColor = new Color3(0.2, 0.2, 0.3);
 
-    // Weak lantern above start
+    // Lantern above start
     const startLight = new PointLight("sl", new Vector3(0, 3, 0), this._scene);
     startLight.diffuse    = new Color3(1, 0.8, 0.4);
-    startLight.intensity  = 0.8;
-    startLight.range      = 10;
+    startLight.intensity  = 1.2;
+    startLight.range      = 18;
 
     this._scene.fogMode    = Scene.FOGMODE_EXP;
-    this._scene.fogDensity = 0.045;
+    this._scene.fogDensity = 0.022;
     this._scene.fogColor   = new Color3(0.04, 0.03, 0.06);
 
     this._cam = new FreeCamera("cam", new Vector3(0, PLR_H * 2, 0), this._scene);
@@ -379,7 +379,7 @@ export class PoppyPlaytime {
     }
 
     // Position camera at player eye level
-    this._cam.position.set(this._px, this._py + PLR_H * 0.8, this._pz);
+    this._cam.position.set(this._px, this._py + PLR_H * 2 * 0.85, this._pz);
     this._cam.rotation.set(this._camPitch, this._camYaw, 0);
 
     this._scene.render();
