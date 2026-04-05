@@ -60,10 +60,6 @@ export function advanceTutorial(expectedId: string): void {
       doneTutorial();
     } else {
       _renderBanner();
-      // Step 9 "enjoy" auto-completes after showing briefly
-      if (TUTORIAL_STEPS[next].id === "enjoy") {
-        setTimeout(() => advanceTutorial("enjoy"), 3000);
-      }
     }
   }, 1200);
 }
@@ -112,6 +108,11 @@ function _renderBanner(): void {
     </div>`;
 
   document.body.appendChild(_banner);
+
+  // Step 9 "enjoy" auto-completes after 3 seconds
+  if (TUTORIAL_STEPS[step].id === "enjoy") {
+    setTimeout(() => advanceTutorial("enjoy"), 3000);
+  }
 }
 
 // Re-show banner on page load if tutorial is in progress

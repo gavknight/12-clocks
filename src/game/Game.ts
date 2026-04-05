@@ -144,8 +144,7 @@ export class Game {
   }
 
   // ── Idle disconnect ────────────────────────────────────────────────────────
-  // TODO: change IDLE_MS to 2 * 24 * 60 * 60 * 1000 for real (2 days)
-  private static readonly IDLE_MS = 1 * 60 * 1000; // 1 minute for playtesting
+  private static readonly IDLE_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
   private _idleTimer = 0;
 
   private _startIdleWatcher(): void {
@@ -168,7 +167,7 @@ export class Game {
     ov.innerHTML =
       `<div style="font-size:56px;">💤</div>` +
       `<div style="color:white;font-size:22px;font-weight:bold;">You have been disconnected</div>` +
-      `<div style="color:rgba(255,255,255,0.6);font-size:15px;">for being idle for 1 minute</div>` +
+      `<div style="color:rgba(255,255,255,0.6);font-size:15px;">for being idle for 2 days</div>` +
       `<button id="idleReconnect" style="margin-top:8px;background:#FFD700;color:#1a0060;` +
       `font-size:16px;font-weight:bold;padding:12px 32px;border-radius:30px;` +
       `border:none;cursor:pointer;">▶ Reconnect</button>`;
