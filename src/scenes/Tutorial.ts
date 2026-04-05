@@ -60,6 +60,10 @@ export function advanceTutorial(expectedId: string): void {
       doneTutorial();
     } else {
       _renderBanner();
+      // Step 9 "enjoy" auto-completes after showing briefly
+      if (TUTORIAL_STEPS[next].id === "enjoy") {
+        setTimeout(() => advanceTutorial("enjoy"), 3000);
+      }
     }
   }, 1200);
 }
