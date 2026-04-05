@@ -627,13 +627,14 @@ export class ArcadeScene {
       if ((e.target as HTMLElement).closest("button[id]")) _tut();
     }, { once: true });
     // Tutorial: watch for coins increasing (step "coins")
-    const _prevCoins = game.state.coins;
+    let _prevCoins = game.state.coins;
     const _coinWatch = setInterval(() => {
       if (game.state.coins > _prevCoins) {
         clearInterval(_coinWatch);
         import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("coins"));
       }
-    }, 2000);
+      _prevCoins = game.state.coins;
+    }, 1000);
 
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
     document.getElementById("banbanBtn")!.onclick  = () => {
