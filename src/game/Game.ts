@@ -1137,7 +1137,6 @@ export class ${className} {
   }
   goExplore():     void {
     if (this._runStart === 0) this.startTimer();
-    import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("map"));
     this._nav(() => import("../scenes/ExploreScene").then(m => new m.ExploreScene(this)));
   }
   goClock():       void { this._nav(() => import("../scenes/ClockScene").then(m => new m.ClockScene(this))); }

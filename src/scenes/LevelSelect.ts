@@ -113,6 +113,7 @@ export class LevelSelect {
       const cost = unlockCost(n);
 
       if (game.isLevelUnlocked(n)) {
+        import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("map"));
         openDiff(n);
       } else if (game.state.coins >= cost) {
         // Confirm unlock
