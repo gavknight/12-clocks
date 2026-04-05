@@ -622,19 +622,19 @@ export class ArcadeScene {
       document.getElementById("arcadeRulesPanel")!.style.display = "none";
     };
     // Tutorial: mark "minigame" step when any game button is clicked
-    const _tut = () => import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("minigame"));
+    const _tut = () => {
+      sessionStorage.setItem("tut_coins_before", String(game.state.coins));
+      import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("minigame"));
+    };
     document.querySelector(".screen")?.addEventListener("click", e => {
       if ((e.target as HTMLElement).closest("button[id]")) _tut();
     }, { once: true });
-    // Tutorial: watch for coins increasing (step "coins")
-    let _prevCoins = game.state.coins;
-    const _coinWatch = setInterval(() => {
-      if (game.state.coins > _prevCoins) {
-        clearInterval(_coinWatch);
-        import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("coins"));
-      }
-      _prevCoins = game.state.coins;
-    }, 1000);
+    // Tutorial: check if coins increased since before the mini-game
+    const _coinsBefore = parseInt(sessionStorage.getItem("tut_coins_before") ?? "-1");
+    if (_coinsBefore >= 0 && game.state.coins > _coinsBefore) {
+      sessionStorage.removeItem("tut_coins_before");
+      import("../scenes/Tutorial").then(({advanceTutorial}) => advanceTutorial("coins"));
+    }
 
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
     document.getElementById("banbanBtn")!.onclick  = () => {
