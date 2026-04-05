@@ -80,10 +80,10 @@ function _renderBanner(): void {
   _banner.id = "tutBanner";
   _banner.style.cssText =
     "position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:99990;" +
-    "background:linear-gradient(135deg,rgba(20,0,40,0.97),rgba(60,0,80,0.97));" +
-    "border:2px solid rgba(180,100,255,0.6);border-radius:20px;" +
-    "padding:12px 20px;min-width:260px;max-width:320px;width:90%;" +
-    "box-shadow:0 4px 24px rgba(100,0,200,0.5);pointer-events:none;";
+    "background:linear-gradient(135deg,#6a20a0,#3a106f);" +
+    "border:3px solid #cc88ff;border-radius:20px;" +
+    "padding:14px 22px;min-width:270px;max-width:340px;width:92%;" +
+    "box-shadow:0 0 30px rgba(200,100,255,0.8),0 4px 24px rgba(0,0,0,0.6);pointer-events:none;";
 
   _banner.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;">
