@@ -188,18 +188,18 @@ export class ArcadeScene {
         <!-- Game cards -->
         <div style="display:flex;flex-direction:column;gap:16px;width:100%;max-width:360px;padding-bottom:8px;">
 
-          <!-- Poppy Playtime -->
-          <button id="poppyBtn" style="
-            background:linear-gradient(135deg,rgba(0,10,30,0.9),rgba(0,40,80,0.7));
-            border:2px solid rgba(68,170,255,0.6);border-radius:20px;
+          <!-- Eggy Hide & Seek -->
+          <button id="eggyBtn" style="
+            background:linear-gradient(135deg,rgba(30,20,0,0.9),rgba(80,60,0,0.7));
+            border:2px solid rgba(255,200,50,0.6);border-radius:20px;
             padding:20px 24px;cursor:pointer;text-align:left;
             display:flex;align-items:center;gap:16px;
           ">
-            <div style="font-size:40px;flex-shrink:0;">🔋</div>
+            <div style="font-size:40px;flex-shrink:0;">🥚</div>
             <div>
-              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Poppy Playtime</div>
-              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Find 4 batteries in the dark mansion!</div>
-              <div style="color:#44aaff;font-size:12px;margin-top:4px;">🎮 3D • Explore • Spooky</div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Eggy Hide &amp; Seek</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Hide as Eggy before the seeker finds you!</div>
+              <div style="color:#ffc832;font-size:12px;margin-top:4px;">🎮 3D • Hide &amp; Seek • Easter</div>
             </div>
           </button>
 
@@ -725,11 +725,10 @@ export class ArcadeScene {
         new m.RobloxGames(game);
       });
     };
-    document.getElementById("poppyBtn")!.onclick = () => {
-      _tut();
-      import("./games/PoppyPlaytime").then(m => {
+    document.getElementById("eggyBtn")!.onclick = () => {
+      import("./games/EggyHideAndSeek").then(m => {
         game.ui.innerHTML = "";
-        new m.PoppyPlaytime(game.ui, (_won, _msg) => {
+        new m.EggyHideAndSeek(game.ui, (_won, _msg) => {
           game.ui.innerHTML = "";
           import("./ArcadeScene").then(a => new a.ArcadeScene(game));
         });
