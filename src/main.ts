@@ -94,8 +94,26 @@ skyLoader.innerHTML = `
   <div style="font-size:15px;color:#1a5a8a;margin-bottom:24px;">A fun clock game!</div>
 
   <div style="color:#1a5abf;font-size:13px;">Loading...</div>
+
+  <!-- Tip -->
+  <div id="skyTip" style="position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+    background:rgba(255,255,255,0.6);border-radius:12px;padding:8px 20px;
+    color:#1a3a8a;font-size:13px;text-align:center;max-width:300px;white-space:normal;">
+    <b>Tip:</b> <span id="skyTipText"></span>
+  </div>
 `;
 document.body.appendChild(skyLoader);
+const _tips = [
+  "There are 12 clocks — can you find them all?",
+  "Each clock hides a secret. Look closely!",
+  "Coins unlock cool stuff in the Shop!",
+  "Some clocks are trickier than others. Don't give up!",
+  "Challenge your friends — who can finish fastest?",
+  "Every clock is different. Stay sharp!",
+  "Check every corner — clocks can be sneaky!",
+];
+const _tipEl = document.getElementById("skyTipText");
+if (_tipEl) _tipEl.textContent = _tips[Math.floor(Math.random() * _tips.length)];
 setTimeout(() => {
   skyLoader.style.opacity = "0";
   setTimeout(() => skyLoader.remove(), 750);
