@@ -189,16 +189,6 @@ const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const game = new Game(canvas);
 game.start();
 
-// Auto-fullscreen on first interaction (browsers require a user gesture)
-const _goFullscreen = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.().catch(() => {});
-  }
-  window.removeEventListener("pointerdown", _goFullscreen);
-  window.removeEventListener("keydown", _goFullscreen);
-};
-window.addEventListener("pointerdown", _goFullscreen, { once: true });
-window.addEventListener("keydown", _goFullscreen, { once: true });
 
 
 // Global refresh button — always visible in bottom-left corner
