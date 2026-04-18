@@ -211,20 +211,19 @@ export class TitleScene {
         <!-- Play button -->
         <button id="playBtn" style="
           background:#FFD700;color:#1a0060;font-size:26px;font-weight:bold;
-          padding:18px 0;border-radius:50px;border:4px solid #e6b800;
-          box-shadow:0 6px 0 #b8860b;cursor:pointer;margin-bottom:10px;display:block;
-          width:90%;max-width:600px;">
+          padding:18px 48px;border-radius:50px;border:4px solid #e6b800;
+          box-shadow:0 6px 0 #b8860b;cursor:pointer;margin-bottom:10px;display:block;">
           ${isTouch ? "👆 TAP TO PLAY" : "▶ START GAME"}
         </button>
 
         <!-- Button grid -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:90%;max-width:600px;padding:0 8px;">
+        <div style="display:grid;grid-template-columns:repeat(3,auto);gap:10px;width:90%;max-width:600px;padding:0 8px;justify-content:center;">
 
           ${hasSave ? `
           <button id="contBtn" style="
             background:rgba(255,255,255,0.15);color:white;font-size:18px;
             padding:12px 24px;border-radius:20px;
-            border:2px solid rgba(255,255,255,0.4);cursor:pointer;grid-column:span 2;">
+            border:2px solid rgba(255,255,255,0.4);cursor:pointer;grid-column:span 3;">
             ▷ Continue (${solved}/12 solved)
           </button>` : ""}
 
@@ -275,16 +274,16 @@ export class TitleScene {
           <button id="bedrockBtn" style="
             background:linear-gradient(135deg,#1a4a1a,#2e7d32);color:#7fff7f;font-size:18px;
             padding:12px 24px;border-radius:20px;
-            border:2px solid rgba(80,200,80,0.45);cursor:pointer;font-weight:bold;grid-column:span 2;">
+            border:2px solid rgba(80,200,80,0.45);cursor:pointer;font-weight:bold;grid-column:span 3;">
             🟢 Play Bedrock Edition
           </button>` : `
           <button id="realBtn" style="
             background:linear-gradient(135deg,#4a1a00,#b85a00);color:#ffe0a0;font-size:18px;
             padding:12px 24px;border-radius:20px;
-            border:2px solid rgba(255,140,0,0.5);cursor:pointer;font-weight:bold;grid-column:span 2;">
+            border:2px solid rgba(255,140,0,0.5);cursor:pointer;font-weight:bold;grid-column:span 3;">
             ← Return to Real Version
           </button>
-          <div style="grid-column:span 2;background:rgba(0,80,0,0.4);border:1px solid rgba(80,200,80,0.4);
+          <div style="grid-column:span 3;background:rgba(0,80,0,0.4);border:1px solid rgba(80,200,80,0.4);
             border-radius:20px;padding:4px 16px;color:#7fff7f;font-size:12px;font-weight:bold;text-align:center;">
             🟢 BEDROCK EDITION
           </div>`}
