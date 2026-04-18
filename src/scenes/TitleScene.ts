@@ -217,10 +217,10 @@ export class TitleScene {
         </button>
 
         <!-- Button grid -->
-        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;width:92%;padding:0 4px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px;padding:0 8px;">
 
           ${hasSave ? `
-          <button id="contBtn" style="width:100%;
+          <button id="contBtn" style="grid-column:span 2;
             background:rgba(255,255,255,0.15);color:white;font-size:18px;
             padding:12px 24px;border-radius:20px;
             border:2px solid rgba(255,255,255,0.4);cursor:pointer;">
@@ -271,19 +271,19 @@ export class TitleScene {
           </button>
 
           ${!IS_BEDROCK ? `
-          <button id="bedrockBtn" style="width:100%;
+          <button id="bedrockBtn" style="grid-column:span 2;
             background:linear-gradient(135deg,#1a4a1a,#2e7d32);color:#7fff7f;font-size:18px;
             padding:12px 24px;border-radius:20px;
             border:2px solid rgba(80,200,80,0.45);cursor:pointer;font-weight:bold;">
             🟢 Play Bedrock Edition
           </button>` : `
-          <button id="realBtn" style="width:100%;
+          <button id="realBtn" style="grid-column:span 2;
             background:linear-gradient(135deg,#4a1a00,#b85a00);color:#ffe0a0;font-size:18px;
             padding:12px 24px;border-radius:20px;
             border:2px solid rgba(255,140,0,0.5);cursor:pointer;font-weight:bold;">
             ← Return to Real Version
           </button>
-          <div style="width:100%;background:rgba(0,80,0,0.4);border:1px solid rgba(80,200,80,0.4);
+          <div style="grid-column:span 2;background:rgba(0,80,0,0.4);border:1px solid rgba(80,200,80,0.4);
             border-radius:20px;padding:4px 16px;color:#7fff7f;font-size:12px;font-weight:bold;text-align:center;">
             🟢 BEDROCK EDITION
           </div>`}
