@@ -1,4 +1,9 @@
 import type { Game } from "../game/Game";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 import { IS_BEDROCK, enterBedrock, exitBedrock } from "../bedrock";
 import { TIME_MACHINE_KEY, VERSION_NAMES } from "./VersionHistory";
 import { getMemberCount } from "../game/members";
@@ -106,12 +111,6 @@ export class TitleScene {
           width:3px;height:3px;border-radius:50%;background:white;
           opacity:${0.4+i*0.05};pointer-events:none;"></div>`).join("")}
 
-        ${Array.from({length:12},(_,i)=>`<div style="position:absolute;
-          left:${[8,15,25,40,55,70,82,90,5,35,65,88][i]}%;
-          top:${[10,25,8,15,5,12,8,20,35,30,28,35][i]}%;
-          width:3px;height:3px;border-radius:50%;background:white;
-          opacity:${0.4+i*0.05};pointer-events:none;"></div>`).join("")}
-
         <!-- Vlad & Niki -->
         <div style="position:absolute;bottom:30%;left:22%;display:flex;gap:10px;align-items:flex-end;pointer-events:none;">
           <div style="display:flex;flex-direction:column;align-items:center;">
@@ -212,13 +211,14 @@ export class TitleScene {
         <!-- Play button -->
         <button id="playBtn" style="
           background:#FFD700;color:#1a0060;font-size:26px;font-weight:bold;
-          padding:18px 48px;border-radius:50px;border:4px solid #e6b800;
-          box-shadow:0 6px 0 #b8860b;cursor:pointer;margin-bottom:20px;display:block;">
+          padding:18px 0;border-radius:50px;border:4px solid #e6b800;
+          box-shadow:0 6px 0 #b8860b;cursor:pointer;margin-bottom:10px;display:block;
+          width:90%;max-width:600px;">
           ${isTouch ? "👆 TAP TO PLAY" : "▶ START GAME"}
         </button>
 
         <!-- Button grid -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px;padding:0 8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:90%;max-width:600px;padding:0 8px;">
 
           ${hasSave ? `
           <button id="contBtn" style="
@@ -233,6 +233,13 @@ export class TitleScene {
             padding:12px 24px;border-radius:20px;
             border:2px solid rgba(100,150,255,0.5);cursor:pointer;">
             🌐 Multiplayer
+          </button>` : ""}
+
+          ${!IS_BEDROCK ? `<button id="duelBtn" style="
+            background:linear-gradient(135deg,#7a0000,#e63946);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
+            border:2px solid rgba(255,80,80,0.5);cursor:pointer;font-weight:bold;">
+            ⚔️ Duel
           </button>` : ""}
 
           <button id="arcadeBtn" style="
@@ -284,6 +291,47 @@ export class TitleScene {
 
         </div>
 
+        <!-- How to Play button -->
+        <button id="howToPlayBtn" style="
+          background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);font-size:16px;
+          font-weight:bold;padding:12px 32px;border-radius:50px;
+          border:2px solid rgba(255,255,255,0.2);cursor:pointer;margin-top:4px;
+          font-family:Arial,sans-serif;">
+          ❓ How to Play
+        </button>
+
+        <!-- How to Play overlay (hidden) -->
+        <div id="howToPlayOverlay" style="display:none;position:fixed;inset:0;z-index:50;
+          background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
+          <div style="background:linear-gradient(160deg,#1a0a3e,#3a106f);
+            border:2px solid rgba(180,100,255,0.4);border-radius:24px;
+            padding:28px 24px;max-width:340px;width:90%;font-family:Arial,sans-serif;
+            box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+            <div style="font-size:36px;text-align:center;margin-bottom:8px;">🕐</div>
+            <div style="color:#FFD700;font-size:22px;font-weight:900;text-align:center;margin-bottom:16px;">How to Play</div>
+            <div style="color:rgba(255,255,255,0.85);font-size:14px;line-height:1.8;display:flex;flex-direction:column;gap:10px;">
+              <div>🔍 <b>Explore the room</b> — 12 clocks are hidden around the scene</div>
+              <div>👆 <b>Click a clock</b> — solve the mini-game puzzle to unlock it</div>
+              <div>🔢 <b>Place the number</b> — each clock has a number, put it in the right slot</div>
+              <div>🏆 <b>Find all 12</b> — unlock the secret 3 AM ending!</div>
+              <div>🪙 <b>Earn coins</b> — play mini-games in the Arcade to collect coins</div>
+            </div>
+            <button id="closeHowToPlay" style="
+              margin-top:20px;width:100%;background:#FFD700;color:#1a0060;
+              font-size:15px;font-weight:bold;padding:12px;border-radius:14px;
+              border:none;cursor:pointer;">Got it! ✓</button>
+          </div>
+        </div>
+
+        <!-- Install / Download button -->
+        <button id="installBtn" style="
+          background:linear-gradient(135deg,#0a3a0a,#1b5e20);color:#a5d6a7;font-size:16px;
+          font-weight:bold;padding:12px 32px;border-radius:50px;
+          border:2px solid rgba(100,200,100,0.5);cursor:pointer;margin-top:8px;
+          box-shadow:0 4px 0 #0a2a0a;font-family:Arial,sans-serif;">
+          ⬇️ Download Game
+        </button>
+
         <p style="margin-top:20px;font-size:12px;color:rgba(255,255,255,0.4);">
           12 puzzles hidden in a room · Find them all to unlock 3 AM 👀
         </p>
@@ -303,7 +351,7 @@ export class TitleScene {
         </div>` : ""}
 
         <!-- Bottom bar: sign out + admin -->
-        <div style="position:absolute;bottom:12px;left:0;right:0;
+        <div style="position:fixed;bottom:12px;left:0;right:0;z-index:30;
           display:flex;justify-content:space-between;padding:0 12px;">
           <button id="signOutBtn" style="
             background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);
@@ -312,13 +360,13 @@ export class TitleScene {
             font-family:Arial,sans-serif;">
             🚪 Sign Out
           </button>
-<button id="adminBtn" style="
+${game.hasHacks ? `<button id="adminBtn" style="
             background:rgba(0,0,0,0.5);color:rgba(255,255,255,0.5);
             font-size:13px;padding:6px 12px;border-radius:10px;
             border:1px solid rgba(255,255,255,0.2);cursor:pointer;
             font-family:Arial,sans-serif;">
             🔧 Admin
-          </button>
+          </button>` : ""}
         </div>
       </div>
     `;
@@ -382,8 +430,9 @@ export class TitleScene {
       game.logout();
       game.goAuth();
     };
-    document.getElementById("adminBtn")!.onclick = () => game.goAdmin();
-    if (!IS_BEDROCK) document.getElementById("mpBtn")!.onclick = () => game.goLobby();
+    if (game.hasHacks) document.getElementById("adminBtn")!.onclick = () => game.goAdmin();
+    if (!IS_BEDROCK) document.getElementById("mpBtn")!.onclick   = () => game.goLobby();
+    if (!IS_BEDROCK) document.getElementById("duelBtn")?.addEventListener("click", () => game.goDuel());
     document.getElementById("arcadeBtn")!.onclick = () => game.goArcade();
     if (!IS_BEDROCK) {
       document.getElementById("lbBtn")!.onclick      = () => game.goLeaderboard();
@@ -438,6 +487,33 @@ export class TitleScene {
           .then(() => fetch(`${SB}?select=account_id`, { headers: SB_H }))
           .then(r => r.json())
           .then((rows: Array<{ account_id: string }>) => refreshLikes(true, rows.length));
+      }
+    };
+
+    // How to Play
+    document.getElementById("howToPlayBtn")!.onclick = () => {
+      const ov = document.getElementById("howToPlayOverlay")!;
+      ov.style.display = "flex";
+    };
+    document.getElementById("closeHowToPlay")!.onclick = () => {
+      document.getElementById("howToPlayOverlay")!.style.display = "none";
+    };
+
+    // PWA install button
+    const installBtn = document.getElementById("installBtn") as HTMLButtonElement;
+    let deferredPrompt: BeforeInstallPromptEvent | null = null;
+    window.addEventListener("beforeinstallprompt", (e: Event) => {
+      e.preventDefault();
+      deferredPrompt = e as BeforeInstallPromptEvent;
+    });
+    installBtn.onclick = async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") installBtn.style.display = "none";
+        deferredPrompt = null;
+      } else {
+        alert("To install: open this game in Chrome or Edge, then look for the install icon (⊕) in the address bar!");
       }
     };
 
