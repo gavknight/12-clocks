@@ -216,73 +216,77 @@ export class TitleScene {
           ${isTouch ? "👆 TAP TO PLAY" : "▶ START GAME"}
         </button>
 
-        <!-- Scattered buttons -->
-        <div style="position:relative;width:100%;height:320px;margin-top:8px;">
+        <!-- Button grid -->
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;width:92%;padding:0 4px;">
 
           ${hasSave ? `
-          <button id="contBtn" style="position:absolute;top:0;left:50%;transform:translateX(-50%);
-            background:rgba(255,255,255,0.15);color:white;font-size:16px;
-            padding:10px 20px;border-radius:20px;white-space:nowrap;
+          <button id="contBtn" style="width:100%;
+            background:rgba(255,255,255,0.15);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(255,255,255,0.4);cursor:pointer;">
-            ▷ Continue (${solved}/12)
+            ▷ Continue (${solved}/12 solved)
           </button>` : ""}
 
-          ${!IS_BEDROCK ? `<button id="mpBtn" style="position:absolute;top:10px;left:4%;
-            background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;font-size:15px;
-            padding:10px 16px;border-radius:20px;white-space:nowrap;
+          ${!IS_BEDROCK ? `<button id="mpBtn" style="
+            background:linear-gradient(135deg,#6a11cb,#2575fc);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(100,150,255,0.5);cursor:pointer;">
             🌐 Multiplayer
           </button>` : ""}
 
-          ${!IS_BEDROCK ? `<button id="duelBtn" style="position:absolute;top:10px;right:4%;
-            background:linear-gradient(135deg,#7a0000,#e63946);color:white;font-size:15px;
-            padding:10px 16px;border-radius:20px;white-space:nowrap;
+          ${!IS_BEDROCK ? `<button id="duelBtn" style="
+            background:linear-gradient(135deg,#7a0000,#e63946);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(255,80,80,0.5);cursor:pointer;font-weight:bold;">
             ⚔️ Duel
           </button>` : ""}
 
-          <button id="arcadeBtn" style="position:absolute;top:75px;left:6%;
-            background:linear-gradient(135deg,#1a6b00,#4caf50);color:white;font-size:15px;
-            padding:10px 16px;border-radius:20px;white-space:nowrap;
+          <button id="arcadeBtn" style="
+            background:linear-gradient(135deg,#1a6b00,#4caf50);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(100,255,100,0.5);cursor:pointer;">
             🕹️ Mini-Games
           </button>
 
           ${!IS_BEDROCK ? `
-          <button id="lbBtn" style="position:absolute;top:75px;right:6%;
-            background:linear-gradient(135deg,#b8860b,#FFD700);color:#1a0060;font-size:15px;
-            padding:10px 16px;border-radius:20px;white-space:nowrap;
+          <button id="lbBtn" style="
+            background:linear-gradient(135deg,#b8860b,#FFD700);color:#1a0060;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(255,215,0,0.5);cursor:pointer;font-weight:bold;">
             🏆 Records
           </button>` : ""}
 
-          <button id="shopBtn" style="position:absolute;top:150px;left:4%;
-            background:linear-gradient(135deg,#4a0080,#9c27b0);color:white;font-size:15px;
-            padding:10px 16px;border-radius:20px;white-space:nowrap;
+          <button id="shopBtn" style="
+            background:linear-gradient(135deg,#4a0080,#9c27b0);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(200,100,255,0.5);cursor:pointer;">
             🛍️ Shop
           </button>
 
-          <button id="versionBtn" style="position:absolute;top:150px;right:4%;
-            background:linear-gradient(135deg,#0a2a4a,#1a5a8a);color:white;font-size:15px;
-            padding:10px 16px;border-radius:20px;white-space:nowrap;
+          <button id="versionBtn" style="
+            background:linear-gradient(135deg,#0a2a4a,#1a5a8a);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(100,180,255,0.5);cursor:pointer;">
             ⏳ History
           </button>
 
           ${!IS_BEDROCK ? `
-          <button id="bedrockBtn" style="position:absolute;top:220px;left:50%;transform:translateX(-50%);
-            background:linear-gradient(135deg,#1a4a1a,#2e7d32);color:#7fff7f;font-size:15px;
-            padding:10px 20px;border-radius:20px;white-space:nowrap;
+          <button id="bedrockBtn" style="width:100%;
+            background:linear-gradient(135deg,#1a4a1a,#2e7d32);color:#7fff7f;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(80,200,80,0.45);cursor:pointer;font-weight:bold;">
             🟢 Play Bedrock Edition
           </button>` : `
-          <button id="realBtn" style="position:absolute;top:220px;left:50%;transform:translateX(-50%);
-            background:linear-gradient(135deg,#4a1a00,#b85a00);color:#ffe0a0;font-size:15px;
-            padding:10px 20px;border-radius:20px;white-space:nowrap;
+          <button id="realBtn" style="width:100%;
+            background:linear-gradient(135deg,#4a1a00,#b85a00);color:#ffe0a0;font-size:18px;
+            padding:12px 24px;border-radius:20px;
             border:2px solid rgba(255,140,0,0.5);cursor:pointer;font-weight:bold;">
             ← Return to Real Version
-          </button>`}
+          </button>
+          <div style="width:100%;background:rgba(0,80,0,0.4);border:1px solid rgba(80,200,80,0.4);
+            border-radius:20px;padding:4px 16px;color:#7fff7f;font-size:12px;font-weight:bold;text-align:center;">
+            🟢 BEDROCK EDITION
+          </div>`}
 
         </div>
 
