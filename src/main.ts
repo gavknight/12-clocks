@@ -110,7 +110,7 @@ const _tips = [
   "Some clocks are trickier than others. Don't give up!",
   "Challenge your friends — who can finish fastest?",
   "Every clock is different. Stay sharp!",
-  "Check every corner — clocks can be sneaky!",
+  "Try hard mode — can you solve all 12 clocks fast?",
 ];
 const _tipEl = document.getElementById("skyTipText");
 if (_tipEl) _tipEl.textContent = _tips[Math.floor(Math.random() * _tips.length)];
@@ -188,6 +188,34 @@ window.addEventListener("beforeinstallprompt", (e) => {
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const game = new Game(canvas);
 game.start();
+
+// Auto-fullscreen on first interaction (browsers require a user gesture)
+const _goFullscreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+  window.removeEventListener("pointerdown", _goFullscreen);
+  window.removeEventListener("keydown", _goFullscreen);
+};
+window.addEventListener("pointerdown", _goFullscreen, { once: true });
+window.addEventListener("keydown", _goFullscreen, { once: true });
+
+// Close game button — only in standalone PWA (downloaded app), below the refresh button
+if (window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: fullscreen)").matches) {
+  const _closeBtn = document.createElement("button");
+  _closeBtn.textContent = "✕";
+  _closeBtn.title = "Exit Game";
+  _closeBtn.style.cssText =
+    "position:fixed;top:54px;left:10px;z-index:99999;" +
+    "background:rgba(0,0,0,0.4);color:white;font-size:14px;" +
+    "width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);" +
+    "cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;" +
+    "opacity:0.5;transition:opacity 0.2s;";
+  _closeBtn.onmouseenter = () => _closeBtn.style.opacity = "1";
+  _closeBtn.onmouseleave = () => _closeBtn.style.opacity = "0.5";
+  _closeBtn.onclick = () => window.close();
+  document.body.appendChild(_closeBtn);
+}
 
 // Global refresh button — always visible in bottom-left corner
 const refreshBtn = document.createElement("button");
