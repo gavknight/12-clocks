@@ -213,6 +213,16 @@ export class AdminPanel {
           <div id="alertFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
         </div>
 
+        <!-- Hacker Reports -->
+        <div style="width:100%;max-width:500px;background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,80,80,0.3);border-radius:14px;padding:16px 18px;margin-bottom:12px;">
+          <div style="color:rgba(255,100,100,0.9);font-size:12px;letter-spacing:2px;
+            text-transform:uppercase;margin-bottom:12px;">🚨 Hacker Reports</div>
+          <div id="hackerReportsList" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="color:rgba(255,255,255,0.3);font-size:12px;">Loading...</div>
+          </div>
+        </div>
+
         <!-- Clan Applications -->
         <div style="width:100%;max-width:500px;background:rgba(255,255,255,0.05);
           border:1px solid rgba(180,100,255,0.3);border-radius:14px;padding:16px 18px;margin-bottom:12px;">
@@ -293,6 +303,29 @@ export class AdminPanel {
     };
 
     loadClanApps();
+
+    // Hacker reports
+    const SB_HACK = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/hacker_reports";
+    fetch(`${SB_HACK}?order=submitted_at.desc&limit=50`, {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+    }).then(r => r.json()).then((rows: { id: number; reporter: string; hacker_name: string; cheat_type: string; level: string; details: string; submitted_at: number }[]) => {
+      const el = document.getElementById("hackerReportsList");
+      if (!el) return;
+      if (!rows.length) { el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No reports yet.</div>`; return; }
+      el.innerHTML = rows.map(row => `
+        <div style="padding:10px 12px;border-radius:10px;
+          background:rgba(255,50,50,0.08);border:1px solid rgba(255,80,80,0.2);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div>
+              <div style="color:#ff8080;font-size:14px;font-weight:bold;">💀 ${row.hacker_name}</div>
+              <div style="color:white;font-size:13px;margin-top:2px;">Cheat: <b>${row.cheat_type}</b>${row.level ? ` · Level: ${row.level}` : ""}</div>
+              ${row.details ? `<div style="color:rgba(255,255,255,0.45);font-size:12px;margin-top:2px;">"${row.details}"</div>` : ""}
+              <div style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:4px;">Reported by ${row.reporter}</div>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }).catch(() => {});
 
     // Rule reports
     const loadReports = () => {
