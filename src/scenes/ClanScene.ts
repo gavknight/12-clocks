@@ -4,7 +4,7 @@ const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/clan_applications";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
 const SB_H = { "apikey": SB_KEY, "Authorization": `Bearer ${SB_KEY}`, "Content-Type": "application/json" };
 
-const DOC_URL = ""; // will be filled in when the doc is ready
+const DOC_URL = "https://docs.google.com/document/d/190eBgCU1vhIKFyHsmHV2iO9i2Cg1lJoe68vZIKXzg88/edit?tab=t.0";
 
 export class ClanScene {
   constructor(game: Game) {
