@@ -551,6 +551,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       { title: "Heartbeat", id: "UDVbmaJGlKQ" },
       { title: "Limbo", id: "ryBbuH_SPbs" },
       { title: "Title Wave", id: "frjtBcNI6dI" },
+      { title: "Bloodbath", id: "Xzb7apPvDos" },
     ];
     const musicOverlay = document.getElementById("musicOverlay")!;
     const songList = document.getElementById("songList")!;
