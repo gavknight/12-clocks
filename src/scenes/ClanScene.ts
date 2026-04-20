@@ -38,18 +38,27 @@ export class ClanScene {
       </div>`}
 
       <div style="width:100%;max-width:400px;background:rgba(255,255,255,0.05);
-        border:1.5px solid rgba(255,255,255,0.15);border-radius:16px;padding:20px;margin-bottom:16px;">
-        <div style="color:white;font-size:16px;font-weight:bold;margin-bottom:12px;">Apply to Join</div>
-        <textarea id="reasonInput" placeholder="Why do you want to join? (optional)"
-          style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.08);
-          border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:white;
-          font-size:14px;padding:10px;resize:none;height:80px;outline:none;font-family:Arial,sans-serif;"></textarea>
-        <button id="applyBtn" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#6a20a0,#3a106f);
-          color:white;font-size:16px;font-weight:bold;padding:12px;border-radius:12px;
-          border:2px solid rgba(180,100,255,0.4);cursor:pointer;">
-          ✅ Apply to Join
-        </button>
-        <div id="applyMsg" style="margin-top:8px;font-size:13px;text-align:center;min-height:16px;"></div>
+        border:1.5px solid rgba(180,100,255,0.3);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:10px;">🕵️</div>
+        <div style="color:white;font-size:18px;font-weight:900;margin-bottom:8px;">
+          Accept to expose GD hackers?
+        </div>
+        <div style="color:rgba(255,255,255,0.45);font-size:13px;margin-bottom:20px;">
+          Join the Creators Expose Clan and help catch cheaters in Geometry Dash.
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button id="applyBtn" style="flex:1;background:linear-gradient(135deg,#1a6b00,#4caf50);
+            color:white;font-size:16px;font-weight:bold;padding:14px;border-radius:12px;
+            border:2px solid rgba(100,255,100,0.4);cursor:pointer;">
+            ✅ Accept
+          </button>
+          <button id="rejectBtn" style="flex:1;background:rgba(255,255,255,0.07);
+            color:rgba(255,255,255,0.5);font-size:16px;font-weight:bold;padding:14px;border-radius:12px;
+            border:2px solid rgba(255,255,255,0.15);cursor:pointer;">
+            ❌ Reject
+          </button>
+        </div>
+        <div id="applyMsg" style="margin-top:10px;font-size:13px;text-align:center;min-height:16px;"></div>
       </div>
 
       <button id="backBtn" style="background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);
@@ -64,11 +73,11 @@ export class ClanScene {
     document.getElementById("backBtn")!.onclick = () => game.goTitle();
 
     const applyBtn = document.getElementById("applyBtn") as HTMLButtonElement;
+    const rejectBtn = document.getElementById("rejectBtn") as HTMLButtonElement;
     const applyMsg = document.getElementById("applyMsg")!;
-    const reasonInput = document.getElementById("reasonInput") as HTMLTextAreaElement;
+    const accountId = game.currentAccountId;
 
     // Check if already applied
-    const accountId = game.currentAccountId;
     fetch(`${SB}?account_id=eq.${encodeURIComponent(accountId)}&select=status`, { headers: SB_H })
       .then(r => r.json())
       .then((rows: { status: string }[]) => {
@@ -76,16 +85,20 @@ export class ClanScene {
           const status = rows[0].status;
           if (status === "accepted") {
             applyBtn.textContent = "✅ You're in the clan!";
-            applyBtn.style.background = "linear-gradient(135deg,#1a6b00,#4caf50)";
             applyBtn.disabled = true;
+            rejectBtn.style.display = "none";
           } else if (status === "pending") {
-            applyBtn.textContent = "⏳ Application pending...";
+            applyBtn.textContent = "⏳ Pending...";
             applyBtn.disabled = true;
+            rejectBtn.style.display = "none";
+            applyMsg.style.color = "rgba(255,255,255,0.4)";
+            applyMsg.textContent = "Waiting for the owner to accept you.";
           } else if (status === "rejected") {
+            applyBtn.disabled = true;
+            applyBtn.style.opacity = "0.4";
+            rejectBtn.style.display = "none";
             applyMsg.style.color = "#ff6060";
             applyMsg.textContent = "Your application was not accepted.";
-            applyBtn.disabled = true;
-            applyBtn.style.opacity = "0.5";
           }
         }
       }).catch(() => {});
@@ -93,7 +106,7 @@ export class ClanScene {
     applyBtn.onclick = () => {
       if (!game.isLoggedIn) {
         applyMsg.style.color = "#ff6060";
-        applyMsg.textContent = "You need to be logged in to apply!";
+        applyMsg.textContent = "You need to be logged in!";
         return;
       }
       applyBtn.disabled = true;
@@ -104,27 +117,29 @@ export class ClanScene {
         body: JSON.stringify({
           username: game.state.username,
           account_id: accountId,
-          reason: reasonInput.value.trim() || null,
           status: "pending",
           applied_at: Date.now(),
         }),
       }).then(r => {
         if (r.ok || r.status === 201) {
-          applyBtn.textContent = "⏳ Application pending...";
+          applyBtn.textContent = "⏳ Pending...";
+          rejectBtn.style.display = "none";
           applyMsg.style.color = "#80ff80";
-          applyMsg.textContent = "Applied! Wait for the owner to accept you.";
+          applyMsg.textContent = "Applied! Waiting for the owner to accept you.";
         } else {
           applyBtn.disabled = false;
-          applyBtn.textContent = "✅ Apply to Join";
+          applyBtn.textContent = "✅ Accept";
           applyMsg.style.color = "#ff6060";
           applyMsg.textContent = "Something went wrong, try again.";
         }
       }).catch(() => {
         applyBtn.disabled = false;
-        applyBtn.textContent = "✅ Apply to Join";
+        applyBtn.textContent = "✅ Accept";
         applyMsg.style.color = "#ff6060";
         applyMsg.textContent = "Connection error, try again.";
       });
     };
+
+    rejectBtn.onclick = () => game.goTitle();
   }
 }
