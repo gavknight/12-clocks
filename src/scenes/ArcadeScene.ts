@@ -188,6 +188,20 @@ export class ArcadeScene {
         <!-- Game cards -->
         <div style="display:flex;flex-direction:column;gap:16px;width:100%;max-width:360px;padding-bottom:8px;">
 
+          <!-- Cat Cleaning -->
+          <button id="catCleanBtn" style="
+            background:linear-gradient(135deg,rgba(30,20,0,0.9),rgba(80,60,10,0.7));
+            border:2px solid rgba(255,200,100,0.5);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🐱</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Cat Cleaning</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Brush all the dirt off the cat!</div>
+              <div style="color:#ffc832;font-size:12px;margin-top:4px;">🧹 Drag • Clean • Purrfect!</div>
+            </div>
+          </button>
+
           <!-- Eggy Hide & Seek -->
           <button id="eggyBtn" style="
             background:linear-gradient(135deg,rgba(30,20,0,0.9),rgba(80,60,0,0.7));
@@ -200,6 +214,21 @@ export class ArcadeScene {
               <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Eggy Hide &amp; Seek</div>
               <div style="color:rgba(255,255,255,0.6);font-size:13px;">Hide as Eggy before the seeker finds you!</div>
               <div style="color:#ffc832;font-size:12px;margin-top:4px;">🎮 3D • Hide &amp; Seek • Easter</div>
+            </div>
+          </button>
+
+          <!-- Prodigy -->
+          <button id="prodigyBtn" style="
+            background:linear-gradient(135deg,rgba(10,10,40,0.9),rgba(30,30,80,0.7));
+            border:2px solid rgba(100,150,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🧙</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Prodigy</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Answer math to cast spells &amp; defeat enemies!</div>
+              <div style="color:#a0b4ff;font-size:12px;margin-top:4px;">🎮 Math • RPG • Battles</div>
             </div>
           </button>
 
@@ -507,6 +536,21 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Fake Google -->
+          <button id="fakeGoogleBtn" style="
+            background:linear-gradient(135deg,rgba(0,30,80,0.9),rgba(20,80,200,0.7));
+            border:2px solid rgba(66,133,244,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🔍</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Fake Google</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Search the web... kind of.</div>
+              <div style="color:#4fc3f7;font-size:12px;margin-top:4px;">🔍 I am not a robot</div>
+            </div>
+          </button>
+
           <!-- Click Test -->
           <button id="clickTestBtn" style="
             background:linear-gradient(135deg,rgba(40,0,80,0.9),rgba(80,0,160,0.7));
@@ -725,6 +769,18 @@ export class ArcadeScene {
         new m.RobloxGames(game);
       });
     };
+    document.getElementById("prodigyBtn")!.onclick = () => {
+      import("./games/ProdigyGame").then(m => {
+        game.ui.innerHTML = "";
+        new m.ProdigyGame(game.ui, (_won, _msg) => {
+          game.ui.innerHTML = "";
+          import("./ArcadeScene").then(a => new a.ArcadeScene(game));
+        });
+      });
+    };
+    document.getElementById("catCleanBtn")!.onclick = () => {
+      import("./games/CatCleaning").then(m => new m.CatCleaning(game));
+    };
     document.getElementById("eggyBtn")!.onclick = () => {
       import("./games/EggyHideAndSeek").then(m => {
         game.ui.innerHTML = "";
@@ -774,6 +830,9 @@ export class ArcadeScene {
       });
     };
 
+    document.getElementById("fakeGoogleBtn")!.onclick = () => {
+      import("./games/FakeGoogle").then(m => { game.ui.innerHTML = ""; new m.FakeGoogle(game); });
+    };
     document.getElementById("clickTestBtn")!.onclick = () => {
       import("./games/ClickTest").then(m => { game.ui.innerHTML = ""; new m.ClickTest(game); });
     };

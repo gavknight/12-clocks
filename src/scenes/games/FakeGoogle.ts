@@ -1,0 +1,186 @@
+import type { Game } from "../../game/Game";
+
+export class FakeGoogle {
+  private _g: Game;
+  private _wrap!: HTMLDivElement;
+
+  constructor(g: Game) {
+    this._g = g;
+    g.inMiniGame = true;
+    g.ui.innerHTML = "";
+    this._wrap = document.createElement("div");
+    this._wrap.style.cssText =
+      "position:absolute;inset:0;overflow-y:auto;background:white;" +
+      "pointer-events:all;font-family:Arial,sans-serif;";
+    g.ui.appendChild(this._wrap);
+    this._showSearch();
+  }
+
+  private _showSearch(): void {
+    this._wrap.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;padding:60px 20px 20px;">
+        <div style="font-size:64px;font-weight:900;margin-bottom:20px;letter-spacing:-2px;">
+          <span style="color:#4285F4;">G</span><span style="color:#EA4335;">o</span><span style="color:#FBBC05;">o</span><span style="color:#4285F4;">g</span><span style="color:#34A853;">l</span><span style="color:#EA4335;">e</span>
+        </div>
+        <div style="display:flex;align-items:center;border:1px solid #dfe1e5;border-radius:24px;
+          padding:10px 18px;width:90%;max-width:500px;box-shadow:0 2px 8px rgba(0,0,0,0.1);gap:10px;">
+          <span style="font-size:18px;">🔍</span>
+          <input id="searchInput" type="text" placeholder="Search Google"
+            style="border:none;outline:none;font-size:16px;width:100%;color:#333;"/>
+        </div>
+        <button id="searchBtn" style="margin-top:20px;background:#f8f9fa;border:1px solid #f8f9fa;
+          border-radius:4px;color:#3c4043;font-size:14px;padding:10px 20px;cursor:pointer;">
+          Google Search
+        </button>
+        <!-- Exit -->
+        <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
+          color:#333;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+    `;
+    document.getElementById("searchBtn")!.onclick = () => this._showResults();
+    document.getElementById("searchInput")!.addEventListener("keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Enter") this._showResults();
+    });
+    document.getElementById("exitBtn")!.onclick = () => this._cleanup();
+  }
+
+  private _showResults(): void {
+    this._wrap.innerHTML = `
+      <div style="padding:16px 20px;">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid #ebebeb;padding-bottom:12px;">
+          <div style="font-size:28px;font-weight:900;">
+            <span style="color:#4285F4;">G</span><span style="color:#EA4335;">o</span><span style="color:#FBBC05;">o</span><span style="color:#4285F4;">g</span><span style="color:#34A853;">l</span><span style="color:#EA4335;">e</span>
+          </div>
+          <div style="display:flex;align-items:center;border:1px solid #dfe1e5;border-radius:24px;
+            padding:8px 14px;flex:1;max-width:500px;gap:8px;">
+            <span>🔍</span>
+            <span style="color:#333;font-size:15px;">how to make a youtube channel</span>
+          </div>
+        </div>
+
+        <!-- Fake results -->
+        <div style="max-width:600px;">
+          <div style="color:#70757a;font-size:13px;margin-bottom:16px;">About 2,340,000,000 results (0.47 seconds)</div>
+
+          <!-- Result 1 -->
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;cursor:pointer;" id="result1">How to Start a YouTube Channel — Do YOU want one?</div>
+            <div style="color:#006621;font-size:13px;">www.youtube.com › start › channel</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Learn how to create your very own YouTube channel today. But first... a quick question.</div>
+          </div>
+
+          <!-- Result 2 -->
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">Top 10 YouTube Tips Nobody Tells You</div>
+            <div style="color:#006621;font-size:13px;">www.fakeblog.com › youtube-tips</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">We asked 1000 YouTubers. 999 of them said the same thing.</div>
+          </div>
+
+          <!-- Result 3 -->
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">YouTube Channel Name Generator</div>
+            <div style="color:#006621;font-size:13px;">www.namegenerator.fake › youtube</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Can't think of a name? We got you. Probably.</div>
+          </div>
+        </div>
+
+        <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
+          color:#333;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+    `;
+    document.getElementById("result1")!.onclick = () => this._showQuiz();
+    document.getElementById("exitBtn")!.onclick = () => this._cleanup();
+  }
+
+  private _showQuiz(): void {
+    this._wrap.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        min-height:100%;padding:40px 20px;text-align:center;">
+
+        <div style="font-size:48px;margin-bottom:16px;">📺</div>
+        <div style="font-size:22px;font-weight:bold;color:#333;margin-bottom:8px;">
+          Do you want to start a YouTube channel?
+        </div>
+        <div style="font-size:14px;color:#70757a;margin-bottom:32px;">Think carefully.</div>
+
+        <div style="display:flex;gap:16px;">
+          <button id="yesBtn" style="background:#4285F4;color:white;font-size:18px;font-weight:bold;
+            padding:14px 36px;border-radius:8px;border:none;cursor:pointer;">Yes</button>
+          <button id="noBtn" style="background:#f8f9fa;color:#333;font-size:18px;font-weight:bold;
+            padding:14px 36px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">No</button>
+        </div>
+
+        <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
+          color:#333;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+    `;
+    document.getElementById("yesBtn")!.onclick = () => this._showYes();
+    document.getElementById("noBtn")!.onclick = () => this._showNo();
+    document.getElementById("exitBtn")!.onclick = () => this._cleanup();
+  }
+
+  private _showNo(): void {
+    this._wrap.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        min-height:100%;padding:40px 20px;text-align:center;">
+        <div style="font-size:64px;margin-bottom:16px;">🙈</div>
+        <div style="font-size:28px;font-weight:900;color:#EA4335;margin-bottom:12px;">You're blind.</div>
+        <div style="font-size:16px;color:#70757a;margin-bottom:32px;">YouTube is RIGHT there. How could you say no??</div>
+        <button id="backBtn" style="background:#4285F4;color:white;font-size:16px;
+          padding:12px 28px;border-radius:8px;border:none;cursor:pointer;">← Go Back</button>
+        <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
+          color:#333;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+    `;
+    document.getElementById("backBtn")!.onclick = () => this._showQuiz();
+    document.getElementById("exitBtn")!.onclick = () => this._cleanup();
+  }
+
+  private _showYes(): void {
+    this._wrap.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        min-height:100%;padding:40px 20px;text-align:center;">
+        <div style="font-size:64px;margin-bottom:16px;">🎉</div>
+        <div style="font-size:28px;font-weight:900;color:#34A853;margin-bottom:16px;">Terrific!</div>
+        <div style="font-size:17px;color:#333;margin-bottom:8px;line-height:1.8;">
+          Push <span id="ytLink" style="color:#4285F4;font-weight:bold;text-decoration:underline;cursor:pointer;">YouTube</span> to go to YouTube.
+        </div>
+        <div style="font-size:14px;color:#70757a;margin-bottom:32px;">You're going places. Big places.</div>
+
+        <!-- I am not a robot -->
+        <div style="background:#f8f9fa;border:1px solid #ddd;border-radius:8px;
+          padding:16px 24px;display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+          <input type="checkbox" id="robotCheck" style="width:22px;height:22px;cursor:pointer;"/>
+          <label for="robotCheck" style="font-size:15px;color:#333;cursor:pointer;">I am not a robot</label>
+          <div style="margin-left:8px;text-align:center;">
+            <div style="font-size:24px;">🤖</div>
+            <div style="font-size:9px;color:#70757a;">reCAPTCHA</div>
+          </div>
+        </div>
+
+        <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
+          color:#333;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+    `;
+    document.getElementById("ytLink")!.onclick = () => {
+      window.open("https://www.youtube.com", "_blank");
+    };
+    const check = document.getElementById("robotCheck") as HTMLInputElement;
+    check.onchange = () => {
+      if (check.checked) {
+        setTimeout(() => {
+          check.parentElement!.style.background = "#e6f4ea";
+          check.parentElement!.style.borderColor = "#34A853";
+        }, 800);
+      }
+    };
+    document.getElementById("exitBtn")!.onclick = () => this._cleanup();
+  }
+
+  private _cleanup(): void {
+    this._wrap.remove();
+    this._g.inMiniGame = false;
+    this._g.goArcade();
+  }
+}
