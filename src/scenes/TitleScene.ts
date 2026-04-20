@@ -208,6 +208,32 @@ export class TitleScene {
           </div>
         </div>
 
+        <!-- Music button -->
+        <button id="musicBtn" style="
+          background:linear-gradient(135deg,#1a1a4a,#3a3a8a);color:white;font-size:18px;
+          padding:10px 28px;border-radius:30px;border:2px solid rgba(150,150,255,0.5);
+          cursor:pointer;margin-bottom:10px;">
+          🎵 Music
+        </button>
+
+        <!-- Music overlay -->
+        <div id="musicOverlay" style="display:none;position:fixed;inset:0;z-index:100;
+          background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;">
+          <div style="background:#111;border:2px solid rgba(180,100,255,0.4);border-radius:20px;
+            padding:24px;width:90%;max-width:420px;font-family:Arial,sans-serif;">
+            <div style="color:white;font-size:20px;font-weight:900;text-align:center;margin-bottom:16px;">🎵 Music</div>
+            <div id="songList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+            <div id="ytPlayer" style="display:none;margin-bottom:12px;">
+              <iframe id="ytFrame" width="100%" height="200" frameborder="0" allowfullscreen
+                allow="autoplay; encrypted-media"
+                style="border-radius:12px;"></iframe>
+            </div>
+            <button id="closeMusicBtn" style="width:100%;background:rgba(255,255,255,0.08);
+              color:rgba(255,255,255,0.6);font-size:14px;padding:10px;border-radius:12px;
+              border:1px solid rgba(255,255,255,0.15);cursor:pointer;">✕ Close</button>
+          </div>
+        </div>
+
         <!-- Play button -->
         <button id="playBtn" style="
           background:#FFD700;color:#1a0060;font-size:26px;font-weight:bold;
@@ -514,6 +540,42 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       } else {
         alert("To install: open this game in Chrome or Edge, then look for the install icon (⊕) in the address bar!");
       }
+    };
+
+    // Music player
+    const songs = [
+      { title: "Nuke Powder", id: "F05aMR0F6YM" },
+    ];
+    const musicOverlay = document.getElementById("musicOverlay")!;
+    const songList = document.getElementById("songList")!;
+    const ytPlayer = document.getElementById("ytPlayer")!;
+    const ytFrame = document.getElementById("ytFrame") as HTMLIFrameElement;
+    songs.forEach(song => {
+      const btn = document.createElement("button");
+      btn.textContent = "▶ " + song.title;
+      btn.style.cssText =
+        "background:rgba(255,255,255,0.07);color:white;font-size:16px;font-weight:bold;" +
+        "padding:12px 20px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.15);" +
+        "cursor:pointer;text-align:left;font-family:Arial,sans-serif;";
+      btn.onclick = () => {
+        ytFrame.src = `https://www.youtube.com/embed/${song.id}?autoplay=1`;
+        ytPlayer.style.display = "block";
+        btn.style.background = "rgba(100,100,255,0.25)";
+        btn.style.borderColor = "rgba(150,150,255,0.5)";
+      };
+      songList.appendChild(btn);
+    });
+    document.getElementById("musicBtn")!.onclick = () => {
+      musicOverlay.style.display = "flex";
+    };
+    document.getElementById("closeMusicBtn")!.onclick = () => {
+      musicOverlay.style.display = "none";
+      ytFrame.src = "";
+      ytPlayer.style.display = "none";
+      songList.querySelectorAll("button").forEach((b: Element) => {
+        (b as HTMLElement).style.background = "rgba(255,255,255,0.07)";
+        (b as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";
+      });
     };
 
     // Load live member count, refresh every 30s
