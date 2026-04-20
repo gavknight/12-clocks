@@ -69,7 +69,7 @@ export class FakeGoogle {
           <div style="color:#70757a;font-size:13px;margin-bottom:16px;">About ${count} results (${secs} seconds)</div>
 
           <div style="margin-bottom:24px;">
-            <div style="color:#1a0dab;font-size:18px;cursor:pointer;" id="result1">How to Start a YouTube Channel — Do YOU want one?</div>
+            <div style="color:#1a0dab;font-size:18px;cursor:pointer;text-decoration:underline;" id="result1">How to Start a YouTube Channel — Do YOU want one?</div>
             <div style="color:#006621;font-size:13px;">www.youtube.com › start › channel</div>
             <div style="color:#545454;font-size:14px;margin-top:4px;">You searched "<b>${q}</b>" — interesting choice. But have you considered YouTube?</div>
           </div>
@@ -85,6 +85,55 @@ export class FakeGoogle {
             <div style="color:#006621;font-size:13px;">www.fakeblog.fake › ${q.replace(/ /g, "-")}</div>
             <div style="color:#545454;font-size:14px;margin-top:4px;">Number 7 will shock you. Number 3 doesn't exist.</div>
           </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">Is "${q}" real? Experts disagree</div>
+            <div style="color:#006621;font-size:13px;">www.science.fake › research › ${q.replace(/ /g, "-")}</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Scientists have been arguing about ${q} since 1742. Still no answer.</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">${q} tier list (updated 2026)</div>
+            <div style="color:#006621;font-size:13px;">www.tierlistmaker.fake › ${q.replace(/ /g, "-")}</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Community voted. ${q} ranked S tier by 3 people and F tier by everyone else.</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">I searched "${q}" and this happened</div>
+            <div style="color:#006621;font-size:13px;">www.reddit.com › r › ${q.replace(/ /g, "")} › comments</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Posted 4 hours ago · 2 upvotes · 1 comment · "ok"</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">${q} for dummies — full guide</div>
+            <div style="color:#006621;font-size:13px;">www.fordummies.fake › ${q.replace(/ /g, "-")}-for-dummies</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">624 pages. Chapter 1: What is ${q}? Chapter 2: We still don't know.</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">${q} — Amazon results</div>
+            <div style="color:#006621;font-size:13px;">www.amazon.com › s › ${q.replace(/ /g, "+")}</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">14,892 results for "${q}". Sponsored: ${q} themed mug — $47.99. Free shipping.</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">My honest review of ${q}</div>
+            <div style="color:#006621;font-size:13px;">www.honestreviews.fake › ${q.replace(/ /g, "-")}-review</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">⭐⭐⭐☆☆ — "It was okay I guess. My cat knocked it over." — GamerDude99</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">Why does everyone Google "${q}"?</div>
+            <div style="color:#006621;font-size:13px;">www.buzzfeed.fake › ${q.replace(/ /g, "-")}-google-trend</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">You and 4 other people searched this today. You're basically famous.</div>
+          </div>
+
+          <div style="margin-bottom:24px;">
+            <div style="color:#1a0dab;font-size:18px;">${q} — did you mean something else?</div>
+            <div style="color:#006621;font-size:13px;">www.google.com › search › did-you-mean</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Did you mean: "<i>how to make a YouTube channel</i>"? We think you did.</div>
+          </div>
+
         </div>
 
         <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
