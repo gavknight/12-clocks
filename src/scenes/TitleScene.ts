@@ -208,6 +208,14 @@ export class TitleScene {
           </div>
         </div>
 
+        <!-- 100 Days button -->
+        <button id="daysBtn" style="
+          background:linear-gradient(135deg,#4a0a0a,#c0392b);color:white;font-size:18px;
+          padding:10px 28px;border-radius:30px;border:2px solid rgba(255,100,100,0.5);
+          cursor:pointer;margin-bottom:10px;">
+          💀 100 Days of Extreme Demons
+        </button>
+
         <!-- Music button -->
         <button id="musicBtn" style="
           background:linear-gradient(135deg,#1a1a4a,#3a3a8a);color:white;font-size:18px;
@@ -540,6 +548,11 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       } else {
         alert("To install: open this game in Chrome or Edge, then look for the install icon (⊕) in the address bar!");
       }
+    };
+
+    // 100 Days button
+    document.getElementById("daysBtn")!.onclick = () => {
+      window.open("https://www.youtube.com/watch?v=9U9yfJVR43s", "_blank");
     };
 
     // Music player
