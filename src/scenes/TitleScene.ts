@@ -548,7 +548,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       { title: "Phobos (GD)", id: "64Qfx-PZ2Qk" },
       { title: "Abyss of Darkness", id: "zjJCqqV2410" },
       { title: "Grief", id: "bQXnREyaO34" },
-      { title: "Heartbeat 😨", id: "UDVbmaJGlKQ" },
+      { title: "Heartbeat", id: "UDVbmaJGlKQ" },
     ];
     const musicOverlay = document.getElementById("musicOverlay")!;
     const songList = document.getElementById("songList")!;
