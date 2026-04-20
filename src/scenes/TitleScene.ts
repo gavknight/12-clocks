@@ -549,6 +549,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       { title: "Abyss of Darkness", id: "zjJCqqV2410" },
       { title: "Grief", id: "bQXnREyaO34" },
       { title: "Heartbeat", id: "UDVbmaJGlKQ" },
+      { title: "Limbo", id: "ryBbuH_SPbs" },
     ];
     const musicOverlay = document.getElementById("musicOverlay")!;
     const songList = document.getElementById("songList")!;
