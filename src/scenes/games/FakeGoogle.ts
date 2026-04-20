@@ -16,6 +16,8 @@ export class FakeGoogle {
     this._showSearch();
   }
 
+  private _query = "";
+
   private _showSearch(): void {
     this._wrap.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;padding:60px 20px 20px;">
@@ -32,22 +34,26 @@ export class FakeGoogle {
           border-radius:4px;color:#3c4043;font-size:14px;padding:10px 20px;cursor:pointer;">
           Google Search
         </button>
-        <!-- Exit -->
         <button id="exitBtn" style="position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.1);
           color:#333;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;">✕</button>
       </div>
     `;
-    document.getElementById("searchBtn")!.onclick = () => this._showResults();
-    document.getElementById("searchInput")!.addEventListener("keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Enter") this._showResults();
-    });
+    const input = document.getElementById("searchInput") as HTMLInputElement;
+    const doSearch = () => {
+      this._query = input.value.trim() || "how to make a youtube channel";
+      this._showResults();
+    };
+    document.getElementById("searchBtn")!.onclick = doSearch;
+    input.addEventListener("keydown", (e) => { if ((e as KeyboardEvent).key === "Enter") doSearch(); });
     document.getElementById("exitBtn")!.onclick = () => this._cleanup();
   }
 
   private _showResults(): void {
+    const q = this._query;
+    const count = (Math.floor(Math.random() * 9) + 1) + "," + Math.floor(Math.random() * 900 + 100) + ",000,000";
+    const secs = (Math.random() * 0.8 + 0.2).toFixed(2);
     this._wrap.innerHTML = `
       <div style="padding:16px 20px;">
-        <!-- Header -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid #ebebeb;padding-bottom:12px;">
           <div style="font-size:28px;font-weight:900;">
             <span style="color:#4285F4;">G</span><span style="color:#EA4335;">o</span><span style="color:#FBBC05;">o</span><span style="color:#4285F4;">g</span><span style="color:#34A853;">l</span><span style="color:#EA4335;">e</span>
@@ -55,33 +61,29 @@ export class FakeGoogle {
           <div style="display:flex;align-items:center;border:1px solid #dfe1e5;border-radius:24px;
             padding:8px 14px;flex:1;max-width:500px;gap:8px;">
             <span>🔍</span>
-            <span style="color:#333;font-size:15px;">how to make a youtube channel</span>
+            <span style="color:#333;font-size:15px;">${q}</span>
           </div>
         </div>
 
-        <!-- Fake results -->
         <div style="max-width:600px;">
-          <div style="color:#70757a;font-size:13px;margin-bottom:16px;">About 2,340,000,000 results (0.47 seconds)</div>
+          <div style="color:#70757a;font-size:13px;margin-bottom:16px;">About ${count} results (${secs} seconds)</div>
 
-          <!-- Result 1 -->
           <div style="margin-bottom:24px;">
             <div style="color:#1a0dab;font-size:18px;cursor:pointer;" id="result1">How to Start a YouTube Channel — Do YOU want one?</div>
             <div style="color:#006621;font-size:13px;">www.youtube.com › start › channel</div>
-            <div style="color:#545454;font-size:14px;margin-top:4px;">Learn how to create your very own YouTube channel today. But first... a quick question.</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">You searched "<b>${q}</b>" — interesting choice. But have you considered YouTube?</div>
           </div>
 
-          <!-- Result 2 -->
           <div style="margin-bottom:24px;">
-            <div style="color:#1a0dab;font-size:18px;">Top 10 YouTube Tips Nobody Tells You</div>
-            <div style="color:#006621;font-size:13px;">www.fakeblog.com › youtube-tips</div>
-            <div style="color:#545454;font-size:14px;margin-top:4px;">We asked 1000 YouTubers. 999 of them said the same thing.</div>
+            <div style="color:#1a0dab;font-size:18px;">${q} — Wikipedia</div>
+            <div style="color:#006621;font-size:13px;">en.wikipedia.org › wiki › ${q.replace(/ /g, "_")}</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">${q} is a topic that has been studied extensively. Nobody knows anything about it.</div>
           </div>
 
-          <!-- Result 3 -->
           <div style="margin-bottom:24px;">
-            <div style="color:#1a0dab;font-size:18px;">YouTube Channel Name Generator</div>
-            <div style="color:#006621;font-size:13px;">www.namegenerator.fake › youtube</div>
-            <div style="color:#545454;font-size:14px;margin-top:4px;">Can't think of a name? We got you. Probably.</div>
+            <div style="color:#1a0dab;font-size:18px;">Top 10 facts about "${q}" you won't believe</div>
+            <div style="color:#006621;font-size:13px;">www.fakeblog.fake › ${q.replace(/ /g, "-")}</div>
+            <div style="color:#545454;font-size:14px;margin-top:4px;">Number 7 will shock you. Number 3 doesn't exist.</div>
           </div>
         </div>
 
