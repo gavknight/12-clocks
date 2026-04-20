@@ -216,6 +216,14 @@ export class TitleScene {
           💀 100 Days of Extreme Demons
         </button>
 
+        <!-- Creators Expose Clan button -->
+        <button id="clanBtn" style="
+          background:linear-gradient(135deg,#1a0a3e,#4a0080);color:white;font-size:18px;
+          padding:10px 28px;border-radius:30px;border:2px solid rgba(180,100,255,0.5);
+          cursor:pointer;margin-bottom:10px;">
+          🔍 Creators Expose Clan
+        </button>
+
         <!-- Music button -->
         <button id="musicBtn" style="
           background:linear-gradient(135deg,#1a1a4a,#3a3a8a);color:white;font-size:18px;
@@ -549,6 +557,9 @@ ${game.hasHacks ? `<button id="adminBtn" style="
         alert("To install: open this game in Chrome or Edge, then look for the install icon (⊕) in the address bar!");
       }
     };
+
+    // Clan button
+    document.getElementById("clanBtn")!.onclick = () => game.goClan();
 
     // 100 Days button
     document.getElementById("daysBtn")!.onclick = () => {

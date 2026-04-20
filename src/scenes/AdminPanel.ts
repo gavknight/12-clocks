@@ -213,6 +213,16 @@ export class AdminPanel {
           <div id="alertFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
         </div>
 
+        <!-- Clan Applications -->
+        <div style="width:100%;max-width:500px;background:rgba(255,255,255,0.05);
+          border:1px solid rgba(180,100,255,0.3);border-radius:14px;padding:16px 18px;margin-bottom:12px;">
+          <div style="color:rgba(180,100,255,0.9);font-size:12px;letter-spacing:2px;
+            text-transform:uppercase;margin-bottom:12px;">🔍 Clan Applications</div>
+          <div id="clanAppsList" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="color:rgba(255,255,255,0.3);font-size:12px;">Loading...</div>
+          </div>
+        </div>
+
         ${btn("←", "Back to Title", "rgba(255,255,255,0.55)", () => game.goTitle())}
       </div>
     `;
@@ -221,6 +231,68 @@ export class AdminPanel {
 
     const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
     const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates" };
+
+    // Clan applications
+    const SB_CLAN = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/clan_applications";
+    const loadClanApps = () => {
+      const el = document.getElementById("clanAppsList");
+      if (!el) return;
+      fetch(`${SB_CLAN}?order=applied_at.desc&limit=50`, {
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+      }).then(r => r.json()).then((rows: { id: number; username: string; account_id: string; reason: string; status: string }[]) => {
+        if (!rows.length) {
+          el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No applications yet.</div>`;
+          return;
+        }
+        el.innerHTML = rows.map(row => `
+          <div style="padding:10px 12px;border-radius:10px;
+            background:${row.status === "accepted" ? "rgba(0,180,0,0.1)" : row.status === "rejected" ? "rgba(180,0,0,0.1)" : "rgba(255,255,255,0.06)"};
+            border:1px solid ${row.status === "accepted" ? "rgba(0,200,0,0.3)" : row.status === "rejected" ? "rgba(200,0,0,0.3)" : "rgba(255,255,255,0.1)"};">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div>
+                <div style="color:white;font-size:14px;font-weight:bold;">${row.username}</div>
+                ${row.reason ? `<div style="color:rgba(255,255,255,0.45);font-size:12px;margin-top:2px;">"${row.reason}"</div>` : ""}
+                <div style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:2px;">
+                  ${row.status === "accepted" ? "✅ Accepted" : row.status === "rejected" ? "❌ Rejected" : "⏳ Pending"}
+                </div>
+              </div>
+              ${row.status === "pending" ? `
+              <div style="display:flex;gap:6px;">
+                <button onclick="window.__clanAccept(${row.id})" style="background:rgba(0,180,0,0.3);color:#80ff80;
+                  font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid rgba(0,200,0,0.4);cursor:pointer;">
+                  ✅ Accept
+                </button>
+                <button onclick="window.__clanReject(${row.id})" style="background:rgba(180,0,0,0.3);color:#ff8080;
+                  font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid rgba(200,0,0,0.4);cursor:pointer;">
+                  ❌ Reject
+                </button>
+              </div>` : ""}
+            </div>
+          </div>
+        `).join("");
+      }).catch(() => {
+        const el2 = document.getElementById("clanAppsList");
+        if (el2) el2.innerHTML = `<div style="color:rgba(255,80,80,0.6);font-size:12px;">Failed to load.</div>`;
+      });
+    };
+
+    const w = window as unknown as Record<string, unknown>;
+    w.__clanAccept = (id: number) => {
+      fetch(`${SB_CLAN}?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "accepted" }),
+      }).then(() => loadClanApps());
+    };
+    w.__clanReject = (id: number) => {
+      fetch(`${SB_CLAN}?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      }).then(() => loadClanApps());
+    };
+
+    loadClanApps();
 
     // Rule reports
     const loadReports = () => {
