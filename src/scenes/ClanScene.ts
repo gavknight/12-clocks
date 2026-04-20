@@ -14,7 +14,8 @@ export class ClanScene {
     const wrap = document.createElement("div");
     wrap.style.cssText =
       "position:absolute;inset:0;overflow-y:auto;background:linear-gradient(160deg,#0a0a1a,#1a0a2e);" +
-      "font-family:Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;";
+      "font-family:Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:40px 20px 80px;" +
+      "pointer-events:all;";
 
     wrap.innerHTML = `
       <div style="font-size:48px;margin-bottom:10px;">🔍</div>
