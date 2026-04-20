@@ -547,6 +547,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       { title: "Nuke Powder", id: "F05aMR0F6YM" },
       { title: "Phobos (GD)", id: "64Qfx-PZ2Qk" },
       { title: "Abyss of Darkness", id: "zjJCqqV2410" },
+      { title: "Grief", id: "bQXnREyaO34" },
     ];
     const musicOverlay = document.getElementById("musicOverlay")!;
     const songList = document.getElementById("songList")!;
