@@ -233,6 +233,95 @@ export class AdminPanel {
           </div>
         </div>
 
+        <!-- Public Chat -->
+        <div style="
+          width:100%;max-width:360px;
+          background:rgba(0,100,255,0.1);
+          border:2px solid rgba(0,140,255,0.4);border-radius:16px;
+          padding:16px;display:flex;flex-direction:column;gap:10px;
+        ">
+          <div style="color:#66aaff;font-size:14px;font-weight:bold;">📢 Public Chat</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:-6px;">
+            Broadcasts a toast notification to all players.
+          </div>
+          <input id="chatMsg" type="text" maxlength="120" placeholder="Type a message…"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(0,140,255,0.4);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;font-family:Arial,sans-serif;outline:none;" />
+          <button id="chatSendBtn" style="
+            background:rgba(0,100,255,0.3);color:#88ccff;font-size:13px;font-weight:bold;
+            border:1px solid rgba(0,140,255,0.5);border-radius:8px;padding:9px;cursor:pointer;
+            font-family:Arial,sans-serif;">📢 Send to All Players</button>
+          <div id="chatFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
+        </div>
+
+        <!-- Give Stats -->
+        <div style="
+          width:100%;max-width:360px;
+          background:rgba(255,180,0,0.08);
+          border:2px solid rgba(255,200,0,0.35);border-radius:16px;
+          padding:16px;display:flex;flex-direction:column;gap:10px;
+        ">
+          <div style="color:#ffdd66;font-size:14px;font-weight:bold;">🎁 Give Stats to Player</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:-6px;">
+            Select a player and gift them coins and/or wins.
+          </div>
+          <select id="giftTarget" style="
+            background:rgba(255,255,255,0.08);border:1px solid rgba(255,200,0,0.35);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;font-family:Arial,sans-serif;outline:none;
+            appearance:none;-webkit-appearance:none;">
+            <option value="" style="background:#111;">— Select a player —</option>
+            ${game.getAllAccounts().map(acc => `<option value="${acc.id}" style="background:#111;">${acc.username}</option>`).join("")}
+          </select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div>
+              <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:4px;">🪙 Coins</div>
+              <input id="giftCoins" type="number" min="0" value="0"
+                style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.08);
+                border:1px solid rgba(255,200,0,0.3);border-radius:8px;color:white;
+                font-size:13px;padding:8px 10px;font-family:Arial,sans-serif;outline:none;" />
+            </div>
+            <div>
+              <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:4px;">🏆 Wins</div>
+              <input id="giftWins" type="number" min="0" value="0"
+                style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.08);
+                border:1px solid rgba(255,200,0,0.3);border-radius:8px;color:white;
+                font-size:13px;padding:8px 10px;font-family:Arial,sans-serif;outline:none;" />
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button id="giftSendBtn" style="
+              background:rgba(255,180,0,0.25);color:#ffdd66;font-size:13px;font-weight:bold;
+              border:1px solid rgba(255,200,0,0.45);border-radius:8px;padding:9px;cursor:pointer;
+              font-family:Arial,sans-serif;">🎁 Send Gift</button>
+            <button id="giftAllBtn" style="
+              background:rgba(255,120,0,0.25);color:#ffcc88;font-size:13px;font-weight:bold;
+              border:1px solid rgba(255,150,0,0.45);border-radius:8px;padding:9px;cursor:pointer;
+              font-family:Arial,sans-serif;">🎁 Give All</button>
+          </div>
+          <div id="giftFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
+        </div>
+
+        <!-- Party Mode -->
+        <div style="
+          width:100%;max-width:360px;
+          background:rgba(255,100,200,0.10);
+          border:2px solid rgba(255,100,200,0.45);border-radius:16px;
+          padding:16px;display:flex;flex-direction:column;gap:10px;
+        ">
+          <div style="color:#ff88dd;font-size:14px;font-weight:bold;">🎉 Party Mode</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;margin-top:-6px;">
+            Decorates everyone's screen with confetti, balloons &amp; music.
+          </div>
+          <button id="partyToggleBtn" style="
+            background:${game.partyMode ? "rgba(255,80,180,0.4)" : "rgba(255,255,255,0.08)"};
+            color:${game.partyMode ? "#ffaaee" : "rgba(255,255,255,0.7)"};
+            font-size:14px;font-weight:bold;padding:10px;border-radius:10px;
+            border:2px solid ${game.partyMode ? "rgba(255,80,180,0.7)" : "rgba(255,255,255,0.2)"};
+            cursor:pointer;font-family:Arial,sans-serif;">
+            ${game.partyMode ? "🎊 ON — Click to Stop" : "🎉 Start Party!"}
+          </button>
+        </div>
+
         ${btn("←", "Back to Title", "rgba(255,255,255,0.55)", () => game.goTitle())}
       </div>
     `;
@@ -391,6 +480,88 @@ export class AdminPanel {
     };
     loadReports();
     document.getElementById("refreshReports")!.onclick = loadReports;
+
+    // Public Chat
+    const SB_CHAT = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_chat";
+    document.getElementById("chatSendBtn")!.addEventListener("click", () => {
+      const msg = (document.getElementById("chatMsg") as HTMLInputElement).value.trim();
+      const fb  = document.getElementById("chatFeedback")!;
+      if (!msg) { fb.style.color = "#ff8888"; fb.textContent = "❌ Message cannot be empty."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
+      fetch(SB_CHAT, {
+        method: "POST",
+        headers: { ...H, "Prefer": "return=minimal" },
+        body: JSON.stringify({ message: msg, sender: game.state.username, sent_at: Date.now() }),
+      }).then(r => {
+        if (!r.ok) throw new Error();
+        fb.style.color = "#80ff80";
+        fb.textContent = "✓ Message sent to all players!";
+        (document.getElementById("chatMsg") as HTMLInputElement).value = "";
+        setTimeout(() => { fb.textContent = ""; }, 3000);
+      }).catch(() => {
+        fb.style.color = "#ff8888";
+        fb.textContent = "❌ Failed to send.";
+      });
+    });
+
+    // Give Stats
+    const SB_GIFTS = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/player_gifts";
+    document.getElementById("giftSendBtn")!.addEventListener("click", () => {
+      const accountId = (document.getElementById("giftTarget") as HTMLSelectElement).value;
+      const coins     = parseInt((document.getElementById("giftCoins") as HTMLInputElement).value, 10) || 0;
+      const wins      = parseInt((document.getElementById("giftWins")  as HTMLInputElement).value, 10) || 0;
+      const fb        = document.getElementById("giftFeedback")!;
+      if (!accountId) { fb.style.color = "#ff8888"; fb.textContent = "❌ Select a player first."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
+      if (coins === 0 && wins === 0) { fb.style.color = "#ff8888"; fb.textContent = "❌ Give at least 1 coin or 1 win."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
+      fetch(SB_GIFTS, {
+        method: "POST",
+        headers: { ...H, "Prefer": "return=minimal" },
+        body: JSON.stringify({ account_id: accountId, coins, wins, claimed: false, sent_at: Date.now() }),
+      }).then(r => {
+        if (!r.ok) throw new Error();
+        fb.style.color = "#80ff80";
+        fb.textContent = `✓ Sent 🪙${coins.toLocaleString()} coins + 🏆${wins} wins!`;
+        (document.getElementById("giftCoins") as HTMLInputElement).value = "0";
+        (document.getElementById("giftWins")  as HTMLInputElement).value = "0";
+        setTimeout(() => { fb.textContent = ""; }, 3000);
+      }).catch(() => {
+        fb.style.color = "#ff8888";
+        fb.textContent = "❌ Failed to send gift.";
+      });
+    });
+
+    // Give All
+    document.getElementById("giftAllBtn")!.addEventListener("click", () => {
+      const coins = parseInt((document.getElementById("giftCoins") as HTMLInputElement).value, 10) || 0;
+      const wins  = parseInt((document.getElementById("giftWins")  as HTMLInputElement).value, 10) || 0;
+      const fb    = document.getElementById("giftFeedback")!;
+      if (coins === 0 && wins === 0) { fb.style.color = "#ff8888"; fb.textContent = "❌ Enter at least 1 coin or 1 win."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
+      const accounts = game.getAllAccounts();
+      if (!accounts.length) { fb.style.color = "#ff8888"; fb.textContent = "❌ No accounts found."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
+      Promise.all(accounts.map(acc =>
+        fetch(SB_GIFTS, {
+          method: "POST",
+          headers: { ...H, "Prefer": "return=minimal" },
+          body: JSON.stringify({ account_id: acc.id, coins, wins, claimed: false, sent_at: Date.now() }),
+        })
+      )).then(() => {
+        fb.style.color = "#80ff80";
+        fb.textContent = `✓ Gifted 🪙${coins.toLocaleString()} + 🏆${wins} wins to all ${accounts.length} players!`;
+        setTimeout(() => { fb.textContent = ""; }, 4000);
+      }).catch(() => {
+        fb.style.color = "#ff8888";
+        fb.textContent = "❌ Some gifts failed to send.";
+      });
+    });
+
+    // Party Mode toggle
+    document.getElementById("partyToggleBtn")!.addEventListener("click", () => {
+      if (game.partyMode) game.disablePartyMode(); else game.enablePartyMode();
+      const btn = document.getElementById("partyToggleBtn")!;
+      btn.textContent = game.partyMode ? "🎊 ON — Click to Stop" : "🎉 Start Party!";
+      btn.style.background = game.partyMode ? "rgba(255,80,180,0.4)" : "rgba(255,255,255,0.08)";
+      btn.style.color = game.partyMode ? "#ffaaee" : "rgba(255,255,255,0.7)";
+      btn.style.borderColor = game.partyMode ? "rgba(255,80,180,0.7)" : "rgba(255,255,255,0.2)";
+    });
 
     // Update alert buttons
     const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/update_alerts";

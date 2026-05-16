@@ -118,8 +118,9 @@ export class ClickTest {
 
     ui.appendChild(wrap);
 
-    // Click handler
+    // Click handler — block auto clicker (pointerId 99, isPrimary false)
     btn.addEventListener("pointerdown", (e) => {
+      if (!e.isPrimary) return;
       e.preventDefault();
       this._onClick(btn, counter, bar, timerEl, status, attEl, bestEl);
     });

@@ -76,6 +76,17 @@ export class TitleScene {
     const textColor    = isOldEra ? "#1a3a6a" : "white";
     const subTextColor = isOldEra ? "rgba(20,60,120,0.7)" : "rgba(255,255,255,0.7)";
 
+    const _fmt = (n: number): string => {
+      if (!isFinite(n)) return "∞";
+      if (n >= 1e18) return n.toExponential(1);
+      if (n >= 1e15) return (n / 1e15).toFixed(1) + "Q";
+      if (n >= 1e12) return (n / 1e12).toFixed(1) + "T";
+      if (n >= 1e9)  return (n / 1e9).toFixed(1)  + "B";
+      if (n >= 1e6)  return (n / 1e6).toFixed(1)  + "M";
+      if (n >= 1e3)  return (n / 1e3).toFixed(1)  + "K";
+      return String(n);
+    };
+
     game.ui.innerHTML = `
       <div class="screen" style="background:${bgStyle};overflow-y:auto;justify-content:flex-start;padding:40px 0 80px;">
 
@@ -129,6 +140,55 @@ export class TitleScene {
             <div style="display:flex;gap:4px;margin-top:2px;">
               <div style="width:14px;height:24px;background:#CC4488;border-radius:3px;"></div>
               <div style="width:14px;height:24px;background:#CC4488;border-radius:3px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats panel (left) -->
+        <div style="position:fixed;top:50%;left:12px;transform:translateY(-50%);
+          display:flex;flex-direction:column;gap:8px;z-index:20;pointer-events:none;
+          font-family:Arial,sans-serif;width:90px;">
+          <div style="color:rgba(255,255,255,0.35);font-size:9px;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:2px;">Stats</div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,200,0,0.25);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
+            <div style="color:rgba(255,200,0,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Wins</div>
+            <div id="statWins" style="color:#FFD700;font-size:22px;font-weight:900;font-family:'Arial Black',Arial;">${game.state.wins}</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,200,0,0.25);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
+            <div style="color:rgba(255,200,0,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">🪙 Coins</div>
+            <div id="statCoins" style="color:#FFD700;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.coins)}</div>
+          </div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,200,255,0.25);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
+            <div style="color:rgba(100,200,255,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Done</div>
+            <div id="statDone" style="color:#7dd3fc;font-size:22px;font-weight:900;font-family:'Arial Black',Arial;">${game.completedLevelCount}</div>
+            <div style="color:rgba(255,255,255,0.3);font-size:9px;">levels</div>
+          </div>
+        </div>
+
+        <!-- Mods panel (right) -->
+        <div id="modsPanel" style="position:fixed;top:50%;right:12px;transform:translateY(-50%);
+          display:flex;flex-direction:column;gap:8px;z-index:20;pointer-events:all;
+          font-family:Arial,sans-serif;width:110px;">
+          <div style="color:rgba(255,255,255,0.35);font-size:9px;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:2px;">Mods</div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid ${game.modMode ? "rgba(0,220,100,0.5)" : "rgba(255,255,255,0.15)"};border-radius:14px;padding:10px 12px;text-align:center;">
+            <div style="color:white;font-size:11px;font-weight:bold;margin-bottom:6px;">Mod Mode</div>
+            <button id="modToggleBtn" style="width:100%;padding:6px 0;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif;
+              ${game.modMode ? "background:rgba(0,200,80,0.3);color:#80ffb0;border:1.5px solid rgba(0,220,100,0.5);" : "background:rgba(255,255,255,0.1);color:white;border:1.5px solid rgba(255,255,255,0.2);}"}">
+              ${game.modMode ? "✓ ON" : "OFF"}
+            </button>
+          </div>
+          <div style="${game.modMode ? "" : "opacity:0.3;pointer-events:none;"}display:flex;flex-direction:column;gap:8px;">
+            <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
+              <div style="color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Set Wins</div>
+              <input id="winsInput" type="number" min="0" value="${game.state.wins}" style="width:100%;background:#111;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:white;font-size:13px;padding:4px 6px;outline:none;margin-bottom:4px;font-family:Arial,sans-serif;box-sizing:border-box;">
+              <button id="winsApplyBtn" style="width:100%;background:rgba(255,200,0,0.15);color:#FFD700;font-size:11px;font-weight:bold;padding:5px;border-radius:6px;border:1px solid rgba(255,200,0,0.3);cursor:pointer;font-family:Arial,sans-serif;">Apply</button>
+            </div>
+            <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
+              <div style="color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Set Coins</div>
+              <input id="coinsInput" type="number" min="0" value="${game.state.coins}" style="width:100%;background:#111;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:white;font-size:13px;padding:4px 6px;outline:none;margin-bottom:4px;font-family:Arial,sans-serif;box-sizing:border-box;">
+              <button id="coinsApplyBtn" style="width:100%;background:rgba(255,200,0,0.15);color:#FFD700;font-size:11px;font-weight:bold;padding:5px;border-radius:6px;border:1px solid rgba(255,200,0,0.3);cursor:pointer;font-family:Arial,sans-serif;">Apply</button>
+            </div>
+            <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;text-align:center;">
+              <button id="modLobbyBtn" style="width:100%;background:linear-gradient(135deg,rgba(106,17,203,0.4),rgba(37,117,252,0.4));color:white;font-size:11px;font-weight:bold;padding:6px;border-radius:8px;border:1px solid rgba(100,150,255,0.4);cursor:pointer;font-family:Arial,sans-serif;">🌐 Lobby</button>
             </div>
           </div>
         </div>
@@ -232,22 +292,26 @@ export class TitleScene {
           🎵 Music
         </button>
 
-        <!-- Music overlay -->
-        <div id="musicOverlay" style="display:none;position:fixed;inset:0;z-index:100;
-          background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;">
-          <div style="background:#111;border:2px solid rgba(180,100,255,0.4);border-radius:20px;
-            padding:24px;width:90%;max-width:420px;font-family:Arial,sans-serif;">
-            <div style="color:white;font-size:20px;font-weight:900;text-align:center;margin-bottom:16px;">🎵 Music</div>
-            <div id="songList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
-            <div id="ytPlayer" style="display:none;margin-bottom:12px;">
-              <iframe id="ytFrame" width="100%" height="200" frameborder="0" allowfullscreen
-                allow="autoplay; encrypted-media"
-                style="border-radius:12px;"></iframe>
-            </div>
-            <button id="closeMusicBtn" style="width:100%;background:rgba(255,255,255,0.08);
-              color:rgba(255,255,255,0.6);font-size:14px;padding:10px;border-radius:12px;
-              border:1px solid rgba(255,255,255,0.15);cursor:pointer;">✕ Close</button>
+        <!-- Music floating player (rendered outside menu frame, bottom-right corner) -->
+        <div id="musicOverlay" style="
+          display:none;position:fixed;bottom:20px;right:20px;z-index:200;
+          width:300px;background:#111827;
+          border:2px solid rgba(150,100,255,0.45);border-radius:18px;
+          padding:14px;font-family:Arial,sans-serif;
+          box-shadow:0 8px 32px rgba(0,0,0,0.7);
+          flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="color:white;font-size:15px;font-weight:bold;">🎵 Music</span>
+            <button id="closeMusicBtn" style="background:rgba(255,255,255,0.08);
+              color:rgba(255,255,255,0.6);font-size:13px;padding:4px 10px;border-radius:10px;
+              border:1px solid rgba(255,255,255,0.15);cursor:pointer;">✕</button>
           </div>
+          <div id="ytPlayer" style="display:none;margin-bottom:4px;">
+            <iframe id="ytFrame" width="100%" height="160" frameborder="0" allowfullscreen
+              allow="autoplay; encrypted-media"
+              style="border-radius:10px;"></iframe>
+          </div>
+          <div id="songList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;"></div>
         </div>
 
         <!-- Play button -->
@@ -311,6 +375,7 @@ export class TitleScene {
             border:2px solid rgba(100,180,255,0.5);cursor:pointer;">
             ⏳ History
           </button>
+
 
           ${!IS_BEDROCK ? `
           <button id="bedrockBtn" style="grid-column:span 2;
@@ -482,6 +547,67 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       document.getElementById("realBtn")!.onclick    = () => exitBedrock();
     }
     document.getElementById("shopBtn")!.onclick    = () => game.goShop();
+    // Mods panel (right side) — re-renders in place
+    const renderMods = () => {
+      const on = game.modMode;
+      const panel = document.getElementById("modsPanel")!;
+      panel.innerHTML = `
+        <div style="color:rgba(255,255,255,0.35);font-size:9px;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:2px;font-family:Arial,sans-serif;">Mods</div>
+        <div style="background:rgba(0,0,0,0.5);border:1.5px solid ${on ? "rgba(0,220,100,0.5)" : "rgba(255,255,255,0.15)"};border-radius:14px;padding:10px 12px;text-align:center;">
+          <div style="color:white;font-size:11px;font-weight:bold;margin-bottom:6px;font-family:Arial,sans-serif;">Mod Mode</div>
+          <button id="modToggleBtn" style="width:100%;padding:6px 0;border-radius:8px;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif;
+            ${on ? "background:rgba(0,200,80,0.3);color:#80ffb0;border:1.5px solid rgba(0,220,100,0.5);" : "background:rgba(255,255,255,0.1);color:white;border:1.5px solid rgba(255,255,255,0.2);}"}">
+            ${on ? "✓ ON" : "OFF"}
+          </button>
+        </div>
+        <div style="${on ? "" : "opacity:0.3;pointer-events:none;"}display:flex;flex-direction:column;gap:8px;">
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
+            <div style="color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-family:Arial,sans-serif;">Set Wins</div>
+            <input id="winsInput" type="number" min="0" value="${game.state.wins}" style="width:100%;background:#111;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:white;font-size:13px;padding:4px 6px;outline:none;margin-bottom:4px;font-family:Arial,sans-serif;box-sizing:border-box;">
+            <button id="winsApplyBtn" style="width:100%;background:rgba(255,200,0,0.15);color:#FFD700;font-size:11px;font-weight:bold;padding:5px;border-radius:6px;border:1px solid rgba(255,200,0,0.3);cursor:pointer;font-family:Arial,sans-serif;">Apply</button>
+          </div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
+            <div style="color:rgba(255,255,255,0.45);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-family:Arial,sans-serif;">Set Coins</div>
+            <input id="coinsInput" type="number" min="0" value="${game.state.coins}" style="width:100%;background:#111;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:white;font-size:13px;padding:4px 6px;outline:none;margin-bottom:4px;font-family:Arial,sans-serif;box-sizing:border-box;">
+            <button id="coinsApplyBtn" style="width:100%;background:rgba(255,200,0,0.15);color:#FFD700;font-size:11px;font-weight:bold;padding:5px;border-radius:6px;border:1px solid rgba(255,200,0,0.3);cursor:pointer;font-family:Arial,sans-serif;">Apply</button>
+          </div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;padding:10px 12px;">
+            <button id="modLobbyBtn" style="width:100%;background:linear-gradient(135deg,rgba(106,17,203,0.4),rgba(37,117,252,0.4));color:white;font-size:11px;font-weight:bold;padding:6px;border-radius:8px;border:1px solid rgba(100,150,255,0.4);cursor:pointer;font-family:Arial,sans-serif;">🌐 Lobby</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("modToggleBtn")!.onclick = () => {
+        if (game.modMode) game.exitModMode(); else game.enterModMode();
+        const sw = document.getElementById("statWins");
+        const sc = document.getElementById("statCoins");
+        if (sw) sw.textContent = String(game.state.wins);
+        if (sc) sc.textContent = _fmt(game.state.coins);
+        renderMods();
+      };
+      if (on) {
+        document.getElementById("winsApplyBtn")!.onclick = () => {
+          const v = parseInt((document.getElementById("winsInput") as HTMLInputElement).value, 10);
+          if (!isNaN(v) && v >= 0) {
+            game.state.wins = v;
+            const el = document.getElementById("statWins");
+            if (el) el.textContent = String(v);
+            renderMods();
+          }
+        };
+        document.getElementById("coinsApplyBtn")!.onclick = () => {
+          const v = parseInt((document.getElementById("coinsInput") as HTMLInputElement).value, 10);
+          if (!isNaN(v) && v >= 0) {
+            game.state.coins = v;
+            const el = document.getElementById("statCoins");
+            if (el) el.textContent = _fmt(v);
+            renderMods();
+          }
+        };
+        document.getElementById("modLobbyBtn")!.onclick = () => game.goLobby();
+      }
+    };
+    renderMods();
+    document.getElementById("modsBtn")!.onclick = () => {}; // button kept for now but panels are always visible
     document.getElementById("exitTimeMachine")?.addEventListener("click", () => {
       sessionStorage.removeItem(TIME_MACHINE_KEY);
       game.ui.innerHTML = "";

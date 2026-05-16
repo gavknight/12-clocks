@@ -83,7 +83,7 @@ function _renderBanner(): void {
     "background:linear-gradient(135deg,#6a20a0,#3a106f);" +
     "border:3px solid #cc88ff;border-radius:20px;" +
     "padding:14px 22px;min-width:270px;max-width:340px;width:92%;" +
-    "box-shadow:0 0 30px rgba(200,100,255,0.8),0 4px 24px rgba(0,0,0,0.6);pointer-events:none;";
+    "box-shadow:0 0 30px rgba(200,100,255,0.8),0 4px 24px rgba(0,0,0,0.6);pointer-events:auto;";
 
   _banner.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;">
@@ -105,9 +105,17 @@ function _renderBanner(): void {
       <div style="height:100%;width:${((step) / TUTORIAL_STEPS.length) * 100}%;
         background:linear-gradient(90deg,#cc88ff,#6a20a0);border-radius:4px;
         transition:width 0.4s;"></div>
+    </div>
+    <div style="margin-top:10px;text-align:right;">
+      <button id="tutSkipBtn" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);
+        border-radius:10px;color:rgba(255,255,255,0.6);font-size:11px;padding:4px 12px;cursor:pointer;">
+        Skip Tutorial
+      </button>
     </div>`;
 
   document.body.appendChild(_banner);
+
+  document.getElementById("tutSkipBtn")?.addEventListener("click", doneTutorial);
 
   // Step 9 "enjoy" auto-completes after 3 seconds
   if (TUTORIAL_STEPS[step].id === "enjoy") {

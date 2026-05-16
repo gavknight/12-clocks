@@ -16,6 +16,7 @@ export interface GameState {
   currentLevel: number; // 1-28
   pets: string[]; // owned pet IDs
   autoClicker: boolean; // owned auto clicker
+  wins: number;
 }
 
 export interface PetDef {
@@ -65,6 +66,7 @@ interface SaveData {
   unlockedLevels: number[];
   pets:           string[];
   autoClicker:    boolean;
+  wins:           number;
   levels: Record<string, { locks: number[]; inv: number[]; completed: boolean }>;
 }
 
@@ -72,8 +74,13 @@ export class Game {
   readonly engine: Engine;
   readonly state: GameState = {
     unlockedLocks: new Set(), inventory: [], username: "",
-    difficulty: 12, coins: 0, currentLevel: 1, pets: [], autoClicker: false,
+    difficulty: 12, coins: 0, currentLevel: 1, pets: [], autoClicker: false, wins: 0,
   };
+  modMode = false;
+  private _modSnapshot: string | null = null;
+  partyMode = false;
+  private _partyOverlay: HTMLDivElement | null = null;
+  private _partyAudioStop: (() => void) | null = null;
   private _petTimers = new Map<string, number>(); // petId → intervalId
   inMiniGame = false; // true while CoinJump or FruitSlice is active
   private _acActive   = false;
@@ -99,6 +106,8 @@ export class Game {
     window.addEventListener("resize", () => this.engine.resize());
     this._initDevButton();
     this._startReportPoller();
+    this._startChatPoller();
+    this._startGiftPoller();
     this._startIdleWatcher();
   }
 
@@ -139,6 +148,98 @@ export class Game {
       `<div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px;">${ruleText}</div>` +
       `<div style="color:rgba(255,255,255,0.45);font-size:11px;margin-top:6px;">Tap to open Admin Panel →</div>`;
     toast.onclick = () => { document.body.removeChild(toast); this.goAdmin(); };
+    document.body.appendChild(toast);
+    setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 10_000);
+  }
+
+  private _lastChatSentAt = 0;
+  private _startChatPoller(): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    // Seed last-seen timestamp so old messages don't pop up on first load
+    fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_chat?order=sent_at.desc&limit=1`, {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+    }).then(r => r.json()).then((rows: { sent_at: number }[]) => {
+      this._lastChatSentAt = rows[0]?.sent_at ?? Date.now();
+    }).catch(() => { this._lastChatSentAt = Date.now(); });
+
+    const check = () => {
+      const after = this._lastChatSentAt;
+      fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_chat?sent_at=gt.${after}&order=sent_at.asc`, {
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+      }).then(r => r.json()).then((rows: { sent_at: number; message: string; sender: string }[]) => {
+        if (!rows.length) return;
+        for (const row of rows) {
+          this._showChatToast(row.sender, row.message);
+        }
+        this._lastChatSentAt = rows[rows.length - 1].sent_at;
+      }).catch(() => {});
+    };
+    setInterval(check, 10_000);
+  }
+
+  private _showChatToast(sender: string, message: string): void {
+    const toast = document.createElement("div");
+    toast.style.cssText =
+      "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);" +
+      "background:rgba(0,60,180,0.95);border:2px solid #4488ff;border-radius:14px;" +
+      "padding:12px 20px;z-index:999999;cursor:pointer;max-width:320px;width:90%;" +
+      "box-shadow:0 4px 24px rgba(0,0,0,0.6);font-family:Arial,sans-serif;text-align:center;";
+    toast.innerHTML =
+      `<div style="color:white;font-size:15px;font-weight:bold;">📢 ${sender}</div>` +
+      `<div style="color:#aaddff;font-size:14px;margin-top:6px;">${message}</div>`;
+    toast.onclick = () => document.body.removeChild(toast);
+    document.body.appendChild(toast);
+    setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 12_000);
+  }
+
+  private _startGiftPoller(): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const check = () => {
+      const accountId = this.currentAccountId;
+      if (!accountId) return;
+      fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/player_gifts?account_id=eq.${accountId}&claimed=eq.false&order=sent_at.asc`, {
+        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+      }).then(r => r.json()).then((rows: { id: number; coins: number; wins: number }[]) => {
+        if (!rows.length) return;
+        let totalCoins = 0;
+        let totalWins  = 0;
+        const ids: number[] = [];
+        for (const row of rows) {
+          totalCoins += row.coins;
+          totalWins  += row.wins;
+          ids.push(row.id);
+        }
+        this.state.coins += totalCoins;
+        this.state.wins  += totalWins;
+        this.save();
+        this._showGiftToast(totalCoins, totalWins);
+        // Mark all as claimed
+        for (const id of ids) {
+          fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/player_gifts?id=eq.${id}`, {
+            method: "PATCH",
+            headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+            body: JSON.stringify({ claimed: true }),
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    };
+    setInterval(check, 15_000);
+  }
+
+  private _showGiftToast(coins: number, wins: number): void {
+    const parts: string[] = [];
+    if (coins > 0) parts.push(`🪙 ${coins.toLocaleString()} coins`);
+    if (wins  > 0) parts.push(`🏆 ${wins} win${wins !== 1 ? "s" : ""}`);
+    const toast = document.createElement("div");
+    toast.style.cssText =
+      "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);" +
+      "background:rgba(160,100,0,0.95);border:2px solid #FFD700;border-radius:14px;" +
+      "padding:12px 20px;z-index:999999;cursor:pointer;max-width:320px;width:90%;" +
+      "box-shadow:0 4px 24px rgba(0,0,0,0.6);font-family:Arial,sans-serif;text-align:center;";
+    toast.innerHTML =
+      `<div style="color:#FFD700;font-size:16px;font-weight:bold;">🎁 Admin gave you a gift!</div>` +
+      `<div style="color:white;font-size:14px;margin-top:6px;">+${parts.join(" and ")}</div>`;
+    toast.onclick = () => document.body.removeChild(toast);
     document.body.appendChild(toast);
     setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 10_000);
   }
@@ -771,6 +872,10 @@ export class ${className} {
   }
 
   // ── Level helpers ──────────────────────────────────────────────────────────
+  get completedLevelCount(): number {
+    return Object.values(this._levelSaves).filter(s => s.completed).length;
+  }
+
   isLevelUnlocked(n: number): boolean {
     return n === 1 || this._unlockedLevels.has(n);
   }
@@ -801,6 +906,7 @@ export class ${className} {
     };
     if (completed) {
       this.state.coins += 100;
+      this.state.wins += 1;
       const next = n + 1;
       if (next <= LEVEL_COUNT) this._unlockedLevels.add(next);
     }
@@ -886,6 +992,7 @@ export class ${className} {
     this.state.difficulty = 12;
     this.state.coins = 0;
     this.state.currentLevel = 1;
+    this.state.wins = 0;
     this._unlockedLevels = new Set([1]);
     this._levelSaves = {};
   }
@@ -909,7 +1016,117 @@ export class ${className} {
     return id ? `${SAVE_KEY}_${id}` : SAVE_KEY;
   }
 
+  enterModMode(): void {
+    this._modSnapshot = localStorage.getItem(this._saveKey());
+    this.modMode = true;
+  }
+
+  exitModMode(): void {
+    this.modMode = false;
+    if (this._modSnapshot !== null) {
+      localStorage.setItem(this._saveKey(), this._modSnapshot);
+    } else {
+      localStorage.removeItem(this._saveKey());
+    }
+    this._modSnapshot = null;
+    const id = this.currentAccountId;
+    if (id) this._loadForAccount(id);
+  }
+
+  enablePartyMode(): void {
+    if (this.partyMode) return;
+    this.partyMode = true;
+    this._startPartyOverlay();
+    this._startPartyMusic();
+  }
+
+  disablePartyMode(): void {
+    if (!this.partyMode) return;
+    this.partyMode = false;
+    this._partyOverlay?.remove();
+    this._partyOverlay = null;
+    document.getElementById("party-style")?.remove();
+    this._partyAudioStop?.();
+    this._partyAudioStop = null;
+  }
+
+  private _startPartyOverlay(): void {
+    const style = document.createElement("style");
+    style.id = "party-style";
+    style.textContent = `
+      @keyframes party-fall { 0%{transform:translateY(-30px) rotate(0deg);opacity:1} 100%{transform:translateY(105vh) rotate(720deg);opacity:0.6} }
+      @keyframes party-bob  { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-18px) rotate(4deg)} }
+      @keyframes party-sway { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+    `;
+    document.head.appendChild(style);
+
+    const overlay = document.createElement("div");
+    overlay.id = "party-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden;";
+
+    const colors = ["#ff4444","#ff9900","#ffff00","#00cc44","#4488ff","#cc44ff","#ff44cc","#00ccff"];
+    for (let i = 0; i < 50; i++) {
+      const p = document.createElement("div");
+      const color = colors[i % colors.length];
+      const size  = 8 + Math.random() * 10;
+      const left  = Math.random() * 100;
+      const delay = Math.random() * 5;
+      const dur   = 3 + Math.random() * 4;
+      const round = Math.random() > 0.5 ? "50%" : "2px";
+      p.style.cssText = `position:absolute;top:-30px;left:${left}%;width:${size}px;height:${size}px;background:${color};border-radius:${round};animation:party-fall ${dur}s ${delay}s linear infinite;`;
+      overlay.appendChild(p);
+    }
+
+    [["5%","10%","🎈",44],["15%","4%","🎈",52],["80%","8%","🎈",48],["90%","3%","🎈",40]].forEach(([l, b, e, sz], i) => {
+      const balloon = document.createElement("div");
+      balloon.style.cssText = `position:absolute;left:${l};bottom:${b};font-size:${sz}px;animation:party-bob ${2+i*0.4}s ${i*0.2}s ease-in-out infinite;`;
+      balloon.textContent = e as string;
+      overlay.appendChild(balloon);
+    });
+
+    ["🎊","🎉","✨","🌟"].forEach((e, i) => {
+      const streamer = document.createElement("div");
+      streamer.style.cssText = `position:absolute;top:${6+i*6}%;${i%2===0?"left":"right"}:${2+i*3}%;font-size:28px;animation:party-sway ${1.2+i*0.3}s ${i*0.15}s ease-in-out infinite;`;
+      streamer.textContent = e;
+      overlay.appendChild(streamer);
+    });
+
+    const banner = document.createElement("div");
+    banner.style.cssText = "position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:18px;font-family:'Arial Black',Arial;font-weight:900;color:white;text-shadow:0 0 12px rgba(255,200,0,0.9);white-space:nowrap;animation:party-bob 1.8s ease-in-out infinite;";
+    banner.textContent = "🎉 PARTY MODE 🎉";
+    overlay.appendChild(banner);
+
+    document.body.appendChild(overlay);
+    this._partyOverlay = overlay;
+  }
+
+  private _startPartyMusic(): void {
+    try {
+      const ctx = new AudioContext();
+      const notes = [523,659,784,1047,784,659,523,392,523,659,784,880,784,659,784,1047];
+      let i = 0, stopped = false;
+      const tick = () => {
+        if (stopped) return;
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "square";
+        osc.frequency.value = notes[i % notes.length];
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+        i++;
+        setTimeout(tick, 320);
+      };
+      tick();
+      this._partyAudioStop = () => { stopped = true; ctx.close(); };
+    } catch { /* audio unavailable */ }
+  }
+
   save(): void {
+    if (this.modMode) return;
     // Also persist current unlockedLocks + inventory into the current level's slot
     const n = this.state.currentLevel;
     this._levelSaves[n] = {
@@ -925,6 +1142,7 @@ export class ${className} {
       unlockedLevels: [...this._unlockedLevels],
       pets:           [...this.state.pets],
       autoClicker:    this.state.autoClicker,
+      wins:           this.state.wins,
       levels:         this._levelSaves,
     };
     localStorage.setItem(this._saveKey(), JSON.stringify(data));
@@ -969,6 +1187,7 @@ export class ${className} {
       this.state.difficulty   = data.difficulty   ?? 12;
       this.state.pets         = data.pets         ?? [];
       this.state.autoClicker  = data.autoClicker  ?? false;
+      this.state.wins         = data.wins         ?? 0;
       if (data.unlockedLevels) {
         this._unlockedLevels = new Set([1, ...data.unlockedLevels]);
       }
@@ -1122,6 +1341,7 @@ export class ${className} {
     this.goIntro();
   }
 
+  goMods():             void { this._nav(() => import("../scenes/ModsScene").then(m => new m.ModsScene(this))); }
   goArcade():           void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("arcade")); this._nav(() => import("../scenes/ArcadeScene").then(m => new m.ArcadeScene(this))); }
   goAuth():             void { this._nav(() => import("../scenes/AuthScene").then(m => new m.AuthScene(this))); }
   goLobby():            void { this._nav(() => import("../scenes/LobbyScene").then(m => new m.LobbyScene(this))); }

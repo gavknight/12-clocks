@@ -11,6 +11,8 @@ export const VERSION_GAMES: Record<string, string[]> = {
   "v0.8": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife"],
   "v0.9": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife","knightsQuest"],
   "v1.0": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife","knightsQuest","clickTest","youtube"],
+  "v1.1": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife","knightsQuest","clickTest","youtube","duckClicker","collectApples","astroBot","obsRecorder","watching"],
+  "v1.2": ["coinJump","fruitSlice","cookie","coinRain","justDraw","itemCreator","robloxStudio","robloxGames","minecraft","geomDash","banban","mrTomato","boldy","nightForest","fireFighter","chess","duckLife","knightsQuest","clickTest","youtube","duckClicker","collectApples","astroBot","obsRecorder","watching","prodigy","catCleaning","eggy","mm2"],
 };
 
 export const VERSION_NAMES: Record<string, string> = {
@@ -24,16 +26,20 @@ export const VERSION_NAMES: Record<string, string> = {
   "v0.8": "Duck Life",
   "v0.9": "Knight's Quest",
   "v1.0": "YouTube Era",
+  "v1.1": "Clicker & More",
+  "v1.2": "Eggy & Friends",
 };
 
 const VERSION_EMOJIS: Record<string, string> = {
   "v0.1":"🌱","v0.2":"🎮","v0.3":"🎨","v0.4":"🔨",
   "v0.5":"⛏️","v0.6":"🌲","v0.7":"♟️","v0.8":"🦆","v0.9":"⚔️","v1.0":"▶️",
+  "v1.1":"🖱️","v1.2":"🥚",
 };
 
 const VERSION_COLORS: Record<string, string> = {
   "v0.1":"#27ae60","v0.2":"#2980b9","v0.3":"#8e44ad","v0.4":"#e67e22",
   "v0.5":"#16a085","v0.6":"#2c3e50","v0.7":"#7f8c8d","v0.8":"#3498db","v0.9":"#f39c12","v1.0":"#cc0000",
+  "v1.1":"#e91e63","v1.2":"#ff9800",
 };
 
 export const TIME_MACHINE_KEY = "12clocks_timemachine";
@@ -74,7 +80,7 @@ export class VersionHistory {
       const emoji  = VERSION_EMOJIS[tag];
       const color  = VERSION_COLORS[tag];
       const games  = VERSION_GAMES[tag];
-      const isLatest = tag === "v1.0";
+      const isLatest = tag === "v1.2";
       const noGames  = false;
 
       const btn = document.createElement("button");

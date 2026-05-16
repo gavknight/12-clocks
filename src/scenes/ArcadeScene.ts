@@ -551,6 +551,51 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Baldi's Basics -->
+          <button id="baldisBtn" style="
+            background:linear-gradient(135deg,rgba(10,60,10,0.9),rgba(20,120,20,0.7));
+            border:2px solid rgba(80,200,80,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">📓</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Baldi's Basics</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Collect 7 notebooks — then escape! Watch out for Baldi.</div>
+              <div style="color:#7fff7f;font-size:12px;margin-top:4px;">📓 3D Maze • Math • Run!</div>
+            </div>
+          </button>
+
+          <!-- Baldi Mod Maker -->
+          <button id="baldisModBtn" style="
+            background:linear-gradient(135deg,rgba(10,40,60,0.9),rgba(20,80,100,0.7));
+            border:2px solid rgba(80,180,255,0.5);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🔧</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Baldi Mod Maker</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Design your own Baldi maze, questions & settings!</div>
+              <div style="color:#7dd3fc;font-size:12px;margin-top:4px;">🗺️ Custom maze · 📓 Custom questions · ⚙️ Custom speed</div>
+            </div>
+          </button>
+
+          <!-- Poppy Playtime -->
+          <button id="poppyBtn" style="
+            background:linear-gradient(135deg,rgba(80,0,60,0.9),rgba(160,0,120,0.7));
+            border:2px solid rgba(255,110,200,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:40px;flex-shrink:0;">🤚</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Poppy Playtime</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Solve the color puzzle — then grab the GrabPack!</div>
+              <div style="color:#ff6ec7;font-size:12px;margin-top:4px;">🎒 Chapter 1 • Grabpack • Huggy's Factory</div>
+            </div>
+          </button>
+
           <!-- Click Test -->
           <button id="clickTestBtn" style="
             background:linear-gradient(135deg,rgba(40,0,80,0.9),rgba(80,0,160,0.7));
@@ -653,6 +698,20 @@ export class ArcadeScene {
               <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Watching</div>
               <div style="color:rgba(255,255,255,0.6);font-size:13px;">Watch your saved clips & community recordings!</div>
               <div style="color:#88bbff;font-size:12px;margin-top:4px;">📼 My Clips • 🌍 Community • ⬇ Download</div>
+            </div>
+          </button>
+
+          <!-- Gorilla Tag -->
+          <button id="gorillaTagBtn" style="
+            background:linear-gradient(135deg,rgba(80,20,40,0.9),rgba(200,50,120,0.7));
+            border:2px solid rgba(255,105,180,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🦍</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Gorilla Tag</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Run from the pink gorilla — don't get caught!</div>
+              <div style="color:#ff69b4;font-size:12px;margin-top:4px;">3D • Mouse-look • Join with code</div>
             </div>
           </button>
 
@@ -833,6 +892,15 @@ export class ArcadeScene {
     document.getElementById("fakeGoogleBtn")!.onclick = () => {
       import("./games/FakeGoogle").then(m => { game.ui.innerHTML = ""; new m.FakeGoogle(game); });
     };
+    document.getElementById("baldisBtn")!.onclick = () => {
+      import("./games/BaldisBasics").then(m => { game.ui.innerHTML = ""; new m.BaldisBasics(game); });
+    };
+    document.getElementById("baldisModBtn")!.onclick = () => {
+      import("./games/BaldisModMaker").then(m => { game.ui.innerHTML = ""; new m.BaldisModMaker(game); });
+    };
+    document.getElementById("poppyBtn")!.onclick = () => {
+      import("./games/PoppyPlaytime").then(m => { game.ui.innerHTML = ""; new m.PoppyPlaytime(game); });
+    };
     document.getElementById("clickTestBtn")!.onclick = () => {
       import("./games/ClickTest").then(m => { game.ui.innerHTML = ""; new m.ClickTest(game); });
     };
@@ -850,6 +918,9 @@ export class ArcadeScene {
     };
     document.getElementById("watchingBtn")!.onclick = () => {
       import("./games/WatchingGame").then(m => { game.ui.innerHTML = ""; new m.WatchingGame(game); });
+    };
+    document.getElementById("gorillaTagBtn")!.onclick = () => {
+      import("./games/GorillaTag").then(m => { game.ui.innerHTML = ""; new m.GorillaTag(game); });
     };
     document.getElementById("youtubeBtn")!.onclick = () => {
       import("./games/YouTubeGame").then(m => { game.ui.innerHTML = ""; new m.YouTubeGame(game); });

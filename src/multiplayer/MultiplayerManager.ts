@@ -1,12 +1,15 @@
 import type { DataConnection, Peer as PeerType } from "peerjs";
 
 export type MPMsg =
-  | { t: "cursor";   x: number; y: number; name: string; color: string }
-  | { t: "inv";      items: number[] }
-  | { t: "sync";     locks: number[]; inv: number[]; diff: number }
-  | { t: "reqsync" }  // joiner asks host for current state
-  | { t: "gd_pos";   px: number; py: number; mode: string; name: string; color: string }
-  | { t: "gd_level"; level: object | null };
+  | { t: "cursor";        x: number; y: number; name: string; color: string }
+  | { t: "inv";           items: number[] }
+  | { t: "sync";          locks: number[]; inv: number[]; diff: number }
+  | { t: "reqsync" }
+  | { t: "gd_pos";        px: number; py: number; mode: string; name: string; color: string }
+  | { t: "gd_level";      level: object | null }
+  | { t: "duel_ready" }
+  | { t: "duel_progress"; locksWon: number; total: number }
+  | { t: "duel_win" };
 
 const PLAYER_COLORS = ["#FF6B6B","#4ECDC4","#45B7D1","#FFEAA7","#DDA0DD","#98D8C8","#F7DC6F"];
 
@@ -31,8 +34,11 @@ export class MultiplayerManager {
   onReqSync:    (() => void) | null = null;
   onConnect:    ((id: string) => void) | null = null;
   onDisconnect: ((id: string) => void) | null = null;
-  onGdPos:      ((id: string, name: string, color: string, px: number, py: number, mode: string) => void) | null = null;
-  onGdLevel:    ((level: object | null) => void) | null = null;
+  onGdPos:       ((id: string, name: string, color: string, px: number, py: number, mode: string) => void) | null = null;
+  onGdLevel:     ((level: object | null) => void) | null = null;
+  onDuelReady:   (() => void) | null = null;
+  onDuelProgress:((locksWon: number, total: number) => void) | null = null;
+  onDuelWin:     (() => void) | null = null;
   private _gdPosTimer = 0;
 
   constructor(name: string) {
@@ -94,8 +100,11 @@ export class MultiplayerManager {
       else if (m.t === "inv")      this.onInv?.(m.items);
       else if (m.t === "sync")     this.onSync?.(m.locks, m.inv, m.diff);
       else if (m.t === "reqsync")  this.onReqSync?.();
-      else if (m.t === "gd_pos")   this.onGdPos?.(conn.peer, m.name, m.color, m.px, m.py, m.mode);
-      else if (m.t === "gd_level") this.onGdLevel?.(m.level);
+      else if (m.t === "gd_pos")       this.onGdPos?.(conn.peer, m.name, m.color, m.px, m.py, m.mode);
+      else if (m.t === "gd_level")     this.onGdLevel?.(m.level);
+      else if (m.t === "duel_ready")   this.onDuelReady?.();
+      else if (m.t === "duel_progress") this.onDuelProgress?.(m.locksWon, m.total);
+      else if (m.t === "duel_win")     this.onDuelWin?.();
     });
     conn.on("close", () => {
       this._conns.delete(conn.peer);
@@ -129,6 +138,10 @@ export class MultiplayerManager {
   sendSync(locks: number[], inv: number[], diff: number): void {
     this._broadcast({ t: "sync", locks, inv, diff });
   }
+
+  sendDuelReady():                            void { this._broadcast({ t: "duel_ready" }); }
+  sendDuelProgress(locksWon: number, total: number): void { this._broadcast({ t: "duel_progress", locksWon, total }); }
+  sendDuelWin():                              void { this._broadcast({ t: "duel_win" }); }
 
   requestSync(): void {
     this._broadcast({ t: "reqsync" });

@@ -9,11 +9,11 @@ export const RULES: { id: number; text: string }[] = [
   { id: 3, text: "No threatening Mr. Tomato in chat 🍅" },
 ];
 
-export async function sendReport(reporter: string, rule: { id: number; text: string }): Promise<void> {
+export async function sendReport(reporter: string, reported: string, rule: { id: number; text: string }): Promise<void> {
   await fetch(SB, {
     method: "POST",
     headers: H,
-    body: JSON.stringify({ reporter, rule_id: rule.id, rule_text: rule.text }),
+    body: JSON.stringify({ reporter: `${reporter} → ${reported}`, rule_id: rule.id, rule_text: rule.text }),
   });
 }
 
@@ -49,14 +49,16 @@ export function bindReportButtons(username: string): void {
       const id = parseInt(btn.dataset.ruleid!);
       const rule = RULES.find(r => r.id === id);
       if (!rule) return;
+      const reported = window.prompt("Enter the username you are reporting:");
+      if (!reported || !reported.trim()) return;
       btn.textContent = "…";
       btn.style.pointerEvents = "none";
       try {
-        await sendReport(username || "anonymous", rule);
+        await sendReport(username || "anonymous", reported.trim(), rule);
         btn.textContent = "✓ Sent";
         btn.style.color = "#80ff80";
         const fb = document.getElementById("reportFeedback");
-        if (fb) fb.textContent = "Report sent!";
+        if (fb) fb.textContent = `Reported ${reported.trim()}!`;
         setTimeout(() => { if (fb) fb.textContent = ""; }, 3000);
       } catch {
         btn.textContent = "❌";
