@@ -58,6 +58,48 @@ export class AdminAbusePanel {
           <div id="aap_chatFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
+        <!-- Chat Viewer -->
+        <div style="background:rgba(0,180,255,0.07);border:2px solid rgba(0,180,255,0.35);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="color:#66ddff;font-size:15px;font-weight:bold;">💬 Live Chat</div>
+            <button id="aap_chatRefresh" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);
+              font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">↻ Refresh</button>
+          </div>
+          <div id="aap_chatFeed" style="display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;">
+            <div style="color:rgba(255,255,255,0.3);font-size:12px;">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Polls -->
+        <div style="background:rgba(180,0,255,0.08);border:2px solid rgba(180,0,255,0.4);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:#dd88ff;font-size:15px;font-weight:bold;">📊 Launch a Poll</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">Players see a vote popup with prize options!</div>
+          <input id="aap_pollQ" type="text" maxlength="80" placeholder="What do you want?"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(180,0,255,0.4);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;outline:none;" />
+          <div style="display:flex;flex-direction:column;gap:6px;" id="aap_pollOpts">
+            <input class="pollOpt" type="text" placeholder="Option 1 (e.g. 100M coins 🪙)"
+              style="background:rgba(255,255,255,0.08);border:1px solid rgba(180,0,255,0.3);border-radius:8px;color:white;font-size:12px;padding:7px 10px;outline:none;" />
+            <input class="pollOpt" type="text" placeholder="Option 2 (e.g. 200M wins 🏆)"
+              style="background:rgba(255,255,255,0.08);border:1px solid rgba(180,0,255,0.3);border-radius:8px;color:white;font-size:12px;padding:7px 10px;outline:none;" />
+            <input class="pollOpt" type="text" placeholder="Option 3 (optional)"
+              style="background:rgba(255,255,255,0.08);border:1px solid rgba(180,0,255,0.3);border-radius:8px;color:white;font-size:12px;padding:7px 10px;outline:none;" />
+            <input class="pollOpt" type="text" placeholder="Option 4 (optional)"
+              style="background:rgba(255,255,255,0.08);border:1px solid rgba(180,0,255,0.3);border-radius:8px;color:white;font-size:12px;padding:7px 10px;outline:none;" />
+          </div>
+          <button id="aap_pollLaunch" style="background:rgba(180,0,255,0.3);color:#dd88ff;font-size:14px;
+            font-weight:bold;border:2px solid rgba(180,0,255,0.5);border-radius:10px;padding:10px;cursor:pointer;">
+            📊 Launch Poll for Everyone
+          </button>
+          <button id="aap_pollEnd" style="background:rgba(255,80,80,0.2);color:#ff8888;font-size:12px;
+            font-weight:bold;border:1px solid rgba(255,80,80,0.4);border-radius:8px;padding:8px;cursor:pointer;">
+            ✕ End Current Poll
+          </button>
+          <div id="aap_pollFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
+        </div>
+
         <!-- Give Stats -->
         <div style="background:rgba(255,180,0,0.08);border:2px solid rgba(255,200,0,0.35);
           border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
@@ -180,6 +222,53 @@ export class AdminAbusePanel {
       ($("aap_coins") as HTMLInputElement).value = "0";
       ($("aap_wins")  as HTMLInputElement).value = "0";
     };
+
+    // Chat viewer
+    const loadChat = () => {
+      fetch(`${SB}/yt_chat?order=created_at.desc&limit=30`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { username: string; icon: string; message: string; is_bot: boolean }[]) => {
+          const el = document.getElementById("aap_chatFeed");
+          if (!el) return;
+          if (!rows.length) { el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No messages yet.</div>`; return; }
+          el.innerHTML = rows.map(r => `
+            <div style="display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-size:14px;">${r.icon ?? "💬"}</span>
+              <div>
+                <span style="color:${r.is_bot ? "rgba(255,255,255,0.35)" : "#66ddff"};font-size:12px;font-weight:bold;">${r.username}</span>
+                <span style="color:rgba(255,255,255,0.7);font-size:12px;margin-left:6px;">${r.message}</span>
+              </div>
+            </div>`).join("");
+        }).catch(() => {});
+    };
+    loadChat();
+    $("aap_chatRefresh").onclick = loadChat;
+    const chatInterval = setInterval(loadChat, 5000);
+
+    // Poll creator
+    $("aap_pollLaunch").onclick = async () => {
+      const question = ($("aap_pollQ") as HTMLInputElement).value.trim();
+      const options = Array.from(document.querySelectorAll<HTMLInputElement>(".pollOpt"))
+        .map(i => i.value.trim()).filter(Boolean);
+      if (!question) { fb("aap_pollFb", "❌ Enter a question!", false); return; }
+      if (options.length < 2) { fb("aap_pollFb", "❌ Need at least 2 options.", false); return; }
+      // End any existing polls first
+      await fetch(`${SB}/polls?active=eq.true`, { method: "PATCH", headers: H, body: JSON.stringify({ active: false }) });
+      const res = await fetch(`${SB}/polls`, {
+        method: "POST", headers: { ...H, "Prefer": "return=representation" },
+        body: JSON.stringify({ question, options, created_at: Date.now(), active: true }),
+      });
+      if (res.ok) fb("aap_pollFb", `✓ Poll launched to all players!`);
+      else fb("aap_pollFb", "❌ Failed to launch.", false);
+    };
+    $("aap_pollEnd").onclick = async () => {
+      await fetch(`${SB}/polls?active=eq.true`, { method: "PATCH", headers: H, body: JSON.stringify({ active: false }) });
+      fb("aap_pollFb", "✓ Poll ended.");
+    };
+
+    // Cleanup chat interval on close
+    const origDestroy = this.destroy.bind(this);
+    this.destroy = () => { clearInterval(chatInterval); origDestroy(); };
 
     // Coin Jump editor — launches Coin Jump then immediately opens the editor overlay
     $("aap_cjEditor").onclick = () => {

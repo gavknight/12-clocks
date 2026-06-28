@@ -1307,6 +1307,7 @@ export class ${className} {
     this.engine.runRenderLoop(() => {});
     this._seedAdminAccount();
     this._startNormal();
+    this._startPollWatcher();
     window.addEventListener("keydown", (e) => {
       if (e.altKey && e.key === "p" && this.hasHacks) {
         e.preventDefault();
@@ -1378,6 +1379,59 @@ export class ${className} {
   goPuzzle(i: number): void { this._nav(() => import("../scenes/MiniPuzzle").then(m => new m.MiniPuzzle(this, i))); }
   goEnding():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("win")); this._nav(() => import("../scenes/EndingScene").then(m => new m.EndingScene(this))); }
   goAdmin():       void { if (!this.hasHacks) return; this._nav(() => import("../scenes/AdminPanel").then(m => new m.AdminPanel(this))); }
+  private _activePollId = -1;
+  private _startPollWatcher(): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+    const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
+    const check = () => {
+      fetch(`${SB}/polls?active=eq.true&order=id.desc&limit=1`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { id: number; question: string; options: string[] }[]) => {
+          if (!rows.length) { document.getElementById("__pollOverlay")?.remove(); return; }
+          const poll = rows[0];
+          if (poll.id === this._activePollId) return;
+          this._activePollId = poll.id;
+          document.getElementById("__pollOverlay")?.remove();
+          const overlay = document.createElement("div");
+          overlay.id = "__pollOverlay";
+          overlay.style.cssText = `position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99990;
+            background:linear-gradient(135deg,#1a003a,#2a005a);border:2px solid rgba(180,0,255,0.6);
+            border-radius:20px;padding:16px 20px;font-family:Arial,sans-serif;min-width:280px;max-width:340px;
+            box-shadow:0 8px 32px rgba(0,0,0,0.7);`;
+          overlay.innerHTML = `
+            <div style="color:#dd88ff;font-size:14px;font-weight:bold;margin-bottom:8px;">📊 ${poll.question}</div>
+            <div id="__pollBtns" style="display:flex;flex-direction:column;gap:6px;">
+              ${poll.options.map((opt, i) => `
+                <button data-idx="${i}" style="background:rgba(180,0,255,0.2);color:white;font-size:13px;
+                  font-weight:bold;padding:8px 12px;border-radius:10px;border:1.5px solid rgba(180,0,255,0.4);
+                  cursor:pointer;text-align:left;">${opt}</button>`).join("")}
+            </div>
+            <div id="__pollThanks" style="color:#80ff80;font-size:12px;margin-top:6px;min-height:14px;"></div>
+            <button id="__pollClose" style="margin-top:8px;width:100%;background:rgba(255,255,255,0.06);
+              color:rgba(255,255,255,0.4);font-size:11px;padding:5px;border-radius:8px;
+              border:1px solid rgba(255,255,255,0.15);cursor:pointer;">✕ Dismiss</button>
+          `;
+          document.body.appendChild(overlay);
+          overlay.querySelectorAll<HTMLButtonElement>("[data-idx]").forEach(btn => {
+            btn.onclick = () => {
+              const idx = parseInt(btn.dataset.idx!);
+              fetch(`${SB}/poll_votes`, { method: "POST", headers: H,
+                body: JSON.stringify({ poll_id: poll.id, account_id: this.currentAccountId, option_index: idx, voted_at: Date.now() }) })
+                .then(() => {
+                  const t = document.getElementById("__pollThanks");
+                  if (t) t.textContent = `✓ Voted for: ${poll.options[idx]}`;
+                  overlay.querySelectorAll<HTMLButtonElement>("[data-idx]").forEach(b => b.disabled = true);
+                }).catch(() => {});
+            };
+          });
+          document.getElementById("__pollClose")!.onclick = () => overlay.remove();
+        }).catch(() => {});
+    };
+    check();
+    setInterval(check, 5000);
+  }
+
   goAdminAbuse():  void {
     if (!this.hasHacks) return;
     import("../scenes/AdminAbusePanel").then(m => new m.AdminAbusePanel(this));
