@@ -97,6 +97,11 @@ export class AdminAbusePanel {
             font-weight:bold;border:1px solid rgba(255,80,80,0.4);border-radius:8px;padding:8px;cursor:pointer;">
             ✕ End Current Poll
           </button>
+          <button id="aap_pollResults" style="background:rgba(0,220,100,0.15);color:#66ffaa;font-size:12px;
+            font-weight:bold;border:1px solid rgba(0,220,100,0.4);border-radius:8px;padding:8px;cursor:pointer;">
+            📊 See Results
+          </button>
+          <div id="aap_pollResultsBox" style="display:none;flex-direction:column;gap:5px;"></div>
           <div id="aap_pollFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
@@ -303,6 +308,42 @@ export class AdminAbusePanel {
     $("aap_pollEnd").onclick = async () => {
       await fetch(`${SB}/polls?active=eq.true`, { method: "PATCH", headers: H, body: JSON.stringify({ active: false }) });
       fb("aap_pollFb", "✓ Poll ended.");
+    };
+
+    $("aap_pollResults").onclick = async () => {
+      const box = document.getElementById("aap_pollResultsBox")!;
+      box.style.display = "flex";
+      box.innerHTML = `<div style="color:rgba(255,255,255,0.4);font-size:12px;">Loading…</div>`;
+      // Get most recent poll
+      const pollRes = await fetch(`${SB}/polls?order=id.desc&limit=1`, { headers: H });
+      const polls: { id: number; question: string; options: string[]; active: boolean }[] = await pollRes.json();
+      if (!polls.length) { box.innerHTML = `<div style="color:#ff8888;font-size:12px;">No polls found.</div>`; return; }
+      const poll = polls[0];
+      // Get votes
+      const votesRes = await fetch(`${SB}/poll_votes?poll_id=eq.${poll.id}&select=option_index`, { headers: H });
+      const votes: { option_index: number }[] = await votesRes.json();
+      const counts = poll.options.map((_, i) => votes.filter(v => v.option_index === i).length);
+      const total = votes.length || 1;
+      const winIdx = counts.indexOf(Math.max(...counts));
+      box.innerHTML = `
+        <div style="color:#dd88ff;font-size:13px;font-weight:bold;margin-bottom:4px;">
+          ${poll.active ? "🟢 LIVE" : "🔴 ENDED"} — ${poll.question}
+        </div>
+        ${poll.options.map((opt, i) => {
+          const pct = Math.round(counts[i] / total * 100);
+          const isWin = i === winIdx && counts[i] > 0;
+          return `<div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:${isWin ? "#66ffaa" : "rgba(255,255,255,0.7)"};">
+              <span>${isWin ? "👑 " : ""}${opt}</span>
+              <span>${counts[i]} vote${counts[i] !== 1 ? "s" : ""} (${pct}%)</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:8px;overflow:hidden;">
+              <div style="background:${isWin ? "#66ffaa" : "rgba(180,0,255,0.5)"};width:${pct}%;height:100%;border-radius:4px;transition:width 0.3s;"></div>
+            </div>
+          </div>`;
+        }).join("")}
+        <div style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:2px;">Total votes: ${votes.length}</div>
+      `;
     };
 
     // Cleanup chat interval on close
