@@ -50,10 +50,10 @@ export interface BaldisModConfig {
 export class BaldisModMaker {
   private _g: Game;
   private _wrap!: HTMLDivElement;
-  private _maze: number[][];
-  private _notebooks: Array<{row:number,col:number}>;
-  private _exits: Array<{row:number,col:number}>;
-  private _questions: Array<{q:string,a:string}>;
+  private _maze: number[][] = [];
+  private _notebooks: Array<{row:number,col:number}> = [];
+  private _exits: Array<{row:number,col:number}> = [];
+  private _questions: Array<{q:string,a:string}> = [];
   private _baldSpeed = 0.02;
   private _fogEnd = 32;
   private _tool = "wall";
