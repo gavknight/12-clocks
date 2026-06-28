@@ -150,23 +150,35 @@ export class AdminAbusePanel {
     };
 
     // Give stats
-    $("aap_giveSend").onclick = () => {
+    $("aap_giveSend").onclick = async () => {
       const targetId = ($("aap_target") as HTMLSelectElement).value;
       const coins    = parseInt(($("aap_coins") as HTMLInputElement).value, 10) || 0;
       const wins     = parseInt(($("aap_wins")  as HTMLInputElement).value, 10) || 0;
       if (coins === 0 && wins === 0) { fb("aap_giveFb", "❌ Enter at least 1 coin or 1 win.", false); return; }
 
-      const accounts = targetId === "ALL" ? this.game.getAllAccounts() : this.game.getAllAccounts().filter(a => a.id === targetId);
-      Promise.all(accounts.map(acc =>
-        fetch(`${SB}/player_gifts`, {
+      if (targetId === "ALL") {
+        // Fetch ALL global players from Supabase members table
+        fb("aap_giveFb", "⏳ Fetching all players...", true);
+        const res = await fetch(`${SB}/members?select=account_id,username`, { headers: H });
+        const members: { account_id: string; username: string }[] = res.ok ? await res.json() : [];
+        if (!members.length) { fb("aap_giveFb", "❌ No players found.", false); return; }
+        await Promise.all(members.map(m =>
+          fetch(`${SB}/player_gifts`, {
+            method: "POST", headers: H,
+            body: JSON.stringify({ account_id: m.account_id, coins, wins, claimed: false, sent_at: Date.now() }),
+          })
+        ));
+        fb("aap_giveFb", `✓ Gifted 🪙${coins.toLocaleString()} + 🏆${wins} to all ${members.length} players!`);
+      } else {
+        const acc = this.game.getAllAccounts().find(a => a.id === targetId);
+        await fetch(`${SB}/player_gifts`, {
           method: "POST", headers: H,
-          body: JSON.stringify({ account_id: acc.id, coins, wins, claimed: false, sent_at: Date.now() }),
-        })
-      )).then(() => {
-        fb("aap_giveFb", `✓ Gifted 🪙${coins.toLocaleString()} + 🏆${wins} to ${targetId === "ALL" ? `all ${accounts.length} players` : accounts[0]?.username}!`);
-        ($("aap_coins") as HTMLInputElement).value = "0";
-        ($("aap_wins")  as HTMLInputElement).value = "0";
-      }).catch(() => fb("aap_giveFb", "❌ Failed.", false));
+          body: JSON.stringify({ account_id: targetId, coins, wins, claimed: false, sent_at: Date.now() }),
+        });
+        fb("aap_giveFb", `✓ Gifted 🪙${coins.toLocaleString()} + 🏆${wins} to ${acc?.username ?? targetId}!`);
+      }
+      ($("aap_coins") as HTMLInputElement).value = "0";
+      ($("aap_wins")  as HTMLInputElement).value = "0";
     };
 
     // Coin Jump editor — launches Coin Jump then immediately opens the editor overlay
