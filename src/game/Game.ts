@@ -1326,12 +1326,15 @@ export class ${className} {
       this._loadForAccount(acc.id);
       this.state.username = acc.username;
       if (this.isBanned(acc.id)) { this.goBanned(); return; }
-      // Also check server-side ban (covers bans issued from other devices)
+      // Also check server-side ban by account_id AND username
       const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
-      fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/members?account_id=eq.${encodeURIComponent(acc.id)}&select=is_banned`, {
-        headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
-      }).then(r => r.json()).then((rows: { is_banned: boolean }[]) => {
-        if (rows[0]?.is_banned) { this.goBanned(); return; }
+      const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
+      const H2 = { "apikey": KEY, "Authorization": `Bearer ${KEY}` };
+      Promise.all([
+        fetch(`${SB}/members?account_id=eq.${encodeURIComponent(acc.id)}&select=is_banned`, { headers: H2 }).then(r => r.json()),
+        fetch(`${SB}/bans?username=eq.${encodeURIComponent(acc.username)}&select=id`, { headers: H2 }).then(r => r.json()),
+      ]).then(([members, bans]: [{ is_banned: boolean }[], { id: number }[]]) => {
+        if (members[0]?.is_banned || bans.length > 0) { this.goBanned(); return; }
         pingMember(acc.id, acc.username);
         this.goTitle();
       }).catch(() => {

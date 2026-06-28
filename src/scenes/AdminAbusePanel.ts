@@ -226,15 +226,23 @@ export class AdminAbusePanel {
     // Chat viewer
     const banUser = (username: string, msgId: number) => {
       if (!confirm(`Ban "${username}"? They won't be able to play.`)) return;
-      // Look up their account_id from members table, then set is_banned = true
+      // Try members table first, fall back to bans-by-username table
       fetch(`${SB}/members?username=eq.${encodeURIComponent(username)}&select=account_id`, { headers: H })
         .then(r => r.json())
         .then((rows: { account_id: string }[]) => {
           const accountId = rows[0]?.account_id;
-          if (!accountId) { alert(`Couldn't find account for "${username}".`); return; }
-          this.game.banUser(accountId);
+          if (accountId) {
+            this.game.banUser(accountId);
+          }
+          // Always also ban by username so guests/unregistered are covered
+          fetch(`${SB}/bans`, {
+            method: "POST",
+            headers: { ...H, "Prefer": "resolution=merge-duplicates,return=minimal" },
+            body: JSON.stringify({ username, banned_at: Date.now(), reason: "banned by admin" }),
+          });
           fetch(`${SB}/admin_chat?id=eq.${msgId}`, { method: "DELETE", headers: H });
           loadChat();
+          alert(`✅ "${username}" has been banned!`);
         }).catch(() => {});
     };
     const deleteMsg = (id: number) => {
