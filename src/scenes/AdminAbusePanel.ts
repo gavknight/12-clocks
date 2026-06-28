@@ -71,6 +71,21 @@ export class AdminAbusePanel {
           </div>
         </div>
 
+        <!-- Global Emojis -->
+        <div style="background:rgba(255,200,0,0.07);border:2px solid rgba(255,200,0,0.35);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="color:#FFD700;font-size:15px;font-weight:bold;">🎭 Global Emoji Reaction</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">Tap one — it flies across everyone's screen!</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${["🔥","💀","😂","🎉","❤️","👑","😱","🤯","💯","🥶","😤","🫡","💸","🎮","⚡","🏆","👏","🤣","😈","💥"].map(e =>
+              `<button class="aap_emojiBtn" data-emoji="${e}" style="font-size:26px;background:rgba(255,255,255,0.06);
+                border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:6px 10px;cursor:pointer;
+                transition:transform 0.1s;">${e}</button>`
+            ).join("")}
+          </div>
+          <div id="aap_emojiFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
+        </div>
+
         <!-- Polls -->
         <div style="background:rgba(180,0,255,0.08);border:2px solid rgba(180,0,255,0.4);
           border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
@@ -288,6 +303,23 @@ export class AdminAbusePanel {
     loadChat();
     $("aap_chatRefresh").onclick = loadChat;
     const chatInterval = setInterval(loadChat, 5000);
+
+    // Global emoji reactions
+    document.querySelectorAll<HTMLButtonElement>(".aap_emojiBtn").forEach(btn => {
+      btn.onclick = () => {
+        const emoji = btn.dataset.emoji!;
+        btn.style.transform = "scale(1.3)";
+        setTimeout(() => { btn.style.transform = ""; }, 150);
+        fetch(`${SB}/global_emoji`, {
+          method: "POST",
+          headers: { ...H, "Prefer": "return=minimal" },
+          body: JSON.stringify({ emoji, sent_at: Date.now() }),
+        }).then(() => {
+          const el = document.getElementById("aap_emojiFb");
+          if (el) { el.textContent = `${emoji} sent to everyone!`; setTimeout(() => { el.textContent = ""; }, 2000); }
+        });
+      };
+    });
 
     // Poll creator
     $("aap_pollLaunch").onclick = async () => {

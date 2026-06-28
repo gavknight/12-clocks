@@ -108,6 +108,7 @@ export class Game {
     this._startReportPoller();
     this._startChatPoller();
     this._startGiftPoller();
+    this._startEmojiPoller();
     this._startIdleWatcher();
   }
 
@@ -242,6 +243,73 @@ export class Game {
     toast.onclick = () => document.body.removeChild(toast);
     document.body.appendChild(toast);
     setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 10_000);
+  }
+
+  // ── Global emoji reactions ────────────────────────────────────────────────
+  private _lastEmojiId = 0;
+  private _startEmojiPoller(): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}` };
+    const SB = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
+    // Seed so old reactions don't fire on join
+    fetch(`${SB}/global_emoji?order=id.desc&limit=1`, { headers: H })
+      .then(r => r.json()).then((rows: { id: number }[]) => {
+        if (rows[0]) this._lastEmojiId = rows[0].id;
+      }).catch(() => {});
+    const check = () => {
+      fetch(`${SB}/global_emoji?id=gt.${this._lastEmojiId}&order=id.asc`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { id: number; emoji: string }[]) => {
+          for (const row of rows) {
+            this._lastEmojiId = row.id;
+            this._showFloatingEmoji(row.emoji);
+          }
+        }).catch(() => {});
+    };
+    setInterval(check, 3000);
+  }
+
+  private _showFloatingEmoji(emoji: string): void {
+    if (!document.getElementById("__emojiStyle")) {
+      const s = document.createElement("style");
+      s.id = "__emojiStyle";
+      s.textContent = `
+        @keyframes emojiFloat {
+          0%   { opacity:0; transform:translateY(0) scale(0.5); }
+          15%  { opacity:1; transform:translateY(-30px) scale(1.2); }
+          80%  { opacity:1; }
+          100% { opacity:0; transform:translateY(-120px) scale(1); }
+        }
+        @keyframes emojiDrift {
+          0%   { left: var(--ex); }
+          100% { left: calc(var(--ex) + var(--drift)); }
+        }
+      `;
+      document.head.appendChild(s);
+    }
+    // Spawn a burst of 6 emojis scattered across the screen
+    for (let i = 0; i < 6; i++) {
+      const el = document.createElement("div");
+      const startX = 5 + Math.floor(Math.random() * 88);
+      const drift  = (Math.random() - 0.5) * 120;
+      const delay  = i * 120;
+      const size   = 36 + Math.floor(Math.random() * 28);
+      el.textContent = emoji;
+      el.style.cssText = `
+        position:fixed;
+        --ex:${startX}vw;
+        --drift:${drift}px;
+        left:${startX}vw;
+        bottom:${10 + Math.floor(Math.random() * 30)}vh;
+        font-size:${size}px;
+        pointer-events:none;
+        z-index:999998;
+        animation: emojiFloat 2.2s ease-out ${delay}ms forwards,
+                   emojiDrift 2.2s ease-out ${delay}ms forwards;
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500 + delay);
+    }
   }
 
   // ── Idle disconnect ────────────────────────────────────────────────────────
