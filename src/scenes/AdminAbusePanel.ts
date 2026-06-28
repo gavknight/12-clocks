@@ -224,19 +224,31 @@ export class AdminAbusePanel {
     };
 
     // Chat viewer
+    const deleteMsg = (id: number) => {
+      fetch(`${SB}/admin_chat?id=eq.${id}`, { method: "DELETE", headers: H })
+        .then(() => loadChat()).catch(() => {});
+    };
     const loadChat = () => {
       fetch(`${SB}/admin_chat?order=sent_at.desc&limit=30`, { headers: H })
         .then(r => r.json())
-        .then((rows: { sender: string; message: string; sent_at: number }[]) => {
+        .then((rows: { id: number; sender: string; message: string; sent_at: number }[]) => {
           const el = document.getElementById("aap_chatFeed");
           if (!el) return;
           if (!rows.length) { el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No messages yet.</div>`; return; }
           el.innerHTML = rows.map(r => `
-            <div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-              <span style="color:#66ddff;font-size:12px;font-weight:bold;">${r.sender}:</span>
-              <span style="color:rgba(255,255,255,0.8);font-size:12px;margin-left:6px;">${r.message}</span>
-              <div style="color:rgba(255,255,255,0.25);font-size:10px;">${new Date(r.sent_at).toLocaleTimeString()}</div>
+            <div data-msgid="${r.id}" style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <div style="flex:1;min-width:0;">
+                <span style="color:#66ddff;font-size:12px;font-weight:bold;">${r.sender}:</span>
+                <span style="color:rgba(255,255,255,0.8);font-size:12px;margin-left:6px;word-break:break-word;">${r.message}</span>
+                <div style="color:rgba(255,255,255,0.25);font-size:10px;">${new Date(r.sent_at).toLocaleTimeString()}</div>
+              </div>
+              <button class="aap_delMsg" data-id="${r.id}" style="flex-shrink:0;background:rgba(255,60,60,0.15);color:#ff8888;
+                border:1px solid rgba(255,60,60,0.3);border-radius:6px;padding:2px 8px;
+                font-size:11px;cursor:pointer;align-self:center;">🗑</button>
             </div>`).join("");
+          el.querySelectorAll<HTMLButtonElement>(".aap_delMsg").forEach(btn => {
+            btn.onclick = () => deleteMsg(Number(btn.dataset.id));
+          });
         }).catch(() => {});
     };
     loadChat();
