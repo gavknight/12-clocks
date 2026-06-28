@@ -20,11 +20,13 @@ export class CoinJumpEditor {
     clickLayer.style.cssText = "position:absolute;inset:0;";
     clickLayer.addEventListener("pointerdown", (e) => {
       e.stopPropagation();
-      const cj = (window as any).__coinJump;
-      if (!cj) return;
       const x = e.clientX / window.innerWidth;
       const y = e.clientY / window.innerHeight;
-      cj.spawnAt(x, y, 1);
+      // Spawn locally
+      const cj = (window as any).__coinJump;
+      if (cj) cj.spawnAt(x, y, 1);
+      // Push globally to Supabase
+      this._pushCoin(x, y);
       this._showDrop(e.clientX, e.clientY);
     });
 
@@ -55,10 +57,10 @@ export class CoinJumpEditor {
 
     bar.querySelector<HTMLButtonElement>("#cje_flood")!.onclick = () => {
       const cj = (window as any).__coinJump;
-      if (!cj) return;
-      cj.spawnAt(0.5, GROUND_Y, 8);
-      cj.spawnAt(0.5, 0.48,    8);
-      cj.spawnAt(0.5, 0.28,    8);
+      [[0.5, GROUND_Y], [0.5, 0.48], [0.5, 0.28]].forEach(([x, y]) => {
+        if (cj) cj.spawnAt(x, y, 8);
+        for (let i = 0; i < 8; i++) this._pushCoin(x + i * 0.1, y);
+      });
     };
 
     bar.querySelector<HTMLButtonElement>("#cje_close")!.onclick = () => {
@@ -67,6 +69,15 @@ export class CoinJumpEditor {
     };
 
     window.addEventListener("keydown", this._onKey);
+  }
+
+  private _pushCoin(x: number, y: number): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    fetch("https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_coins", {
+      method: "POST",
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ x, y, created_at: Date.now() }),
+    });
   }
 
   private _onKey = (e: KeyboardEvent) => {

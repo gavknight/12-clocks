@@ -76,6 +76,7 @@ export class CoinJump {
     this._game.inMiniGame = true;
     this._game.autoClickCallback = () => this._doJump();
     (window as any).__coinJump = this;
+    this._pollAdminCoins();
 
     // Load editor-placed coins if coming from the editor
     const editorCoins: { x: number; y: number }[] | undefined = (window as any).__cjeCoins;
@@ -235,6 +236,22 @@ export class CoinJump {
       ctx.textAlign = "center";
       ctx.fillText("Tap again to double jump!", W / 2, H * 0.88);
     }
+  }
+
+  private _lastAdminCoinId = 0;
+  private _pollAdminCoins(): void {
+    if (this._done) return;
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_coins?id=gt.${this._lastAdminCoinId}&order=id.asc`, {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+    }).then(r => r.json()).then((rows: { id: number; x: number; y: number }[]) => {
+      for (const row of rows) {
+        this._coins.push({ x: row.x, y: row.y, collected: false });
+        this._lastAdminCoinId = row.id;
+      }
+    }).catch(() => {}).finally(() => {
+      if (!this._done) setTimeout(() => this._pollAdminCoins(), 2000);
+    });
   }
 
   spawnAt(x: number, y: number, count = 5): void {
