@@ -225,19 +225,17 @@ export class AdminAbusePanel {
 
     // Chat viewer
     const loadChat = () => {
-      fetch(`${SB}/yt_chat?order=created_at.desc&limit=30`, { headers: H })
+      fetch(`${SB}/admin_chat?order=sent_at.desc&limit=30`, { headers: H })
         .then(r => r.json())
-        .then((rows: { username: string; icon: string; message: string; is_bot: boolean }[]) => {
+        .then((rows: { sender: string; message: string; sent_at: number }[]) => {
           const el = document.getElementById("aap_chatFeed");
           if (!el) return;
           if (!rows.length) { el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No messages yet.</div>`; return; }
           el.innerHTML = rows.map(r => `
-            <div style="display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-              <span style="font-size:14px;">${r.icon ?? "💬"}</span>
-              <div>
-                <span style="color:${r.is_bot ? "rgba(255,255,255,0.35)" : "#66ddff"};font-size:12px;font-weight:bold;">${r.username}</span>
-                <span style="color:rgba(255,255,255,0.7);font-size:12px;margin-left:6px;">${r.message}</span>
-              </div>
+            <div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="color:#66ddff;font-size:12px;font-weight:bold;">${r.sender}:</span>
+              <span style="color:rgba(255,255,255,0.8);font-size:12px;margin-left:6px;">${r.message}</span>
+              <div style="color:rgba(255,255,255,0.25);font-size:10px;">${new Date(r.sent_at).toLocaleTimeString()}</div>
             </div>`).join("");
         }).catch(() => {});
     };
