@@ -224,6 +224,19 @@ export class AdminAbusePanel {
     };
 
     // Chat viewer
+    const banUser = (username: string, msgId: number) => {
+      if (!confirm(`Ban "${username}"? They won't be able to play.`)) return;
+      // Look up their account_id from members table, then set is_banned = true
+      fetch(`${SB}/members?username=eq.${encodeURIComponent(username)}&select=account_id`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { account_id: string }[]) => {
+          const accountId = rows[0]?.account_id;
+          if (!accountId) { alert(`Couldn't find account for "${username}".`); return; }
+          this.game.banUser(accountId);
+          fetch(`${SB}/admin_chat?id=eq.${msgId}`, { method: "DELETE", headers: H });
+          loadChat();
+        }).catch(() => {});
+    };
     const deleteMsg = (id: number) => {
       fetch(`${SB}/admin_chat?id=eq.${id}`, { method: "DELETE", headers: H })
         .then(() => loadChat()).catch(() => {});
@@ -242,12 +255,20 @@ export class AdminAbusePanel {
                 <span style="color:rgba(255,255,255,0.8);font-size:12px;margin-left:6px;word-break:break-word;">${r.message}</span>
                 <div style="color:rgba(255,255,255,0.25);font-size:10px;">${new Date(r.sent_at).toLocaleTimeString()}</div>
               </div>
-              <button class="aap_delMsg" data-id="${r.id}" style="flex-shrink:0;background:rgba(255,60,60,0.15);color:#ff8888;
-                border:1px solid rgba(255,60,60,0.3);border-radius:6px;padding:2px 8px;
-                font-size:11px;cursor:pointer;align-self:center;">🗑</button>
+              <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;align-self:center;">
+                <button class="aap_delMsg" data-id="${r.id}" style="background:rgba(255,60,60,0.15);color:#ff8888;
+                  border:1px solid rgba(255,60,60,0.3);border-radius:6px;padding:2px 8px;
+                  font-size:11px;cursor:pointer;">🗑</button>
+                <button class="aap_banBtn" data-id="${r.id}" data-sender="${r.sender}" style="background:rgba(255,0,0,0.25);color:#ff4444;
+                  border:1px solid rgba(255,0,0,0.5);border-radius:6px;padding:2px 8px;
+                  font-size:11px;cursor:pointer;font-weight:bold;">🚫 Ban</button>
+              </div>
             </div>`).join("");
           el.querySelectorAll<HTMLButtonElement>(".aap_delMsg").forEach(btn => {
             btn.onclick = () => deleteMsg(Number(btn.dataset.id));
+          });
+          el.querySelectorAll<HTMLButtonElement>(".aap_banBtn").forEach(btn => {
+            btn.onclick = () => banUser(btn.dataset.sender!, Number(btn.dataset.id));
           });
         }).catch(() => {});
     };
