@@ -5,8 +5,10 @@ const GROUND_Y = 0.78;
 export class CoinJumpEditor {
   private _overlay: HTMLDivElement;
   private _active = true;
+  private _game: Game;
 
   constructor(_game: Game) {
+    this._game = _game;
     this._overlay = document.createElement("div");
     this._overlay.style.cssText = `
       position:fixed;inset:0;z-index:99998;

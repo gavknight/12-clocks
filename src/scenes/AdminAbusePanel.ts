@@ -6,8 +6,10 @@ const H    = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": 
 
 export class AdminAbusePanel {
   private _overlay: HTMLDivElement;
+  private game: Game;
 
-  constructor(private game: Game) {
+  constructor(game: Game) {
+    this.game = game;
     this._overlay = document.createElement("div");
     this._overlay.style.cssText = `
       position:fixed;inset:0;z-index:99999;
