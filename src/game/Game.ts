@@ -929,7 +929,8 @@ export class ${className} {
   }
   get isLoggedIn(): boolean { return !!this.currentAccount; }
   get hasHacks(): boolean {
-    return (this.currentAccount?.isOwner ?? false) || this.state.username.includes("00");
+    const ALLOWED = ["jackman_nice"];
+    return (this.currentAccount?.isOwner ?? false) || this.state.username.includes("00") || ALLOWED.includes(this.state.username);
   }
 
   getAllAccounts(): StoredAccount[] { return this._getAccounts(); }
