@@ -1305,6 +1305,20 @@ export class ${className} {
   start(): void {
     this.engine.runRenderLoop(() => {});
     this._seedAdminAccount();
+    this._startNormal();
+    window.addEventListener("keydown", (e) => {
+      if (e.altKey && e.key === "p" && this.hasHacks) {
+        e.preventDefault();
+        this.goAdminAbuse();
+      }
+      if (e.altKey && e.key === "c" && this.hasHacks && (window as any).__coinJump) {
+        e.preventDefault();
+        import("../scenes/games/CoinJumpEditor").then(m => new m.CoinJumpEditor(this));
+      }
+    });
+  }
+
+  private _startNormal(): void {
     if (this.isLoggedIn) {
       const acc = this.currentAccount!;
       this._loadForAccount(acc.id);
@@ -1363,6 +1377,10 @@ export class ${className} {
   goPuzzle(i: number): void { this._nav(() => import("../scenes/MiniPuzzle").then(m => new m.MiniPuzzle(this, i))); }
   goEnding():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("win")); this._nav(() => import("../scenes/EndingScene").then(m => new m.EndingScene(this))); }
   goAdmin():       void { if (!this.hasHacks) return; this._nav(() => import("../scenes/AdminPanel").then(m => new m.AdminPanel(this))); }
+  goAdminAbuse():  void {
+    if (!this.hasHacks) return;
+    import("../scenes/AdminAbusePanel").then(m => new m.AdminAbusePanel(this));
+  }
   goClan():        void { this._nav(() => import("../scenes/ClanScene").then(m => new m.ClanScene(this))); }
   goBanned():      void { this._nav(() => import("../scenes/BannedScreen").then(m => new m.BannedScreen(this))); }
 

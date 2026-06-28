@@ -45,7 +45,8 @@ export class CoinJump {
             padding:6px 12px;border-radius:10px;border:2px solid rgba(255,140,0,0.6);
             cursor:pointer;font-family:Arial,sans-serif;">
             ⚡ BOOST
-          </button>` : ""}
+          </button>
+` : ""}
       </div>
     `;
 
@@ -74,6 +75,15 @@ export class CoinJump {
 
     this._game.inMiniGame = true;
     this._game.autoClickCallback = () => this._doJump();
+    (window as any).__coinJump = this;
+
+    // Load editor-placed coins if coming from the editor
+    const editorCoins: { x: number; y: number }[] | undefined = (window as any).__cjeCoins;
+    if (editorCoins?.length) {
+      for (const c of editorCoins) this._coins.push({ x: c.x, y: c.y, collected: false });
+      (window as any).__cjeCoins = null;
+    }
+
     this._lastTs = performance.now();
     this._raf = requestAnimationFrame(ts => this._loop(ts));
   }
@@ -227,7 +237,14 @@ export class CoinJump {
     }
   }
 
+  spawnAt(x: number, y: number, count = 5): void {
+    for (let i = 0; i < count; i++) {
+      this._coins.push({ x: x + i * 0.1, y, collected: false });
+    }
+  }
+
   private _showResult(): void {
+    (window as any).__coinJump = null;
     this._game.inMiniGame = false;
     this._game.autoClickCallback = null;
     const earned = this._score;

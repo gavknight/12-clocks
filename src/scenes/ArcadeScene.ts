@@ -1,4 +1,5 @@
 import type { Game } from "../game/Game";
+import { GamepadMenu } from "../input/GamepadMenu";
 import { IS_BEDROCK, exitBedrock } from "../bedrock";
 import { TIME_MACHINE_KEY, VERSION_GAMES, VERSION_NAMES } from "./VersionHistory";
 import { rulesHTML, bindReportButtons } from "../game/rules";
@@ -701,6 +702,34 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- My Singing Monsters -->
+          <button id="msmBtn" style="
+            background:linear-gradient(135deg,rgba(40,10,80,0.9),rgba(100,30,180,0.7));
+            border:2px solid rgba(180,100,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🦣</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">My Singing Monsters</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Build your island — buy monsters and hear them sing!</div>
+              <div style="color:#cc88ff;font-size:12px;margin-top:4px;">🎵 Cold Island • Mammott • Harmony</div>
+            </div>
+          </button>
+
+          <!-- Berry Burry Berry -->
+          <button id="berryBtn" style="
+            background:linear-gradient(135deg,rgba(80,10,30,0.9),rgba(180,30,60,0.7));
+            border:2px solid rgba(255,80,120,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🍓</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Berry Burry Berry</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Grow berries, drop them in the hole, earn $!</div>
+              <div style="color:#ff8080;font-size:12px;margin-top:4px;">🌱 3D • First Person • Backyard</div>
+            </div>
+          </button>
+
           <!-- Gorilla Tag -->
           <button id="gorillaTagBtn" style="
             background:linear-gradient(135deg,rgba(80,20,40,0.9),rgba(200,50,120,0.7));
@@ -919,6 +948,12 @@ export class ArcadeScene {
     document.getElementById("watchingBtn")!.onclick = () => {
       import("./games/WatchingGame").then(m => { game.ui.innerHTML = ""; new m.WatchingGame(game); });
     };
+    document.getElementById("msmBtn")!.onclick = () => {
+      import("./games/MySingingMonsters").then(m => { game.ui.innerHTML = ""; new m.MySingingMonsters(game); });
+    };
+    document.getElementById("berryBtn")!.onclick = () => {
+      import("./games/BerryBurryBerry").then(m => { game.ui.innerHTML = ""; new m.BerryBurryBerry(game); });
+    };
     document.getElementById("gorillaTagBtn")!.onclick = () => {
       import("./games/GorillaTag").then(m => { game.ui.innerHTML = ""; new m.GorillaTag(game); });
     };
@@ -961,6 +996,29 @@ export class ArcadeScene {
           if (show) visible++;
         });
         if (noResultsEl) noResultsEl.style.display = visible === 0 && q ? "block" : "none";
+      });
+    }
+
+    // Gamepad navigation — all visible game cards + back button
+    {
+      const allIds = [
+        "backBtn",
+        "catCleanBtn", "eggyBtn", "prodigyBtn", "mm2Btn",
+        "banbanBtn", "cookieBtn", "coinJumpBtn", "fruitSliceBtn",
+        "nightForestBtn", "coinRainBtn", "justDrawBtn", "itemCreatorBtn",
+        "robloxStudioBtn", "robloxGamesBtn", "minecraftBtn", "gdBtn",
+        "boldyBtn", "mrTomatoBtn", "chessBtn", "fireFighterBtn",
+        "duckLifeBtn", "knightsQuestBtn", "fakeGoogleBtn", "baldisBtn",
+        "baldisModBtn", "poppyBtn", "clickTestBtn", "duckClickerBtn",
+        "collectApplesBtn", "astroBotBtn", "obsRecorderBtn", "watchingBtn",
+        "msmBtn", "berryBtn", "gorillaTagBtn", "youtubeBtn",
+      ];
+      const navEls = allIds
+        .map(id => document.getElementById(id))
+        .filter(el => el && el.style.display !== "none") as HTMLElement[];
+      new GamepadMenu(navEls, {
+        onBack: () => game.goTitle(),
+        showIndicator: true,
       });
     }
 

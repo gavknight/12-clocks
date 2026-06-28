@@ -1,4 +1,5 @@
 import type { Game } from "../game/Game";
+import { GamepadMenu } from "../input/GamepadMenu";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -145,7 +146,7 @@ export class TitleScene {
         </div>
 
         <!-- Stats panel (left) -->
-        <div style="position:fixed;top:50%;left:12px;transform:translateY(-50%);
+        <div id="statsPanel" style="position:fixed;top:50%;left:12px;transform:translateY(-50%);
           display:flex;flex-direction:column;gap:8px;z-index:20;pointer-events:none;
           font-family:Arial,sans-serif;width:90px;">
           <div style="color:rgba(255,255,255,0.35);font-size:9px;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:2px;">Stats</div>
@@ -314,6 +315,37 @@ export class TitleScene {
           <div id="songList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;"></div>
         </div>
 
+        <!-- Trailer button (demo only) -->
+        <button id="trailerBtn" style="
+          display:none;
+          background:linear-gradient(135deg,#cc0000,#ff4444);color:white;font-size:20px;
+          font-weight:bold;padding:13px 36px;border-radius:50px;
+          border:3px solid rgba(255,100,100,0.5);cursor:pointer;margin-bottom:10px;
+          box-shadow:0 4px 0 #880000;font-family:Arial,sans-serif;">
+          🎬 Watch Trailer
+        </button>
+
+        <!-- Trailer modal -->
+        <div id="trailerModal" style="display:none;position:fixed;inset:0;z-index:100;
+          background:rgba(0,0,0,0.95);align-items:center;justify-content:center;flex-direction:column;gap:14px;">
+          <div style="color:white;font-size:20px;font-weight:900;font-family:Arial,sans-serif;letter-spacing:1px;">
+            🎬 12 Clocks — Official Trailer
+          </div>
+          <div id="trailerProgress" style="color:rgba(255,255,255,0.45);font-size:13px;font-family:Arial,sans-serif;">
+            Part 1 of 8
+          </div>
+          <div style="width:min(640px,92vw);aspect-ratio:16/9;border-radius:16px;overflow:hidden;
+            border:2px solid rgba(255,100,100,0.35);background:#000;position:relative;">
+            <div id="trailerIframeWrap" style="width:100%;height:100%;"></div>
+          </div>
+          <button id="closeTrailerBtn" style="
+            background:rgba(255,255,255,0.1);color:white;font-size:14px;font-weight:bold;
+            padding:8px 28px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.2);
+            cursor:pointer;font-family:Arial,sans-serif;">✕ Close</button>
+          <!-- Part dots -->
+          <div id="trailerDots" style="display:flex;gap:6px;"></div>
+        </div>
+
         <!-- Play button -->
         <button id="playBtn" style="
           background:#FFD700;color:#1a0060;font-size:26px;font-weight:bold;
@@ -325,7 +357,7 @@ export class TitleScene {
         <!-- Button grid -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:340px;padding:0 8px;">
 
-          ${hasSave ? `
+${hasSave ? `
           <button id="contBtn" style="grid-column:span 2;
             background:rgba(255,255,255,0.15);color:white;font-size:18px;
             padding:12px 24px;border-radius:20px;
@@ -347,13 +379,6 @@ export class TitleScene {
             ⚔️ Duel
           </button>` : ""}
 
-          <button id="arcadeBtn" style="
-            background:linear-gradient(135deg,#1a6b00,#4caf50);color:white;font-size:18px;
-            padding:12px 24px;border-radius:20px;
-            border:2px solid rgba(100,255,100,0.5);cursor:pointer;">
-            🕹️ Mini-Games
-          </button>
-
           ${!IS_BEDROCK ? `
           <button id="lbBtn" style="
             background:linear-gradient(135deg,#b8860b,#FFD700);color:#1a0060;font-size:18px;
@@ -361,6 +386,14 @@ export class TitleScene {
             border:2px solid rgba(255,215,0,0.5);cursor:pointer;font-weight:bold;">
             🏆 Records
           </button>` : ""}
+
+          <button id="arcadeBtn" style="
+            background:linear-gradient(135deg,#1a6b00,#4caf50);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
+            border:2px solid rgba(100,255,100,0.5);cursor:pointer;">
+            🕹️ Mini-Games
+          </button>
+
 
           <button id="shopBtn" style="
             background:linear-gradient(135deg,#4a0080,#9c27b0);color:white;font-size:18px;
@@ -607,7 +640,72 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       }
     };
     renderMods();
-    document.getElementById("modsBtn")!.onclick = () => {}; // button kept for now but panels are always visible
+    document.getElementById("modsBtn")?.addEventListener("click", () => {});
+
+    // Trailer playlist
+    const TRAILER_PARTS = [
+      "/trailers/part1.mp4",
+      "/trailers/part2.mp4",
+      // add part3.mp4 - part8.mp4 here as you record them
+    ];
+    let trailerIndex = 0;
+
+    const trailerWrap   = document.getElementById("trailerIframeWrap")!;
+    const trailerProg   = document.getElementById("trailerProgress")!;
+    const trailerDots   = document.getElementById("trailerDots")!;
+
+    const trailerMusic  = new Audio("/trailers/music.mp4");
+    trailerMusic.loop   = true;
+    trailerMusic.volume = 0.6;
+
+    // Preload all clips upfront so switching is instant
+    const vids = TRAILER_PARTS.map(src => {
+      const v = document.createElement("video");
+      v.src = src;
+      v.muted = true;
+      v.preload = "auto";
+      v.style.cssText = "width:100%;height:100%;object-fit:contain;background:#000;display:none;position:absolute;inset:0;";
+      trailerWrap.appendChild(v);
+      return v;
+    });
+    trailerWrap.style.position = "relative";
+
+    const buildDots = () => {
+      trailerDots.innerHTML = "";
+      TRAILER_PARTS.forEach((_, i) => {
+        const d = document.createElement("div");
+        d.style.cssText = `width:8px;height:8px;border-radius:50%;background:${i === trailerIndex ? "white" : "rgba(255,255,255,0.25)"};transition:background 0.2s;`;
+        trailerDots.appendChild(d);
+      });
+    };
+
+    const loadPart = (index: number) => {
+      vids[trailerIndex].style.display = "none";
+      vids[trailerIndex].pause();
+      trailerIndex = Math.max(0, Math.min(index, TRAILER_PARTS.length - 1));
+      trailerProg.textContent = `Part ${trailerIndex + 1} of ${TRAILER_PARTS.length}`;
+      buildDots();
+      vids[trailerIndex].style.display = "block";
+      vids[trailerIndex].currentTime = 0;
+      vids[trailerIndex].play();
+    };
+
+    vids.forEach((v, i) => {
+      v.onended = () => { if (i < TRAILER_PARTS.length - 1) loadPart(i + 1); };
+    });
+
+    document.getElementById("trailerBtn")?.addEventListener("click", () => {
+      loadPart(0);
+      document.getElementById("trailerModal")!.style.display = "flex";
+      trailerMusic.currentTime = 0;
+      trailerMusic.play();
+    });
+    document.getElementById("closeTrailerBtn")?.addEventListener("click", () => {
+      document.getElementById("trailerModal")!.style.display = "none";
+      vids.forEach(v => { v.pause(); v.currentTime = 0; v.style.display = "none"; });
+      trailerMusic.pause();
+      trailerMusic.currentTime = 0;
+    });
     document.getElementById("exitTimeMachine")?.addEventListener("click", () => {
       sessionStorage.removeItem(TIME_MACHINE_KEY);
       game.ui.innerHTML = "";
@@ -734,6 +832,21 @@ ${game.hasHacks ? `<button id="adminBtn" style="
         (b as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";
       });
     };
+
+    // Gamepad navigation — always active on title screen
+    {
+      const navIds = [
+        "playBtn", hasSave ? "contBtn" : null,
+        !IS_BEDROCK ? "mpBtn" : null, !IS_BEDROCK ? "duelBtn" : null,
+        "arcadeBtn", !IS_BEDROCK ? "lbBtn" : null,
+        "shopBtn", "versionBtn", "howToPlayBtn", "installBtn",
+      ];
+      const navEls = navIds
+        .filter(Boolean)
+        .map(id => document.getElementById(id!))
+        .filter(Boolean) as HTMLElement[];
+      new GamepadMenu(navEls, { showIndicator: true });
+    }
 
     // Load live member count, refresh every 30s
     const updateCount = () => {
