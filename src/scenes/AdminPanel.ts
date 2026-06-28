@@ -252,6 +252,11 @@ export class AdminPanel {
             border:1px solid rgba(0,140,255,0.5);border-radius:8px;padding:9px;cursor:pointer;
             font-family:Arial,sans-serif;">📢 Send to All Players</button>
           <div id="chatFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+            <span style="color:rgba(255,255,255,0.4);font-size:11px;">Recent messages</span>
+            <button id="apChatRefresh" style="background:transparent;border:none;color:rgba(255,255,255,0.35);font-size:11px;cursor:pointer;padding:0;">↻ Refresh</button>
+          </div>
+          <div id="apChatFeed" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;"></div>
         </div>
 
         <!-- Give Stats -->
@@ -502,6 +507,38 @@ export class AdminPanel {
         fb.textContent = "❌ Failed to send.";
       });
     });
+
+    // Chat feed with delete
+    const apDelMsg = (id: number) => {
+      fetch(`${SB_CHAT}?id=eq.${id}`, { method: "DELETE", headers: H })
+        .then(() => apLoadChat()).catch(() => {});
+    };
+    const apLoadChat = () => {
+      fetch(`${SB_CHAT}?order=sent_at.desc&limit=30`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { id: number; sender: string; message: string; sent_at: number }[]) => {
+          const el = document.getElementById("apChatFeed");
+          if (!el) return;
+          if (!rows.length) { el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No messages yet.</div>`; return; }
+          el.innerHTML = rows.map(r => `
+            <div style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <div style="flex:1;min-width:0;">
+                <span style="color:#66ddff;font-size:12px;font-weight:bold;">${r.sender}:</span>
+                <span style="color:rgba(255,255,255,0.8);font-size:12px;margin-left:6px;word-break:break-word;">${r.message}</span>
+                <div style="color:rgba(255,255,255,0.25);font-size:10px;">${new Date(r.sent_at).toLocaleTimeString()}</div>
+              </div>
+              <button class="apDelBtn" data-id="${r.id}" style="flex-shrink:0;background:rgba(255,60,60,0.15);color:#ff8888;
+                border:1px solid rgba(255,60,60,0.3);border-radius:6px;padding:2px 8px;
+                font-size:11px;cursor:pointer;">🗑</button>
+            </div>`).join("");
+          el.querySelectorAll<HTMLButtonElement>(".apDelBtn").forEach(btn => {
+            btn.onclick = () => apDelMsg(Number(btn.dataset.id));
+          });
+        }).catch(() => {});
+    };
+    apLoadChat();
+    document.getElementById("apChatRefresh")!.addEventListener("click", apLoadChat);
+    setInterval(apLoadChat, 8000);
 
     // Give Stats
     const SB_GIFTS = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/player_gifts";
