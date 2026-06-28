@@ -75,7 +75,7 @@ export class AdminPanel {
         padding:28px 16px;gap:12px;font-family:monospace;
       ">
         <div style="font-size:26px;font-weight:bold;color:#FFD700;text-align:center;">
-          🔧 ADMIN PANEL — Gavin Only 👑
+          🔧 ADMIN PANEL — Owner Only 👑
         </div>
         <div style="color:rgba(255,255,255,0.45);font-size:12px;margin-bottom:4px;">
           Press Ctrl anywhere · or click 🔧 Admin on the title screen
