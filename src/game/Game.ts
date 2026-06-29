@@ -999,13 +999,47 @@ export class ${className} {
   }
   get isLoggedIn(): boolean { return !!this.currentAccount; }
   private _adminUsernames: Set<string> = new Set(["jackman_nice"]);
+  private _adminGrantedNotified = false;
   fetchAdminUsers(): Promise<void> {
     const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const wasAdmin = this.hasHacks;
     return fetch("https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_users?select=username", {
       headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
     }).then(r => r.json()).then((rows: { username: string }[]) => {
       this._adminUsernames = new Set(["jackman_nice", ...rows.map(r => r.username)]);
+      if (!wasAdmin && this.hasHacks && !this._adminGrantedNotified) {
+        this._adminGrantedNotified = true;
+        this._showAdminGrantedToast();
+      }
     }).catch(() => {});
+  }
+  private _showAdminGrantedToast(): void {
+    const toast = document.createElement("div");
+    toast.style.cssText = `
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      background:linear-gradient(135deg,#1a0040,#2a006a);
+      border:2px solid rgba(255,140,0,0.8);border-radius:20px;
+      padding:20px 28px;z-index:999999;text-align:center;
+      box-shadow:0 0 40px rgba(255,140,0,0.4);font-family:Arial,sans-serif;
+      animation:adminPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+    `;
+    if (!document.getElementById("__adminPopStyle")) {
+      const s = document.createElement("style");
+      s.id = "__adminPopStyle";
+      s.textContent = `@keyframes adminPop { from{opacity:0;transform:translate(-50%,-50%) scale(0.5);} to{opacity:1;transform:translate(-50%,-50%) scale(1);} }`;
+      document.head.appendChild(s);
+    }
+    toast.innerHTML = `
+      <div style="font-size:36px;margin-bottom:8px;">👑</div>
+      <div style="color:#FFD700;font-size:18px;font-weight:bold;">Admin gave you Admin+!</div>
+      <div style="color:rgba(255,255,255,0.7);font-size:13px;margin-top:6px;">Press <kbd style="background:rgba(255,255,255,0.15);border-radius:5px;padding:2px 7px;font-family:monospace;">Alt+P</kbd> to open it</div>
+      <button style="margin-top:14px;background:rgba(255,200,0,0.2);color:#FFD700;border:1px solid rgba(255,200,0,0.5);
+        border-radius:10px;padding:8px 24px;font-size:13px;font-weight:bold;cursor:pointer;font-family:Arial,sans-serif;">
+        Got it! 🎉
+      </button>
+    `;
+    toast.querySelector("button")!.onclick = () => toast.remove();
+    document.body.appendChild(toast);
   }
   get hasHacks(): boolean {
     return (this.currentAccount?.isOwner ?? false)
