@@ -251,7 +251,7 @@ export class AdminAbusePanel {
           <input id="aap_customYtId" type="text" placeholder="or paste a YouTube URL / ID"
             style="background:rgba(255,255,255,0.08);border:1px solid rgba(100,255,160,0.3);border-radius:8px;
             color:white;font-size:12px;padding:8px 11px;outline:none;" />
-          <div style="display:flex;gap:7px;">
+          <div style="display:flex;gap:7px;flex-wrap:wrap;">
             <button id="aap_setMusic" style="flex:1;background:rgba(100,255,160,0.22);color:#66ffaa;font-size:13px;
               font-weight:bold;border:2px solid rgba(100,255,160,0.5);border-radius:10px;padding:10px;cursor:pointer;">
               🌍 Set Global + Play
@@ -261,6 +261,10 @@ export class AdminAbusePanel {
               ✕ Stop
             </button>
           </div>
+          <button id="aap_musicCreator" style="width:100%;background:rgba(190,80,255,0.2);color:#cc88ff;font-size:13px;
+            font-weight:bold;border:2px solid rgba(190,80,255,0.45);border-radius:10px;padding:11px;cursor:pointer;">
+            🎹 Open Music Creator (make your own beat!)
+          </button>
           <div id="aap_musicFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
@@ -572,6 +576,10 @@ export class AdminAbusePanel {
       highlightSongBtn(null);
       _selId = "";
       _selTitle = "";
+    };
+    $("aap_musicCreator").onclick = () => {
+      this.destroy();
+      import("./MusicCreator").then(m => new m.MusicCreator());
     };
 
     // Party mode
