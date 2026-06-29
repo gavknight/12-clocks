@@ -43,6 +43,28 @@ export class AdminAbusePanel {
           Press Alt+P to open · Admin only 👑
         </div>
 
+        <!-- Give Admin -->
+        <div style="background:rgba(255,80,0,0.1);border:2px solid rgba(255,120,0,0.5);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:#ffaa44;font-size:15px;font-weight:bold;">👑 Give Admin Access</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">Type their username — they get Alt+P access.</div>
+          <input id="aap_adminTarget" type="text" placeholder="Username"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,120,0,0.4);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;outline:none;" />
+          <div style="display:flex;gap:8px;">
+            <button id="aap_giveAdmin" style="flex:1;background:rgba(255,120,0,0.3);color:#ffaa44;font-size:13px;
+              font-weight:bold;border:1px solid rgba(255,120,0,0.5);border-radius:8px;padding:9px;cursor:pointer;">
+              👑 Give Admin
+            </button>
+            <button id="aap_revokeAdmin" style="flex:1;background:rgba(255,40,40,0.2);color:#ff8888;font-size:13px;
+              font-weight:bold;border:1px solid rgba(255,40,40,0.4);border-radius:8px;padding:9px;cursor:pointer;">
+              🚫 Revoke Admin
+            </button>
+          </div>
+          <div id="aap_adminList" style="color:rgba(255,255,255,0.4);font-size:11px;"></div>
+          <div id="aap_adminFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
+        </div>
+
         <!-- Global Message -->
         <div style="background:rgba(0,100,255,0.1);border:2px solid rgba(0,140,255,0.4);
           border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
@@ -196,6 +218,41 @@ export class AdminAbusePanel {
     };
 
     $("aap_close").onclick = () => this.destroy();
+
+    // Give / Revoke Admin
+    const loadAdminList = () => {
+      fetch(`${SB}/admin_users?select=username&order=granted_at.asc`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { username: string }[]) => {
+          const el = $("aap_adminList");
+          el.textContent = rows.length ? `Current admins: ${rows.map(r => r.username).join(", ")}` : "No extra admins yet.";
+        }).catch(() => {});
+    };
+    loadAdminList();
+    $("aap_giveAdmin").onclick = () => {
+      const username = ($("aap_adminTarget") as HTMLInputElement).value.trim();
+      if (!username) { fb("aap_adminFb", "❌ Enter a username.", false); return; }
+      fetch(`${SB}/admin_users`, {
+        method: "POST", headers: H,
+        body: JSON.stringify({ username, granted_at: Date.now() }),
+      }).then(() => {
+        this.game.fetchAdminUsers();
+        loadAdminList();
+        fb("aap_adminFb", `✓ ${username} now has admin access!`);
+        ($("aap_adminTarget") as HTMLInputElement).value = "";
+      }).catch(() => fb("aap_adminFb", "❌ Failed.", false));
+    };
+    $("aap_revokeAdmin").onclick = () => {
+      const username = ($("aap_adminTarget") as HTMLInputElement).value.trim();
+      if (!username) { fb("aap_adminFb", "❌ Enter a username.", false); return; }
+      fetch(`${SB}/admin_users?username=eq.${encodeURIComponent(username)}`, { method: "DELETE", headers: H })
+        .then(() => {
+          this.game.fetchAdminUsers();
+          loadAdminList();
+          fb("aap_adminFb", `✓ ${username}'s admin access revoked.`);
+          ($("aap_adminTarget") as HTMLInputElement).value = "";
+        }).catch(() => fb("aap_adminFb", "❌ Failed.", false));
+    };
 
     // Global message
     $("aap_chatSend").onclick = () => {

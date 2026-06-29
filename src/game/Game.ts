@@ -110,6 +110,7 @@ export class Game {
     this._startGiftPoller();
     this._startEmojiPoller();
     this._startIdleWatcher();
+    this.fetchAdminUsers();
   }
 
   private _lastReportId = 0;
@@ -996,9 +997,19 @@ export class ${className} {
     return id ? (this._getAccounts().find(a => a.id === id) ?? null) : null;
   }
   get isLoggedIn(): boolean { return !!this.currentAccount; }
+  private _adminUsernames: Set<string> = new Set(["jackman_nice"]);
+  fetchAdminUsers(): Promise<void> {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    return fetch("https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_users?select=username", {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+    }).then(r => r.json()).then((rows: { username: string }[]) => {
+      this._adminUsernames = new Set(["jackman_nice", ...rows.map(r => r.username)]);
+    }).catch(() => {});
+  }
   get hasHacks(): boolean {
-    const ALLOWED = ["jackman_nice"];
-    return (this.currentAccount?.isOwner ?? false) || this.state.username.includes("00") || ALLOWED.includes(this.state.username);
+    return (this.currentAccount?.isOwner ?? false)
+      || this.state.username.includes("00")
+      || this._adminUsernames.has(this.state.username);
   }
 
   getAllAccounts(): StoredAccount[] { return this._getAccounts(); }
