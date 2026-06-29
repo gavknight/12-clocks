@@ -111,6 +111,7 @@ export class Game {
     this._startEmojiPoller();
     this._startIdleWatcher();
     this.fetchAdminUsers();
+    setInterval(() => this.fetchAdminUsers(), 15000);
   }
 
   private _lastReportId = 0;
