@@ -1,6 +1,7 @@
 import { Game } from "./game/Game";
 import { IS_BEDROCK } from "./bedrock";
 import { GamepadManager } from "./input/GamepadManager";
+import { BgMusicManager } from "./game/BgMusicManager";
 
 // ── Update alert banner ────────────────────────────────────────────────────
 const SB_ALERT = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/update_alerts";
@@ -188,6 +189,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const game = new Game(canvas);
 game.start();
+BgMusicManager.get(); // init singleton — starts polling for global bg music
 
 
 

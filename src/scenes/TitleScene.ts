@@ -74,6 +74,55 @@ export class TitleScene {
     const bgStyle = isOldEra
       ? "linear-gradient(180deg,#87CEEB 0%,#b8e4f9 65%,#dff0fb 100%)"
       : "linear-gradient(160deg,#1a0a3e,#3a106f,#6a20a0)";
+    if (!isOldEra) {
+      const _SB  = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
+      const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+      fetch(`${_SB}/global_settings?key=eq.title_bg&select=value`, {
+        headers: { "apikey": _KEY, "Authorization": `Bearer ${_KEY}` },
+      }).then(r => r.json()).then((rows: { value: string }[]) => {
+        if (!rows[0]?.value) return;
+        const screen = game.ui.querySelector<HTMLElement>(".screen");
+        if (!screen) return;
+        type El = { id:string;type:string;content:string;x:number;y:number;size:number;color:string;bold:boolean;italic:boolean;shadow:boolean;opacity:number;rotate:number };
+        type Cfg = { bg:string; elements:El[] };
+        let cfg: Cfg;
+        try { cfg = JSON.parse(rows[0].value); } catch { screen.style.background=rows[0].value; return; }
+        if (cfg.bg) screen.style.background = cfg.bg;
+        if (cfg.elements?.length) {
+          const layer = document.createElement("div");
+          layer.className = "tbe_live_layer";
+          layer.style.cssText="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;";
+          for (const e of cfg.elements) {
+            const d = document.createElement("div");
+            d.style.cssText=`position:absolute;left:${e.x}%;top:${e.y}%;transform:translate(-50%,-50%) rotate(${e.rotate}deg);opacity:${e.opacity};pointer-events:none;`;
+            if (e.type==="text") {
+              d.textContent=e.content;
+              d.style.fontSize=`${e.size}px`;d.style.color=e.color;
+              d.style.fontWeight=e.bold?"900":"400";d.style.fontStyle=e.italic?"italic":"normal";
+              d.style.whiteSpace="nowrap";
+              d.style.textShadow=e.shadow?"0 2px 12px rgba(0,0,0,.9)":"none";
+            } else if (e.type==="emoji") {
+              d.textContent=e.content;d.style.fontSize=`${e.size}px`;d.style.lineHeight="1";
+            } else if (e.type==="shape") {
+              const shapeMap: Record<string,string> = {
+                circle:   `border-radius:50%;background:${e.color};width:${e.size}px;height:${e.size}px;`,
+                square:   `background:${e.color};width:${e.size}px;height:${e.size}px;border-radius:4px;`,
+                triangle: `width:0;height:0;border-left:${e.size/2}px solid transparent;border-right:${e.size/2}px solid transparent;border-bottom:${e.size}px solid ${e.color};`,
+                diamond:  `background:${e.color};width:${e.size*.7}px;height:${e.size*.7}px;transform:rotate(45deg);border-radius:3px;`,
+                star:     `font-size:${e.size}px;line-height:1;color:${e.color};`,
+                bar:      `background:${e.color};width:${e.size*2}px;height:${e.size*.25}px;border-radius:${e.size*.12}px;`,
+              };
+              const inner=document.createElement("div");
+              inner.style.cssText=shapeMap[e.content]??"";
+              if(e.content==="star") inner.textContent="★";
+              d.appendChild(inner);
+            }
+            layer.appendChild(d);
+          }
+          screen.insertBefore(layer, screen.firstChild);
+        }
+      }).catch(() => {});
+    }
     const textColor    = isOldEra ? "#1a3a6a" : "white";
     const subTextColor = isOldEra ? "rgba(20,60,120,0.7)" : "rgba(255,255,255,0.7)";
 

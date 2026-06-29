@@ -1,4 +1,5 @@
 import type { Game } from "../game/Game";
+import { SONGS } from "../game/BgMusicManager";
 
 const SB   = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
 const KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
@@ -201,6 +202,66 @@ export class AdminAbusePanel {
             cursor:pointer;">
             ${this.game.partyMode ? "🎊 ON — Click to Stop" : "🎉 Start Party!"}
           </button>
+        </div>
+
+        <!-- Cookie Clicker Editor -->
+        <div style="background:rgba(255,160,0,0.08);border:2px solid rgba(255,160,0,0.4);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="color:#FFD700;font-size:15px;font-weight:bold;">🍪 Cookie Clicker Editor</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">
+            Opens an editor overlay on top of the live Cookie Clicker game — place golden cookies, boost clicks, drop coins, and more.
+          </div>
+          <button id="aap_openCcEditor" style="background:rgba(255,160,0,0.25);color:#FFD700;font-size:14px;
+            font-weight:bold;border:2px solid rgba(255,160,0,0.55);border-radius:10px;padding:13px;cursor:pointer;">
+            🍪 Open Cookie Clicker Editor
+          </button>
+          <div style="color:rgba(255,255,255,0.3);font-size:11px;">
+            ⚠️ You must have Cookie Clicker open first
+          </div>
+        </div>
+
+        <!-- Main Menu Background Editor -->
+        <div style="background:rgba(0,200,255,0.07);border:2px solid rgba(0,200,255,0.35);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="color:#66eeff;font-size:15px;font-weight:bold;">🎨 Main Menu Background</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">
+            Full scene editor — add text, emojis, shapes, pick any background. Saved globally for all players.
+          </div>
+          <button id="aap_openBgEditor" style="background:rgba(0,200,255,0.25);color:#66eeff;font-size:14px;
+            font-weight:bold;border:2px solid rgba(0,200,255,0.5);border-radius:10px;padding:13px;cursor:pointer;">
+            🎨 Open Background Editor
+          </button>
+        </div>
+
+        <!-- Background Music -->
+        <div style="background:rgba(100,255,160,0.06);border:2px solid rgba(100,255,160,0.35);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:9px;">
+          <div style="color:#66ffaa;font-size:15px;font-weight:bold;">🎵 Background Music</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">
+            Set a song that plays for ALL players on every scene. They see a pill in the corner to play/pause.
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${SONGS.map(s => `<button class="aap_songBtn" data-id="${s.id}" data-title="${s.title}"
+              style="font-size:12px;padding:6px 11px;border-radius:10px;cursor:pointer;
+                background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.65);
+                border:1px solid rgba(255,255,255,0.15);">
+              ${s.emoji} ${s.title}
+            </button>`).join("")}
+          </div>
+          <input id="aap_customYtId" type="text" placeholder="or paste a YouTube URL / ID"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(100,255,160,0.3);border-radius:8px;
+            color:white;font-size:12px;padding:8px 11px;outline:none;" />
+          <div style="display:flex;gap:7px;">
+            <button id="aap_setMusic" style="flex:1;background:rgba(100,255,160,0.22);color:#66ffaa;font-size:13px;
+              font-weight:bold;border:2px solid rgba(100,255,160,0.5);border-radius:10px;padding:10px;cursor:pointer;">
+              🌍 Set Global + Play
+            </button>
+            <button id="aap_stopMusic" style="background:rgba(255,80,80,0.18);color:#ff8888;font-size:13px;
+              font-weight:bold;border:1px solid rgba(255,80,80,0.4);border-radius:10px;padding:10px 15px;cursor:pointer;">
+              ✕ Stop
+            </button>
+          </div>
+          <div id="aap_musicFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
 
@@ -448,6 +509,69 @@ export class AdminAbusePanel {
           import("./games/CoinJumpEditor").then(m2 => new m2.CoinJumpEditor(this.game));
         }, 200);
       });
+    };
+
+    // Cookie Clicker editor
+    $("aap_openCcEditor").onclick = () => {
+      const cc = (window as any).__cookieClicker;
+      if (!cc) {
+        alert("Open Cookie Clicker first, then come back to Alt+P!");
+        return;
+      }
+      this.destroy();
+      import("./games/CookieClickerEditor").then(m => new m.CookieClickerEditor(this.game));
+    };
+
+    // Main menu background editor
+    $("aap_openBgEditor").onclick = () => {
+      this.destroy();
+      import("./TitleBgEditor").then(m => new m.TitleBgEditor(() => {}));
+    };
+
+    // Background music
+    let _selId = "";
+    let _selTitle = "";
+    const highlightSongBtn = (activeBtn: HTMLButtonElement | null) => {
+      document.querySelectorAll<HTMLButtonElement>(".aap_songBtn").forEach(b => {
+        const on = b === activeBtn;
+        b.style.background   = on ? "rgba(100,255,160,0.25)" : "rgba(255,255,255,0.07)";
+        b.style.color        = on ? "#66ffaa"                : "rgba(255,255,255,0.65)";
+        b.style.borderColor  = on ? "rgba(100,255,160,0.5)" : "rgba(255,255,255,0.15)";
+      });
+    };
+    document.querySelectorAll<HTMLButtonElement>(".aap_songBtn").forEach(btn => {
+      btn.onclick = () => {
+        _selId    = btn.dataset.id    ?? "";
+        _selTitle = btn.dataset.title ?? "";
+        ($("aap_customYtId") as HTMLInputElement).value = "";
+        highlightSongBtn(btn);
+      };
+    });
+    $("aap_setMusic").onclick = () => {
+      const raw = ($("aap_customYtId") as HTMLInputElement).value.trim();
+      let ytId    = _selId;
+      let ytTitle = _selTitle;
+      if (raw) {
+        const m = raw.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
+        ytId    = m ? m[1] : raw.slice(0, 11);
+        ytTitle = SONGS.find(s => s.id === ytId)?.title ?? "Custom Song";
+      }
+      if (!ytId) { fb("aap_musicFb", "❌ Pick a song or enter a YouTube URL.", false); return; }
+      import("../game/BgMusicManager").then(async mod => {
+        const mgr = mod.BgMusicManager.get();
+        await mgr.setGlobal(ytId, ytTitle);
+        mgr.play();
+        fb("aap_musicFb", `✓ "${ytTitle}" set globally + playing!`);
+      });
+    };
+    $("aap_stopMusic").onclick = () => {
+      import("../game/BgMusicManager").then(async mod => {
+        await mod.BgMusicManager.get().clearGlobal();
+        fb("aap_musicFb", "✓ Music stopped globally.");
+      });
+      highlightSongBtn(null);
+      _selId = "";
+      _selTitle = "";
     };
 
     // Party mode

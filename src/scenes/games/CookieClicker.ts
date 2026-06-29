@@ -456,6 +456,10 @@ export class CookieClicker {
   private _frenzyEnd  = 0;
   private _frenzyEl:  HTMLDivElement|null = null;
 
+  // Global admin event polling
+  private _evtPoll    = 0;
+  private _evtLastTs  = 0;
+
   // Cursor ring
   private _cursorEls:   HTMLElement[] = [];
   private _cursorAngle  = 0;
@@ -719,6 +723,7 @@ export class CookieClicker {
 
     game.inMiniGame = true;
     game.autoClickCallback = () => this._clickCookie();
+    (window as any).__cookieClicker = this;
     this._lastTs = performance.now();
     this._raf = requestAnimationFrame(ts => this._loop(ts));
     this._runCursorRing();
@@ -886,6 +891,10 @@ export class CookieClicker {
 
     this._achCheckTimer += dt;
     if (this._achCheckTimer>=500) { this._achCheckTimer=0; this._checkAchievements(); }
+
+    // Global admin event poll (every 3 seconds)
+    this._evtPoll += dt;
+    if (this._evtPoll >= 3_000) { this._evtPoll = 0; this._pollGlobalEvent(); }
 
     // Sugar lump growth + auto-harvest
     if (this._lumpProgress < 1) {
@@ -2796,6 +2805,64 @@ export class CookieClicker {
 
   // ─── admin panel ──────────────────────────────────────────────────────────
 
+  // ─── global admin events ──────────────────────────────────────────────────
+
+  private _pollGlobalEvent(): void {
+    const SB  = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    fetch(`${SB}/global_settings?key=eq.cc_event&select=value,updated_at`, {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` },
+    }).then(r => r.json())
+      .then((rows: { value: string; updated_at: number }[]) => {
+        if (!rows[0]) return;
+        const row = rows[0];
+        if (row.updated_at <= this._evtLastTs) return;
+        this._evtLastTs = row.updated_at;
+        type Evt = { type: string; value?: number };
+        let evt: Evt;
+        try { evt = JSON.parse(row.value); } catch { return; }
+        this._execGlobalEvent(evt);
+      }).catch(() => {});
+  }
+
+  private _execGlobalEvent(evt: { type: string; value?: number }): void {
+    if (this._done) return;
+    switch (evt.type) {
+      case "golden":
+        if (!this._gcEl) { clearTimeout(this._gcTimeout); this._spawnGoldenCookie(); }
+        this._showGcToast("🍪 Admin spawned a golden cookie!");
+        break;
+      case "golden_rain":
+        for (let i = 0; i < 5; i++) setTimeout(() => { if (!this._done) this._spawnSpellGoldenCookie(); }, i * 400);
+        this._showGcToast("🌧️ Golden Cookie Rain! Admin unleashed 5 golden cookies!");
+        break;
+      case "storm":
+        this._triggerCookieStorm();
+        this._showGcToast("🍪🍪🍪 ADMIN COOKIE STORM!");
+        break;
+      case "frenzy":
+        this._frenzyEnd = performance.now() + this._hvFrenzyMs;
+        this._frenzyCount++;
+        this._showGcToast("🔥 ADMIN FRENZY! 7× CPS!");
+        break;
+      case "coins":
+        if (evt.value) {
+          this._coins        += evt.value;
+          this._totalBaked   += evt.value;
+          this._allTimeBaked += evt.value;
+          this._showGcToast(`🎁 Admin gifted ${fmt(evt.value)} cookies!`);
+        }
+        break;
+      case "lucky":
+        // Instant huge bonus
+        { const bonus = Math.max(1_000_000, Math.floor(this._cps * 60 * 60));
+          this._coins += bonus; this._totalBaked += bonus; this._allTimeBaked += bonus;
+          this._showGoldenCookieEffect();
+          this._showGcToast(`✨ ADMIN LUCKY! +${fmt(bonus)} cookies!`); }
+        break;
+    }
+  }
+
   private _showAdminPanel(): void {
     const existing = document.getElementById("ccAdminPanel");
     if (existing) { existing.remove(); return; } // toggle off
@@ -2921,5 +2988,76 @@ export class CookieClicker {
     this._gcEl?.remove(); this._frenzyEl?.remove();
     this._cursorEls.forEach(el => el.remove()); this._cursorEls = [];
     this._g.inMiniGame=false; this._g.autoClickCallback=null;
+    (window as any).__cookieClicker = null;
+  }
+
+  // ─── public editor API ────────────────────────────────────────────────────
+
+  editorSpawnGoldenAt(clientX: number, clientY: number): void {
+    if (this._done) return;
+    const root = document.getElementById("ccRoot"); if (!root) return;
+    const gc = document.createElement("div");
+    gc.textContent = "🍪";
+    gc.style.cssText = `position:fixed;left:${clientX}px;top:${clientY}px;
+      transform:translate(-50%,-50%);
+      font-size:56px;cursor:pointer;z-index:200;
+      animation:gcPulse 0.8s ease-in-out infinite alternate;
+      filter:sepia(1) saturate(20) hue-rotate(-10deg) brightness(1.6)
+             drop-shadow(0 0 14px rgba(255,220,0,1)) drop-shadow(0 0 28px rgba(255,160,0,0.8));
+      transition:opacity 0.4s;`;
+    document.body.appendChild(gc);
+    if (this._gcAlerts) this._showGcToast("🍪 Admin spawned a golden cookie!");
+    const collect = () => {
+      gc.style.opacity = "0";
+      setTimeout(() => gc.remove(), 400);
+      this._gcCount++;
+      const roll = Math.random();
+      if (roll < 0.5) {
+        this._frenzyEnd = performance.now() + this._hvFrenzyMs;
+        this._frenzyCount++;
+        this._showGoldenCookieEffect();
+        this._showGcToast(`🔥 FRENZY! 7× CPS for ${this._hvFrenzyMs/1000}s!`);
+      } else {
+        const bonus = Math.max(777, Math.floor(this._cps * 60 * 15)) * this._hvLuckyMult;
+        this._coins += bonus; this._totalBaked += bonus; this._allTimeBaked += bonus;
+        this._showGoldenCookieEffect();
+        this._showGcToast(`✨ Lucky! +${fmt(bonus)} cookies!`);
+      }
+    };
+    gc.addEventListener("pointerdown", e => { e.stopPropagation(); collect(); });
+    setTimeout(() => { if (document.body.contains(gc)) { gc.style.opacity="0"; setTimeout(()=>gc.remove(),400); } }, this._hvGcLifeMs);
+  }
+
+  editorBoostClick(amount: number): void {
+    if (this._done) return;
+    this._clickValue += amount;
+    this._clickValEl.textContent = String(this._clickValue);
+    this._showGcToast(`✨ Admin boosted click value by +${fmt(amount)}! Now ${fmt(this._clickValue)}/click`);
+  }
+
+  editorAddCoins(amount: number): void {
+    if (this._done) return;
+    this._coins += amount; this._totalBaked += amount; this._allTimeBaked += amount;
+    this._showGcToast(`💰 Admin dropped ${fmt(amount)} cookies!`);
+  }
+
+  editorFrenzy(): void {
+    if (this._done) return;
+    this._frenzyEnd = performance.now() + this._hvFrenzyMs;
+    this._frenzyCount++;
+    this._showGcToast("🔥 ADMIN FRENZY! 7× CPS!");
+  }
+
+  editorStorm(): void {
+    if (this._done) return;
+    this._triggerCookieStorm();
+  }
+
+  editorMultiplyCps(mult: number): void {
+    if (this._done) return;
+    this._coins += this._cps * mult;
+    this._totalBaked += this._cps * mult;
+    this._allTimeBaked += this._cps * mult;
+    this._showGcToast(`📈 Admin gave you ${mult} seconds of CPS instantly!`);
   }
 }
