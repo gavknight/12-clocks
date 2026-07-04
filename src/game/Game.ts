@@ -109,6 +109,7 @@ export class Game {
     this._startChatPoller();
     this._startGiftPoller();
     this._startEmojiPoller();
+    this._startUpdateAlertPoller();
     this._startIdleWatcher();
     this.fetchAdminUsers();
     setInterval(() => this.fetchAdminUsers(), 15000);
@@ -193,6 +194,76 @@ export class Game {
     toast.onclick = () => document.body.removeChild(toast);
     document.body.appendChild(toast);
     setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 12_000);
+  }
+
+  private _updateAlertPill: HTMLDivElement | null = null;
+  private _updateAlertTargetAt = 0;
+  private _updateAlertLabel = "";
+  private _updateAlertLastUpdatedAt = 0;
+  private _updateAlertTickTimer = 0;
+
+  private _startUpdateAlertPoller(): void {
+    const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
+    const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}` };
+    const check = () => {
+      fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/global_settings?key=eq.update_alert&select=value,updated_at`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { value: string; updated_at: number }[]) => {
+          if (!rows.length) return;
+          const { value, updated_at } = rows[0];
+          if (updated_at <= this._updateAlertLastUpdatedAt) return;
+          this._updateAlertLastUpdatedAt = updated_at;
+          const cfg = JSON.parse(value) as { targetAt?: number; label?: string };
+          this._updateAlertTargetAt = cfg.targetAt ?? 0;
+          this._updateAlertLabel = cfg.label ?? "";
+          if (this._updateAlertTargetAt > 0) this._showUpdateAlertPill();
+          else this._hideUpdateAlertPill();
+        }).catch(() => {});
+    };
+    check();
+    setInterval(check, 15_000);
+  }
+
+  private _showUpdateAlertPill(): void {
+    if (!this._updateAlertPill) {
+      this._updateAlertPill = document.createElement("div");
+      this._updateAlertPill.style.cssText =
+        "position:fixed;top:14px;left:14px;z-index:99992;" +
+        "background:rgba(0,0,0,0.82);border:1px solid rgba(255,215,0,0.4);" +
+        "border-radius:22px;padding:7px 15px;display:flex;align-items:center;gap:7px;" +
+        "color:#FFD700;font-size:13px;font-weight:bold;font-family:Arial,sans-serif;" +
+        "backdrop-filter:blur(6px);user-select:none;pointer-events:none;";
+      document.body.appendChild(this._updateAlertPill);
+    }
+    this._updateAlertPill.style.display = "flex";
+    clearInterval(this._updateAlertTickTimer);
+    const tick = () => {
+      if (!this._updateAlertPill) return;
+      const remaining = this._updateAlertTargetAt - Date.now();
+      const label = this._updateAlertLabel || "Update";
+      if (remaining <= 0) {
+        this._updateAlertPill.textContent = `🎉 ${label} is live!`;
+        return;
+      }
+      const s = Math.floor(remaining / 1000);
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      const parts = [];
+      if (d) parts.push(`${d}d`);
+      if (d || h) parts.push(`${h}h`);
+      if (d || h || m) parts.push(`${m}m`);
+      parts.push(`${sec}s`);
+      this._updateAlertPill.textContent = `🚀 ${label} in ${parts.join(" ")}`;
+    };
+    tick();
+    this._updateAlertTickTimer = window.setInterval(tick, 1000);
+  }
+
+  private _hideUpdateAlertPill(): void {
+    clearInterval(this._updateAlertTickTimer);
+    if (this._updateAlertPill) this._updateAlertPill.style.display = "none";
   }
 
   private _startGiftPoller(): void {

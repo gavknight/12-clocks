@@ -66,6 +66,32 @@ export class AdminAbusePanel {
           <div id="aap_adminFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
+        <!-- Update Alert -->
+        <div style="background:rgba(255,215,0,0.1);border:2px solid rgba(255,215,0,0.4);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:#FFD700;font-size:15px;font-weight:bold;">🚀 Update Alert</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">
+            Shows a live countdown pill (top-left) to ALL players. Type a duration like <b>1d</b>, <b>9h8s</b>, or <b>1d 2h 30m</b>.
+          </div>
+          <input id="aap_updateLabel" type="text" maxlength="40" placeholder="Label (optional, e.g. Update)"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,215,0,0.35);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;outline:none;" />
+          <input id="aap_updateDuration" type="text" placeholder="e.g. 1d 2h 30m"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,215,0,0.35);border-radius:8px;
+            color:white;font-size:13px;padding:8px 12px;outline:none;" />
+          <div style="display:flex;gap:8px;">
+            <button id="aap_updateLaunch" style="flex:1;background:rgba(255,215,0,0.25);color:#FFD700;font-size:13px;
+              font-weight:bold;border:2px solid rgba(255,215,0,0.5);border-radius:8px;padding:10px;cursor:pointer;">
+              🚀 Start Countdown
+            </button>
+            <button id="aap_updateClear" style="background:rgba(255,80,80,0.2);color:#ff8888;font-size:13px;
+              font-weight:bold;border:1px solid rgba(255,80,80,0.4);border-radius:8px;padding:10px 14px;cursor:pointer;">
+              ✕ Clear
+            </button>
+          </div>
+          <div id="aap_updateFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
+        </div>
+
         <!-- Global Message -->
         <div style="background:rgba(0,100,255,0.1);border:2px solid rgba(0,140,255,0.4);
           border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
@@ -317,6 +343,39 @@ export class AdminAbusePanel {
           fb("aap_adminFb", `✓ ${username}'s admin access revoked.`);
           ($("aap_adminTarget") as HTMLInputElement).value = "";
         }).catch(() => fb("aap_adminFb", "❌ Failed.", false));
+    };
+
+    // Update Alert
+    const parseDuration = (raw: string): number => {
+      let ms = 0;
+      const d = raw.match(/(\d+)\s*d/i); if (d) ms += Number(d[1]) * 86400_000;
+      const h = raw.match(/(\d+)\s*h/i); if (h) ms += Number(h[1]) * 3600_000;
+      const m = raw.match(/(\d+)\s*m(?!s)/i); if (m) ms += Number(m[1]) * 60_000;
+      const s = raw.match(/(\d+)\s*s/i); if (s) ms += Number(s[1]) * 1000;
+      return ms;
+    };
+    $("aap_updateLaunch").onclick = () => {
+      const raw = ($("aap_updateDuration") as HTMLInputElement).value.trim();
+      const label = ($("aap_updateLabel") as HTMLInputElement).value.trim();
+      const ms = parseDuration(raw);
+      if (!ms) { fb("aap_updateFb", "❌ Enter a duration like \"1d\" or \"9h8s\".", false); return; }
+      const targetAt = Date.now() + ms;
+      fetch(`${SB}/global_settings`, {
+        method: "POST", headers: H,
+        body: JSON.stringify({ key: "update_alert", value: JSON.stringify({ targetAt, label }), updated_at: Date.now() }),
+      }).then(r => {
+        if (!r.ok) throw new Error();
+        fb("aap_updateFb", "✓ Countdown launched for all players!");
+      }).catch(() => fb("aap_updateFb", "❌ Failed to launch.", false));
+    };
+    $("aap_updateClear").onclick = () => {
+      fetch(`${SB}/global_settings`, {
+        method: "POST", headers: H,
+        body: JSON.stringify({ key: "update_alert", value: JSON.stringify({ targetAt: 0 }), updated_at: Date.now() }),
+      }).then(r => {
+        if (!r.ok) throw new Error();
+        fb("aap_updateFb", "✓ Countdown cleared.");
+      }).catch(() => fb("aap_updateFb", "❌ Failed to clear.", false));
     };
 
     // Global message
