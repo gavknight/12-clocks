@@ -70,16 +70,29 @@ export class ShopScene {
             Pets earn coins automatically every 80 seconds!
           </p>
 
-          <!-- Coin balance -->
-          <div style="
-            display:flex;align-items:center;gap:6px;
-            background:rgba(255,200,0,0.1);border:2px solid rgba(255,200,0,0.35);
-            border-radius:16px;padding:5px 16px;margin-bottom:20px;
-          ">
-            <span style="font-size:18px;">🪙</span>
-            <span id="shopCoinCount" style="color:#FFD700;font-size:15px;font-weight:bold;">
-              ${game.state.coins.toLocaleString()} coins
-            </span>
+          <!-- Coin / diamond balance -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;">
+            <div style="
+              display:flex;align-items:center;gap:6px;
+              background:rgba(255,200,0,0.1);border:2px solid rgba(255,200,0,0.35);
+              border-radius:16px;padding:5px 16px;
+            ">
+              <span style="font-size:18px;">🪙</span>
+              <span id="shopCoinCount" style="color:#FFD700;font-size:15px;font-weight:bold;">
+                ${game.state.coins.toLocaleString()} coins
+              </span>
+            </div>
+            ${game.state.diamonds > 0 ? `
+            <div style="
+              display:flex;align-items:center;gap:6px;
+              background:rgba(100,220,255,0.1);border:2px solid rgba(100,220,255,0.35);
+              border-radius:16px;padding:5px 16px;
+            ">
+              <span style="font-size:18px;">💎</span>
+              <span id="shopDiamondCount" style="color:#66ddff;font-size:15px;font-weight:bold;">
+                ${game.state.diamonds.toLocaleString()} diamonds
+              </span>
+            </div>` : ""}
           </div>
 
           <!-- Auto clicker -->
@@ -109,6 +122,37 @@ export class ShopScene {
                   cursor:${game.state.coins >= 10000 ? "pointer" : "default"};
                   font-family:Arial,sans-serif;white-space:nowrap;">
                   🪙 10,000
+                </button>`
+            }
+          </div>
+
+          <!-- Admin Panel minus -->
+          <div style="
+            width:100%;max-width:420px;margin-bottom:16px;
+            background:${game.state.hasAdminLite ? "rgba(100,220,255,0.1)" : "rgba(255,255,255,0.05)"};
+            border:2px solid ${game.state.hasAdminLite ? "rgba(100,220,255,0.4)" : "rgba(255,255,255,0.1)"};
+            border-radius:18px;padding:18px 20px;
+            display:flex;align-items:center;gap:16px;
+          ">
+            <div style="font-size:44px;">🛡️</div>
+            <div style="flex:1;">
+              <div style="color:white;font-size:17px;font-weight:bold;">Admin Panel −</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:2px;">
+                Alt+P access · give yourself 1,000 coins every 30s + message the owner
+              </div>
+            </div>
+            ${game.state.hasAdminLite
+              ? `<div style="color:#66ddff;font-size:13px;font-weight:bold;
+                  background:rgba(100,220,255,0.15);padding:6px 16px;border-radius:20px;
+                  border:1px solid rgba(100,220,255,0.3);white-space:nowrap;">✓ Owned</div>`
+              : `<button id="buyAdminLite" style="
+                  background:${game.state.diamonds >= 50_000 ? "#66ddff" : "rgba(255,255,255,0.1)"};
+                  color:${game.state.diamonds >= 50_000 ? "#00202e" : "rgba(255,255,255,0.35)"};
+                  font-size:13px;font-weight:bold;padding:8px 18px;
+                  border-radius:20px;border:none;
+                  cursor:${game.state.diamonds >= 50_000 ? "pointer" : "default"};
+                  font-family:Arial,sans-serif;white-space:nowrap;">
+                  💎 50,000
                 </button>`
             }
           </div>
@@ -155,6 +199,17 @@ export class ShopScene {
           game.state.autoClicker = true;
           game.save();
           game.setupAutoClicker();
+          render();
+        });
+      }
+
+      const adminLiteBtn = document.getElementById("buyAdminLite");
+      if (adminLiteBtn) {
+        adminLiteBtn.addEventListener("click", () => {
+          if (game.state.diamonds < 50_000) return;
+          game.state.diamonds -= 50_000;
+          game.state.hasAdminLite = true;
+          game.save();
           render();
         });
       }

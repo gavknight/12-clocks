@@ -319,6 +319,27 @@ export class BgMusicManager {
     }
   }
 
+  // ── local-only pause/resume (doesn't touch global state or other players) ────
+
+  private _pausedLocally = false;
+
+  pauseLocally(): void {
+    if (!this._playing || this._pausedLocally) return;
+    this._pausedLocally = true;
+    this._iframe.src = "about:blank";
+  }
+
+  resumeLocally(): void {
+    if (!this._pausedLocally) return;
+    this._pausedLocally = false;
+    if (this._seqPattern) return; // sequencer audio was never routed through the iframe
+    if (!this._ytId) return;
+    const auto = isIOS() ? 0 : 1;
+    this._iframe.src =
+      `https://www.youtube-nocookie.com/embed/${this._ytId}` +
+      `?autoplay=${auto}&loop=1&playlist=${this._ytId}&controls=1`;
+  }
+
   // ── stop (both modes) ─────────────────────────────────────────────────────────
 
   stop(): void {

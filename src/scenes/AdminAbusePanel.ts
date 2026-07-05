@@ -120,6 +120,19 @@ export class AdminAbusePanel {
           </div>
         </div>
 
+        <!-- Update Ideas Viewer -->
+        <div style="background:rgba(100,220,255,0.07);border:2px solid rgba(100,220,255,0.35);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="color:#66ddff;font-size:15px;font-weight:bold;">💡 Update Ideas</div>
+            <button id="aap_ideasRefresh" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);
+              font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">↻ Refresh</button>
+          </div>
+          <div id="aap_ideasFeed" style="display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;">
+            <div style="color:rgba(255,255,255,0.3);font-size:12px;">Loading...</div>
+          </div>
+        </div>
+
         <!-- Global Emojis -->
         <div style="background:rgba(255,200,0,0.07);border:2px solid rgba(255,200,0,0.35);
           border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;">
@@ -173,14 +186,14 @@ export class AdminAbusePanel {
         <div style="background:rgba(255,180,0,0.08);border:2px solid rgba(255,200,0,0.35);
           border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
           <div style="color:#ffdd66;font-size:15px;font-weight:bold;">🎁 Give Stats</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:12px;">Gift coins &amp; wins to one player or everyone.</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">Gift coins, wins &amp; diamonds to one player or everyone.</div>
           <select id="aap_target" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,200,0,0.35);
             border-radius:8px;color:white;font-size:13px;padding:8px 12px;outline:none;
             appearance:none;-webkit-appearance:none;">
             <option value="ALL" style="background:#111;">🌍 ALL Players</option>
             ${opts}
           </select>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
             <div>
               <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:4px;">🪙 Coins</div>
               <input id="aap_coins" type="number" min="0" value="0"
@@ -195,11 +208,24 @@ export class AdminAbusePanel {
                 border:1px solid rgba(255,200,0,0.3);border-radius:8px;color:white;
                 font-size:13px;padding:8px 10px;outline:none;" />
             </div>
+            <div>
+              <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-bottom:4px;">💎 Diamonds</div>
+              <input id="aap_diamonds" type="number" min="0" value="0"
+                style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.08);
+                border:1px solid rgba(255,200,0,0.3);border-radius:8px;color:white;
+                font-size:13px;padding:8px 10px;outline:none;" />
+            </div>
           </div>
-          <button id="aap_giveSend" style="background:rgba(255,180,0,0.25);color:#ffdd66;font-size:13px;
-            font-weight:bold;border:1px solid rgba(255,200,0,0.45);border-radius:8px;padding:10px;cursor:pointer;">
-            🎁 Send Gift
-          </button>
+          <div style="display:flex;gap:8px;">
+            <button id="aap_giveSend" style="flex:1;background:rgba(255,180,0,0.25);color:#ffdd66;font-size:13px;
+              font-weight:bold;border:1px solid rgba(255,200,0,0.45);border-radius:8px;padding:10px;cursor:pointer;">
+              🎁 Give (+)
+            </button>
+            <button id="aap_takeSend" style="flex:1;background:rgba(255,60,60,0.2);color:#ff8888;font-size:13px;
+              font-weight:bold;border:1px solid rgba(255,60,60,0.4);border-radius:8px;padding:10px;cursor:pointer;">
+              ➖ Take (-)
+            </button>
+          </div>
           <div id="aap_giveFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
@@ -392,12 +418,15 @@ export class AdminAbusePanel {
       }).catch(() => fb("aap_chatFb", "❌ Failed to send.", false));
     };
 
-    // Give stats
-    $("aap_giveSend").onclick = async () => {
+    // Give / take stats
+    const sendStats = async (sign: 1 | -1) => {
       const targetId = ($("aap_target") as HTMLSelectElement).value;
-      const coins    = parseInt(($("aap_coins") as HTMLInputElement).value, 10) || 0;
-      const wins     = parseInt(($("aap_wins")  as HTMLInputElement).value, 10) || 0;
-      if (coins === 0 && wins === 0) { fb("aap_giveFb", "❌ Enter at least 1 coin or 1 win.", false); return; }
+      const coins    = (parseInt(($("aap_coins")    as HTMLInputElement).value, 10) || 0) * sign;
+      const wins     = (parseInt(($("aap_wins")     as HTMLInputElement).value, 10) || 0) * sign;
+      const diamonds = (parseInt(($("aap_diamonds") as HTMLInputElement).value, 10) || 0) * sign;
+      if (coins === 0 && wins === 0 && diamonds === 0) { fb("aap_giveFb", "❌ Enter at least 1 coin, win, or diamond.", false); return; }
+      const verb = sign === 1 ? "Gifted" : "Took";
+      const abs = (n: number) => Math.abs(n).toLocaleString();
 
       if (targetId === "ALL") {
         // Fetch ALL global players from Supabase members table
@@ -408,21 +437,24 @@ export class AdminAbusePanel {
         await Promise.all(members.map(m =>
           fetch(`${SB}/player_gifts`, {
             method: "POST", headers: H,
-            body: JSON.stringify({ account_id: m.account_id, coins, wins, claimed: false, sent_at: Date.now() }),
+            body: JSON.stringify({ account_id: m.account_id, coins, wins, diamonds, claimed: false, sent_at: Date.now() }),
           })
         ));
-        fb("aap_giveFb", `✓ Gifted 🪙${coins.toLocaleString()} + 🏆${wins} to all ${members.length} players!`);
+        fb("aap_giveFb", `✓ ${verb} 🪙${abs(coins)} + 🏆${abs(wins)} + 💎${abs(diamonds)} ${sign === 1 ? "to" : "from"} all ${members.length} players!`);
       } else {
         const acc = this.game.getAllAccounts().find(a => a.id === targetId);
         await fetch(`${SB}/player_gifts`, {
           method: "POST", headers: H,
-          body: JSON.stringify({ account_id: targetId, coins, wins, claimed: false, sent_at: Date.now() }),
+          body: JSON.stringify({ account_id: targetId, coins, wins, diamonds, claimed: false, sent_at: Date.now() }),
         });
-        fb("aap_giveFb", `✓ Gifted 🪙${coins.toLocaleString()} + 🏆${wins} to ${acc?.username ?? targetId}!`);
+        fb("aap_giveFb", `✓ ${verb} 🪙${abs(coins)} + 🏆${abs(wins)} + 💎${abs(diamonds)} ${sign === 1 ? "to" : "from"} ${acc?.username ?? targetId}!`);
       }
-      ($("aap_coins") as HTMLInputElement).value = "0";
-      ($("aap_wins")  as HTMLInputElement).value = "0";
+      ($("aap_coins")    as HTMLInputElement).value = "0";
+      ($("aap_wins")     as HTMLInputElement).value = "0";
+      ($("aap_diamonds") as HTMLInputElement).value = "0";
     };
+    $("aap_giveSend").onclick = () => sendStats(1);
+    $("aap_takeSend").onclick = () => sendStats(-1);
 
     // Chat viewer
     const banUser = (username: string, msgId: number) => {
@@ -484,6 +516,26 @@ export class AdminAbusePanel {
     loadChat();
     $("aap_chatRefresh").onclick = loadChat;
     const chatInterval = setInterval(loadChat, 5000);
+
+    // Update ideas viewer
+    const loadIdeas = () => {
+      fetch(`${SB}/update_ideas?order=sent_at.desc&limit=30`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { id: number; username: string; message: string; sent_at: number }[]) => {
+          const el = document.getElementById("aap_ideasFeed");
+          if (!el) return;
+          if (!rows.length) { el.innerHTML = `<div style="color:rgba(255,255,255,0.3);font-size:12px;">No ideas yet.</div>`; return; }
+          el.innerHTML = rows.map(r => `
+            <div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="color:#66ddff;font-size:12px;font-weight:bold;">${r.username}:</span>
+              <span style="color:rgba(255,255,255,0.8);font-size:12px;margin-left:6px;word-break:break-word;">${r.message}</span>
+              <div style="color:rgba(255,255,255,0.25);font-size:10px;">${new Date(r.sent_at).toLocaleString()}</div>
+            </div>`).join("");
+        }).catch(() => {});
+    };
+    loadIdeas();
+    $("aap_ideasRefresh").onclick = loadIdeas;
+    const ideasInterval = setInterval(loadIdeas, 15_000);
 
     // Global emoji reactions
     document.querySelectorAll<HTMLButtonElement>(".aap_emojiBtn").forEach(btn => {
@@ -561,7 +613,7 @@ export class AdminAbusePanel {
 
     // Cleanup chat interval on close
     const origDestroy = this.destroy.bind(this);
-    this.destroy = () => { clearInterval(chatInterval); origDestroy(); };
+    this.destroy = () => { clearInterval(chatInterval); clearInterval(ideasInterval); origDestroy(); };
 
     // Coin Jump editor — launches Coin Jump then immediately opens the editor overlay
     $("aap_cjEditor").onclick = () => {

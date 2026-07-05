@@ -33,9 +33,19 @@ function makePNG(size) {
   ihdr[9] = 2;  // color type RGB
   ihdr[10] = ihdr[11] = ihdr[12] = 0;
 
-  // Draw a simple clock icon: purple bg + gold circle + white hands
+  // Grayed-out clock + huge "1" (update countdown) + party confetti corner badge
   const rows = [];
   const cx = size / 2, cy = size / 2, r = size * 0.36;
+  const bg = { R: 0x14, G: 0x14, B: 0x14 };
+
+  // Party confetti dots (top-right corner)
+  const confetti = [
+    { x: 0.72, y: 0.14, r: 0.045, R: 0xff, G: 0x55, B: 0x55 },
+    { x: 0.84, y: 0.10, r: 0.035, R: 0x55, G: 0xdd, B: 0xff },
+    { x: 0.90, y: 0.20, r: 0.04,  R: 0xff, G: 0xd7, B: 0x00 },
+    { x: 0.80, y: 0.22, r: 0.03,  R: 0x55, G: 0xff, B: 0x99 },
+    { x: 0.94, y: 0.09, r: 0.025, R: 0xff, G: 0x99, B: 0xee },
+  ];
 
   for (let y = 0; y < size; y++) {
     const row = Buffer.allocUnsafe(1 + size * 3);
@@ -43,37 +53,45 @@ function makePNG(size) {
     for (let x = 0; x < size; x++) {
       const dx = x - cx, dy = y - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      let R = 0x1a, G = 0x0a, B = 0x3e; // dark purple bg
+      let R = bg.R, G = bg.G, B = bg.B;
 
-      // Blend purple gradient based on distance from center
-      const t = Math.min(dist / (size * 0.5), 1);
-      R = Math.round(0x6a * (1 - t) + 0x1a * t);
-      G = Math.round(0x20 * (1 - t) + 0x0a * t);
-      B = Math.round(0xa0 * (1 - t) + 0x3e * t);
-
-      // Gold clock ring
+      // Gray clock ring
       if (dist > r - size * 0.03 && dist < r + size * 0.03) {
-        R = 0xff; G = 0xd7; B = 0x00;
+        R = 0x66; G = 0x66; B = 0x66;
       }
 
-      // White hour hand (12 o'clock, pointing up)
-      // Hand: thin rectangle from center going up
+      // Gray hour hand (12 o'clock, pointing up)
       if (Math.abs(dx) < size * 0.025 && dy < 0 && dy > -r * 0.55) {
-        R = G = B = 255;
+        R = G = B = 0x99;
       }
 
-      // White minute hand (3 o'clock, pointing right)
+      // Gray minute hand (3 o'clock, pointing right)
       if (Math.abs(dy) < size * 0.018 && dx > 0 && dx < r * 0.7) {
-        R = G = B = 255;
+        R = G = B = 0x99;
       }
 
-      // Gold center dot
+      // Gray center dot
       if (dist < size * 0.04) {
-        R = 0xff; G = 0xd7; B = 0x00;
+        R = 0x88; G = 0x88; B = 0x88;
       }
 
-      // Clip to circle (outside = transparent → black for PNG RGB)
-      if (dist > size * 0.49) { R = 0x1a; G = 0x0a; B = 0x3e; }
+      // Clip to circle (outside = bg)
+      if (dist > size * 0.49) { R = bg.R; G = bg.G; B = bg.B; }
+
+      // Huge "1" (vertical bar + small serif foot) dead center over everything
+      const barW = size * 0.09, barTop = size * 0.22, barBot = size * 0.74;
+      const footW = size * 0.20, footH = size * 0.07;
+      const inBar  = Math.abs(dx) < barW / 2 && y > barTop && y < barBot;
+      const inFoot = Math.abs(dx) < footW / 2 && y > barBot - footH && y < barBot;
+      if (inBar || inFoot) { R = G = B = 255; }
+
+      // Party confetti corner badge
+      for (const c of confetti) {
+        const ddx = x - c.x * size, ddy = y - c.y * size;
+        if (ddx * ddx + ddy * ddy < (c.r * size) * (c.r * size)) {
+          R = c.R; G = c.G; B = c.B;
+        }
+      }
 
       const i = 1 + x * 3;
       row[i] = R; row[i + 1] = G; row[i + 2] = B;

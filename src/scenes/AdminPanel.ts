@@ -247,10 +247,23 @@ export class AdminPanel {
           <input id="chatMsg" type="text" maxlength="120" placeholder="Type a message…"
             style="background:rgba(255,255,255,0.08);border:1px solid rgba(0,140,255,0.4);border-radius:8px;
             color:white;font-size:13px;padding:8px 12px;font-family:Arial,sans-serif;outline:none;" />
-          <button id="chatSendBtn" style="
-            background:rgba(0,100,255,0.3);color:#88ccff;font-size:13px;font-weight:bold;
-            border:1px solid rgba(0,140,255,0.5);border-radius:8px;padding:9px;cursor:pointer;
-            font-family:Arial,sans-serif;">📢 Send to All Players</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button id="chatSendBtn" style="
+              flex:1;background:rgba(0,100,255,0.3);color:#88ccff;font-size:13px;font-weight:bold;
+              border:1px solid rgba(0,140,255,0.5);border-radius:8px;padding:9px;cursor:pointer;
+              font-family:Arial,sans-serif;">📢 Send to All</button>
+            <label id="chatGlobalLabel" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+              background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;flex-shrink:0;">
+              <span id="chatGlobalBox" style="
+                display:inline-flex;align-items:center;justify-content:center;
+                width:20px;height:20px;border-radius:4px;flex-shrink:0;
+                background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.3);
+                transition:background 0.15s,border-color 0.15s;
+              "></span>
+              <input id="chatGlobal" type="checkbox" style="display:none;" />
+              <span style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:bold;white-space:nowrap;">🌍 Global</span>
+            </label>
+          </div>
           <div id="chatFeedback" style="color:#80ff80;font-size:12px;min-height:16px;"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
             <span style="color:rgba(255,255,255,0.4);font-size:11px;">Recent messages</span>
@@ -488,10 +501,27 @@ export class AdminPanel {
 
     // Public Chat
     const SB_CHAT = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/admin_chat";
+    const chatGlobalBox = document.getElementById("chatGlobalBox")!;
+    const chatGlobalInput = document.getElementById("chatGlobal") as HTMLInputElement;
+    document.getElementById("chatGlobalLabel")!.addEventListener("click", () => {
+      chatGlobalInput.checked = !chatGlobalInput.checked;
+      if (chatGlobalInput.checked) {
+        chatGlobalBox.style.background = "#1a6fff";
+        chatGlobalBox.style.borderColor = "#1a6fff";
+        chatGlobalBox.innerHTML = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><polyline points="2,7 5,10 11,3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      } else {
+        chatGlobalBox.style.background = "rgba(255,255,255,0.08)";
+        chatGlobalBox.style.borderColor = "rgba(255,255,255,0.3)";
+        chatGlobalBox.innerHTML = "";
+      }
+    });
+
     document.getElementById("chatSendBtn")!.addEventListener("click", () => {
-      const msg = (document.getElementById("chatMsg") as HTMLInputElement).value.trim();
+      const raw = (document.getElementById("chatMsg") as HTMLInputElement).value.trim();
+      const isGlobal = (document.getElementById("chatGlobal") as HTMLInputElement).checked;
+      const msg = isGlobal ? `GLOBAL${raw}` : raw;
       const fb  = document.getElementById("chatFeedback")!;
-      if (!msg) { fb.style.color = "#ff8888"; fb.textContent = "❌ Message cannot be empty."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
+      if (!raw) { fb.style.color = "#ff8888"; fb.textContent = "❌ Message cannot be empty."; setTimeout(() => { fb.textContent = ""; }, 2500); return; }
       fetch(SB_CHAT, {
         method: "POST",
         headers: { ...H, "Prefer": "return=minimal" },

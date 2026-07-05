@@ -1,6 +1,6 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
 import type { MultiplayerManager } from "../multiplayer/MultiplayerManager";
-import { upsertRecord, fetchRecords, upsertCoinRecord, fetchCoinLeaderboard, type CoinRecord } from "./cloudRecords";
+import { upsertRecord, fetchRecords, upsertCoinRecord, fetchCoinLeaderboard, type CoinRecord, upsertDiamondRecord, fetchDiamondLeaderboard, type DiamondRecord } from "./cloudRecords";
 import { pingMember, setBanStatus } from "./members";
 import { unlockCost, LEVEL_COUNT } from "./levelData";
 import { IS_BEDROCK } from "../bedrock";
@@ -17,6 +17,8 @@ export interface GameState {
   pets: string[]; // owned pet IDs
   autoClicker: boolean; // owned auto clicker
   wins: number;
+  diamonds: number; // admin-gifted only, no in-game way to earn/spend
+  hasAdminLite: boolean; // bought in Shop with diamonds — grants a reduced admin panel
 }
 
 export interface PetDef {
@@ -67,6 +69,8 @@ interface SaveData {
   pets:           string[];
   autoClicker:    boolean;
   wins:           number;
+  diamonds:       number;
+  hasAdminLite:   boolean;
   levels: Record<string, { locks: number[]; inv: number[]; completed: boolean }>;
 }
 
@@ -74,7 +78,8 @@ export class Game {
   readonly engine: Engine;
   readonly state: GameState = {
     unlockedLocks: new Set(), inventory: [], username: "",
-    difficulty: 12, coins: 0, currentLevel: 1, pets: [], autoClicker: false, wins: 0,
+    difficulty: 12, coins: 0, currentLevel: 1, pets: [], autoClicker: false, wins: 0, diamonds: 0,
+    hasAdminLite: false,
   };
   modMode = false;
   private _modSnapshot: string | null = null;
@@ -173,7 +178,11 @@ export class Game {
       }).then(r => r.json()).then((rows: { sent_at: number; message: string; sender: string }[]) => {
         if (!rows.length) return;
         for (const row of rows) {
-          this._showChatToast(row.sender, row.message);
+          if (row.message.startsWith("GLOBAL")) {
+            this._showGlobalBanner(row.sender, row.message.slice("GLOBAL".length));
+          } else {
+            this._showChatToast(row.sender, row.message);
+          }
         }
         this._lastChatSentAt = rows[rows.length - 1].sent_at;
       }).catch(() => {});
@@ -189,11 +198,40 @@ export class Game {
       "padding:12px 20px;z-index:999999;cursor:pointer;max-width:320px;width:90%;" +
       "box-shadow:0 4px 24px rgba(0,0,0,0.6);font-family:Arial,sans-serif;text-align:center;";
     toast.innerHTML =
-      `<div style="color:white;font-size:15px;font-weight:bold;">📢 ${sender}</div>` +
+      `<div style="display:flex;align-items:center;justify-content:center;gap:6px;">` +
+        `<span style="color:white;font-size:15px;font-weight:bold;">📢 ${sender}</span>` +
+        `<span style="display:inline-flex;align-items:center;justify-content:center;` +
+          `width:18px;height:18px;border-radius:4px;background:#1a6fff;flex-shrink:0;">` +
+          `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><polyline points="1.5,6 4,8.5 9.5,2" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` +
+        `</span>` +
+      `</div>` +
       `<div style="color:#aaddff;font-size:14px;margin-top:6px;">${message}</div>`;
     toast.onclick = () => document.body.removeChild(toast);
     document.body.appendChild(toast);
     setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 12_000);
+  }
+
+  private _showGlobalBanner(sender: string, message: string): void {
+    const banner = document.createElement("div");
+    banner.style.cssText =
+      "position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999999;" +
+      "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
+      "background:rgba(0,0,0,0.7);cursor:pointer;";
+    banner.innerHTML =
+      `<div style="` +
+        `background:linear-gradient(135deg,rgba(30,0,80,0.98),rgba(0,40,160,0.98));` +
+        `border:3px solid #FFD700;border-radius:22px;padding:32px 40px;text-align:center;` +
+        `max-width:440px;width:88%;box-shadow:0 0 60px rgba(255,215,0,0.4),0 8px 40px rgba(0,0,0,0.8);` +
+        `font-family:Arial,sans-serif;` +
+      `">` +
+        `<div style="font-size:36px;margin-bottom:10px;">📣</div>` +
+        `<div style="color:#FFD700;font-size:13px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">Global Message from ${sender}</div>` +
+        `<div style="color:white;font-size:22px;font-weight:bold;line-height:1.3;">${message}</div>` +
+        `<div style="color:rgba(255,255,255,0.35);font-size:11px;margin-top:18px;">Tap anywhere to dismiss</div>` +
+      `</div>`;
+    banner.onclick = () => { if (document.body.contains(banner)) document.body.removeChild(banner); };
+    document.body.appendChild(banner);
+    setTimeout(() => { if (document.body.contains(banner)) document.body.removeChild(banner); }, 20_000);
   }
 
   private _updateAlertPill: HTMLDivElement | null = null;
@@ -273,20 +311,23 @@ export class Game {
       if (!accountId) return;
       fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/player_gifts?account_id=eq.${accountId}&claimed=eq.false&order=sent_at.asc`, {
         headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
-      }).then(r => r.json()).then((rows: { id: number; coins: number; wins: number }[]) => {
+      }).then(r => r.json()).then((rows: { id: number; coins: number; wins: number; diamonds?: number }[]) => {
         if (!rows.length) return;
         let totalCoins = 0;
         let totalWins  = 0;
+        let totalDiamonds = 0;
         const ids: number[] = [];
         for (const row of rows) {
           totalCoins += row.coins;
           totalWins  += row.wins;
+          totalDiamonds += row.diamonds ?? 0;
           ids.push(row.id);
         }
-        this.state.coins += totalCoins;
-        this.state.wins  += totalWins;
+        this.state.coins    = Math.max(0, this.state.coins    + totalCoins);
+        this.state.wins     = Math.max(0, this.state.wins     + totalWins);
+        this.state.diamonds = Math.max(0, this.state.diamonds + totalDiamonds);
         this.save();
-        this._showGiftToast(totalCoins, totalWins);
+        this._showGiftToast(totalCoins, totalWins, totalDiamonds);
         // Mark all as claimed
         for (const id of ids) {
           fetch(`https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/player_gifts?id=eq.${id}`, {
@@ -300,19 +341,25 @@ export class Game {
     setInterval(check, 15_000);
   }
 
-  private _showGiftToast(coins: number, wins: number): void {
+  private _showGiftToast(coins: number, wins: number, diamonds = 0): void {
+    const fmt = (n: number, label: string) => `${n > 0 ? "+" : "-"}${Math.abs(n).toLocaleString()} ${label}`;
     const parts: string[] = [];
-    if (coins > 0) parts.push(`🪙 ${coins.toLocaleString()} coins`);
-    if (wins  > 0) parts.push(`🏆 ${wins} win${wins !== 1 ? "s" : ""}`);
+    if (coins    !== 0) parts.push(`🪙 ${fmt(coins, "coins")}`);
+    if (wins     !== 0) parts.push(`🏆 ${fmt(wins, wins !== 1 ? "wins" : "win")}`);
+    if (diamonds !== 0) parts.push(`💎 ${fmt(diamonds, diamonds !== 1 ? "diamonds" : "diamond")}`);
+    if (!parts.length) return;
+    const isTake = coins < 0 || wins < 0 || diamonds < 0;
     const toast = document.createElement("div");
     toast.style.cssText =
-      "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);" +
-      "background:rgba(160,100,0,0.95);border:2px solid #FFD700;border-radius:14px;" +
+      `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);` +
+      `background:${isTake ? "rgba(160,0,0,0.95)" : "rgba(160,100,0,0.95)"};` +
+      `border:2px solid ${isTake ? "#ff4444" : "#FFD700"};border-radius:14px;` +
       "padding:12px 20px;z-index:999999;cursor:pointer;max-width:320px;width:90%;" +
       "box-shadow:0 4px 24px rgba(0,0,0,0.6);font-family:Arial,sans-serif;text-align:center;";
     toast.innerHTML =
-      `<div style="color:#FFD700;font-size:16px;font-weight:bold;">🎁 Admin gave you a gift!</div>` +
-      `<div style="color:white;font-size:14px;margin-top:6px;">+${parts.join(" and ")}</div>`;
+      `<div style="color:${isTake ? "#ff8888" : "#FFD700"};font-size:16px;font-weight:bold;">` +
+        `${isTake ? "⚠️ Admin took stats away" : "🎁 Admin gave you a gift!"}</div>` +
+      `<div style="color:white;font-size:14px;margin-top:6px;">${parts.join(" and ")}</div>`;
     toast.onclick = () => document.body.removeChild(toast);
     document.body.appendChild(toast);
     setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 10_000);
@@ -1179,6 +1226,8 @@ export class ${className} {
     this.state.coins = 0;
     this.state.currentLevel = 1;
     this.state.wins = 0;
+    this.state.diamonds = 0;
+    this.state.hasAdminLite = false;
     this._unlockedLevels = new Set([1]);
     this._levelSaves = {};
   }
@@ -1329,10 +1378,13 @@ export class ${className} {
       pets:           [...this.state.pets],
       autoClicker:    this.state.autoClicker,
       wins:           this.state.wins,
+      diamonds:       this.state.diamonds,
+      hasAdminLite:   this.state.hasAdminLite,
       levels:         this._levelSaves,
     };
     localStorage.setItem(this._saveKey(), JSON.stringify(data));
     this.syncCoins(); // fire-and-forget
+    this.syncDiamonds(); // fire-and-forget
   }
 
   /** Push current coin count to cloud leaderboard. Returns a promise so callers can await it. */
@@ -1347,12 +1399,26 @@ export class ${className} {
     });
   }
 
+  /** Push current diamond count to cloud leaderboard. Returns a promise so callers can await it. */
+  syncDiamonds(): Promise<void> {
+    const id = this.currentAccountId;
+    if (!id || !this.state.username) return Promise.resolve();
+    return upsertDiamondRecord({
+      account_id: id,
+      username:   this.state.username,
+      diamonds:   this.state.diamonds,
+      updated_at: Date.now(),
+    });
+  }
+
   private _loadForAccount(id: string): void {
     this.state.unlockedLocks.clear();
     this.state.inventory.length = 0;
     this.state.difficulty = 12;
     this.state.coins = 0;
     this.state.currentLevel = 1;
+    this.state.diamonds = 0;
+    this.state.hasAdminLite = false;
     this._unlockedLevels = new Set([1]);
     this._levelSaves = {};
     try {
@@ -1374,6 +1440,8 @@ export class ${className} {
       this.state.pets         = data.pets         ?? [];
       this.state.autoClicker  = data.autoClicker  ?? false;
       this.state.wins         = data.wins         ?? 0;
+      this.state.diamonds     = data.diamonds     ?? 0;
+      this.state.hasAdminLite = data.hasAdminLite ?? false;
       if (data.unlockedLevels) {
         this._unlockedLevels = new Set([1, ...data.unlockedLevels]);
       }
@@ -1407,6 +1475,8 @@ export class ${className} {
     this.state.difficulty = 12;
     this.state.coins = 0;
     this.state.currentLevel = 1;
+    this.state.diamonds = 0;
+    this.state.hasAdminLite = false;
     this._unlockedLevels = new Set([1]);
     this._levelSaves = {};
   }
@@ -1466,6 +1536,10 @@ export class ${className} {
     return fetchCoinLeaderboard();
   }
 
+  async getDiamondLeaderboard(): Promise<DiamondRecord[]> {
+    return fetchDiamondLeaderboard();
+  }
+
   async getRecords(): Promise<GameRecord[]> {
     const cloud = await fetchRecords();
     if (cloud.length > 0) {
@@ -1497,6 +1571,9 @@ export class ${className} {
       if (e.altKey && e.key === "p" && this.hasHacks) {
         e.preventDefault();
         this.goAdminAbuse();
+      } else if (e.altKey && e.key === "p" && this.state.hasAdminLite) {
+        e.preventDefault();
+        import("../scenes/AdminLitePanel").then(m => new m.AdminLitePanel(this));
       }
       if (e.altKey && e.key === "c" && this.hasHacks && (window as any).__coinJump) {
         e.preventDefault();
@@ -1564,6 +1641,7 @@ export class ${className} {
   goLevelSelect():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("start")); this._nav(() => import("../scenes/LevelSelect").then(m => new m.LevelSelect(this))); }
   goLeaderboard():      void { this._nav(() => import("../scenes/LeaderboardScene").then(m => new m.LeaderboardScene(this))); }
   goCoinLeaderboard():  void { this._nav(() => import("../scenes/CoinLeaderboardScene").then(m => new m.CoinLeaderboardScene(this))); }
+  goDiamondLeaderboard(): void { this._nav(() => import("../scenes/DiamondLeaderboardScene").then(m => new m.DiamondLeaderboardScene(this))); }
   goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this))); }
   goIntro():       void {
     this.startTimer();

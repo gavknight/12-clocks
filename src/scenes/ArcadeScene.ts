@@ -179,11 +179,23 @@ export class ArcadeScene {
           background:rgba(255,200,0,0.08);border:1px solid rgba(255,200,0,0.3);
           border-radius:14px;padding:10px 20px;cursor:pointer;
           display:flex;align-items:center;gap:10px;width:100%;max-width:360px;
-          font-family:Arial,sans-serif;
+          font-family:Arial,sans-serif;margin-bottom:10px;
         ">
           <span style="font-size:22px;">🏆</span>
           <span style="color:#FFD700;font-size:15px;font-weight:bold;">Coin Leaderboard</span>
           <span style="color:rgba(255,255,255,0.4);font-size:13px;margin-left:auto;">See top earners →</span>
+        </button>
+
+        <!-- Diamond leaderboard link -->
+        <button id="diamondLbBtn" style="
+          background:rgba(100,220,255,0.08);border:1px solid rgba(100,220,255,0.3);
+          border-radius:14px;padding:10px 20px;cursor:pointer;
+          display:flex;align-items:center;gap:10px;width:100%;max-width:360px;
+          font-family:Arial,sans-serif;
+        ">
+          <span style="font-size:22px;">💎</span>
+          <span style="color:#66ddff;font-size:15px;font-weight:bold;">Diamond Leaderboard</span>
+          <span style="color:rgba(255,255,255,0.4);font-size:13px;margin-left:auto;">Most gifted →</span>
         </button>
 
         <!-- Game cards -->
@@ -784,6 +796,7 @@ export class ArcadeScene {
     }
 
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
+    document.getElementById("diamondLbBtn")!.onclick = () => game.goDiamondLeaderboard();
     document.getElementById("banbanBtn")!.onclick  = () => {
       _tut();
       import("./games/GardenBanban").then(m => {

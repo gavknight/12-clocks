@@ -207,6 +207,11 @@ export class TitleScene {
             <div style="color:rgba(255,200,0,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">🪙 Coins</div>
             <div id="statCoins" style="color:#FFD700;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.coins)}</div>
           </div>
+          ${game.state.diamonds > 0 ? `
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,220,255,0.35);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
+            <div style="color:rgba(100,220,255,0.7);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">💎 Diamonds</div>
+            <div id="statDiamonds" style="color:#66ddff;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.diamonds)}</div>
+          </div>` : ""}
           <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,200,255,0.25);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
             <div style="color:rgba(100,200,255,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Done</div>
             <div id="statDone" style="color:#7dd3fc;font-size:22px;font-weight:900;font-family:'Arial Black',Arial;">${game.completedLevelCount}</div>
@@ -854,6 +859,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
     const songList = document.getElementById("songList")!;
     const ytPlayer = document.getElementById("ytPlayer")!;
     const ytFrame = document.getElementById("ytFrame") as HTMLIFrameElement;
+    let activeSongId: string | null = null;
     songs.forEach(song => {
       const btn = document.createElement("button");
       btn.textContent = "▶ " + song.title;
@@ -862,6 +868,8 @@ ${game.hasHacks ? `<button id="adminBtn" style="
         "padding:12px 20px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.15);" +
         "cursor:pointer;text-align:left;font-family:Arial,sans-serif;";
       btn.onclick = () => {
+        if (activeSongId === song.id) return; // already playing — reloading would restart it and briefly double up audio
+        activeSongId = song.id;
         ytFrame.src = `https://www.youtube.com/embed/${song.id}?autoplay=1`;
         ytPlayer.style.display = "block";
         btn.style.background = "rgba(100,100,255,0.25)";
@@ -871,11 +879,14 @@ ${game.hasHacks ? `<button id="adminBtn" style="
     });
     document.getElementById("musicBtn")!.onclick = () => {
       musicOverlay.style.display = "flex";
+      import("../game/BgMusicManager").then(mod => mod.BgMusicManager.get().pauseLocally());
     };
     document.getElementById("closeMusicBtn")!.onclick = () => {
       musicOverlay.style.display = "none";
       ytFrame.src = "";
       ytPlayer.style.display = "none";
+      activeSongId = null;
+      import("../game/BgMusicManager").then(mod => mod.BgMusicManager.get().resumeLocally());
       songList.querySelectorAll("button").forEach((b: Element) => {
         (b as HTMLElement).style.background = "rgba(255,255,255,0.07)";
         (b as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)";

@@ -3,6 +3,7 @@
 const BASE_URL = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
 const URL  = `${BASE_URL}/clocks_records`;
 const COIN_URL = `${BASE_URL}/coin_leaders`;
+const DIAMOND_URL = `${BASE_URL}/diamond_leaders`;
 const KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
 
 const BASE_HEADERS = {
@@ -59,6 +60,42 @@ export async function fetchCoinLeaderboard(): Promise<CoinRecord[]> {
 export async function upsertCoinRecord(rec: CoinRecord): Promise<void> {
   try {
     await fetch(COIN_URL, {
+      method:  "POST",
+      headers: { ...BASE_HEADERS, "Prefer": "resolution=merge-duplicates,return=minimal" },
+      body:    JSON.stringify(rec),
+    });
+  } catch {
+    // Silently fail
+  }
+}
+
+// ── Diamond leaderboard ─────────────────────────────────────────────────────
+
+export interface DiamondRecord {
+  account_id: string;
+  username:   string;
+  diamonds:   number;
+  updated_at: number;
+}
+
+/** Fetch top 50 players sorted by most diamonds */
+export async function fetchDiamondLeaderboard(): Promise<DiamondRecord[]> {
+  try {
+    const res = await fetch(
+      `${DIAMOND_URL}?select=account_id,username,diamonds,updated_at&order=diamonds.desc&limit=50`,
+      { headers: BASE_HEADERS },
+    );
+    if (!res.ok) return [];
+    return (await res.json()) as DiamondRecord[];
+  } catch {
+    return [];
+  }
+}
+
+/** Upsert this player's diamond count (always overwrites — reflects current balance) */
+export async function upsertDiamondRecord(rec: DiamondRecord): Promise<void> {
+  try {
+    await fetch(DIAMOND_URL, {
       method:  "POST",
       headers: { ...BASE_HEADERS, "Prefer": "resolution=merge-duplicates,return=minimal" },
       body:    JSON.stringify(rec),
