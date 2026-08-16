@@ -1,5 +1,13 @@
 import type { Game } from "../game/Game";
 import { SONGS } from "../game/BgMusicManager";
+import {
+  fetchAllLevelsForAdmin, difficultyOf, rateLevel, setFeatured, setHidden, deleteLevel,
+  DIFFICULTIES,
+} from "../game/clockLevels";
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 const SB   = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
 const KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
@@ -73,6 +81,10 @@ export class AdminAbusePanel {
           <div style="color:rgba(255,255,255,0.4);font-size:12px;">
             Shows a live countdown pill (top-left) to ALL players. Type a duration like <b>1d</b>, <b>9h8s</b>, or <b>1d 2h 30m</b>.
           </div>
+          <div id="aap_updateStatus" style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,215,0,0.25);
+            border-radius:10px;padding:9px 12px;font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;">
+            Checking current countdown…
+          </div>
           <input id="aap_updateLabel" type="text" maxlength="40" placeholder="Label (optional, e.g. Update)"
             style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,215,0,0.35);border-radius:8px;
             color:white;font-size:13px;padding:8px 12px;outline:none;" />
@@ -90,6 +102,22 @@ export class AdminAbusePanel {
             </button>
           </div>
           <div id="aap_updateFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
+        </div>
+
+        <!-- Rate Community Levels -->
+        <div style="background:rgba(160,100,255,0.1);border:2px solid rgba(160,100,255,0.4);
+          border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+          <div style="color:#c9a6ff;font-size:15px;font-weight:bold;">🛠️ Rate Community Levels</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;">
+            Assign a difficulty, feature it to the top, hide it from players, or delete it.
+          </div>
+          <div id="aap_lvlList" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;">
+            <div style="color:rgba(255,255,255,0.35);font-size:12px;">Loading levels…</div>
+          </div>
+          <button id="aap_lvlRefresh" style="background:rgba(160,100,255,0.2);color:#c9a6ff;font-size:12px;
+            font-weight:bold;border:1px solid rgba(160,100,255,0.4);border-radius:8px;padding:8px;
+            cursor:pointer;">↻ Refresh</button>
+          <div id="aap_lvlFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
         <!-- Global Message -->
@@ -336,6 +364,8 @@ export class AdminAbusePanel {
 
     $("aap_close").onclick = () => this.destroy();
 
+    let updateStatusTimer = 0; // ticks the Update Alert status readout
+
     // Give / Revoke Admin
     const loadAdminList = () => {
       fetch(`${SB}/admin_users?select=username&order=granted_at.asc`, { headers: H })
@@ -380,6 +410,67 @@ export class AdminAbusePanel {
       const s = raw.match(/(\d+)\s*s/i); if (s) ms += Number(s[1]) * 1000;
       return ms;
     };
+    // ── Live status of the currently-active countdown ────────────────────────
+    // Mirrors what the pill in Game.ts is showing players right now.
+    let liveTargetAt = 0;
+    let liveLabel    = "";
+
+    const fmtRemaining = (ms: number): string => {
+      const s = Math.floor(ms / 1000);
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const parts: string[] = [];
+      if (d) parts.push(`${d}d`);
+      if (d || h) parts.push(`${h}h`);
+      if (d || h || m) parts.push(`${m}m`);
+      parts.push(`${s % 60}s`);
+      return parts.join(" ");
+    };
+
+    const renderUpdateStatus = (): void => {
+      const el = document.getElementById("aap_updateStatus");
+      if (!el) return;
+      if (liveTargetAt <= 0) {
+        el.innerHTML = `<span style="color:rgba(255,255,255,0.4);">○ No countdown active — players see no pill.</span>`;
+        return;
+      }
+      const remaining = liveTargetAt - Date.now();
+      const when = new Date(liveTargetAt).toLocaleString();
+      const shown = liveLabel || "Update";
+      el.innerHTML = remaining <= 0
+        ? `<span style="color:#80ff80;font-weight:bold;">● LIVE</span>
+           <span style="color:rgba(255,255,255,0.75);">— players see “🎉 ${shown} is live!”</span>
+           <div style="color:rgba(255,255,255,0.4);margin-top:2px;">Landed ${when}</div>`
+        : `<span style="color:#FFD700;font-weight:bold;">● ACTIVE</span>
+           <span style="color:rgba(255,255,255,0.75);">— “🚀 ${shown} in ${fmtRemaining(remaining)}”</span>
+           <div style="color:rgba(255,255,255,0.4);margin-top:2px;">Lands ${when}</div>`;
+    };
+
+    const refreshUpdateStatus = (): void => {
+      fetch(`${SB}/global_settings?key=eq.update_alert&select=value`, { headers: H })
+        .then(r => r.json())
+        .then((rows: { value: string }[]) => {
+          if (!rows.length) { liveTargetAt = 0; liveLabel = ""; renderUpdateStatus(); return; }
+          let cfg: { targetAt?: number; label?: string } = {};
+          try { cfg = JSON.parse(rows[0].value); } catch { /* corrupt row — treat as none */ }
+          liveTargetAt = cfg.targetAt ?? 0;
+          liveLabel    = cfg.label ?? "";
+          // prefill the label so re-launching keeps the same wording
+          const labelInput = document.getElementById("aap_updateLabel") as HTMLInputElement | null;
+          if (labelInput && !labelInput.value) labelInput.value = liveLabel;
+          renderUpdateStatus();
+        })
+        .catch(() => {
+          const el = document.getElementById("aap_updateStatus");
+          if (el) el.innerHTML = `<span style="color:#ff8888;">⚠ Couldn't reach the server.</span>`;
+        });
+    };
+
+    refreshUpdateStatus();
+    // ticks the displayed countdown; cleared in destroy() below
+    updateStatusTimer = window.setInterval(renderUpdateStatus, 1000);
+
     $("aap_updateLaunch").onclick = () => {
       const raw = ($("aap_updateDuration") as HTMLInputElement).value.trim();
       const label = ($("aap_updateLabel") as HTMLInputElement).value.trim();
@@ -392,6 +483,7 @@ export class AdminAbusePanel {
       }).then(r => {
         if (!r.ok) throw new Error();
         fb("aap_updateFb", "✓ Countdown launched for all players!");
+        liveTargetAt = targetAt; liveLabel = label; renderUpdateStatus();
       }).catch(() => fb("aap_updateFb", "❌ Failed to launch.", false));
     };
     $("aap_updateClear").onclick = () => {
@@ -401,8 +493,99 @@ export class AdminAbusePanel {
       }).then(r => {
         if (!r.ok) throw new Error();
         fb("aap_updateFb", "✓ Countdown cleared.");
+        liveTargetAt = 0; liveLabel = ""; renderUpdateStatus();
       }).catch(() => fb("aap_updateFb", "❌ Failed to clear.", false));
     };
+
+    // ── Rate community levels ────────────────────────────────────────────────
+    const loadLevels = (): void => {
+      const list = document.getElementById("aap_lvlList");
+      if (!list) return;
+      fetchAllLevelsForAdmin().then(levels => {
+        if (!levels.length) {
+          list.innerHTML = `<div style="color:rgba(255,255,255,0.35);font-size:12px;">
+            No levels published yet.</div>`;
+          return;
+        }
+        list.innerHTML = levels.map(lvl => {
+          const d = difficultyOf(lvl);
+          return `
+            <div style="background:rgba(0,0,0,0.3);border:1px solid ${lvl.hidden
+                ? "rgba(255,80,80,0.4)"
+                : lvl.featured ? "rgba(255,215,0,0.45)" : "rgba(255,255,255,0.12)"};
+              border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:7px;">
+              <div style="display:flex;align-items:center;gap:9px;">
+                <span style="font-size:22px;">${lvl.emoji}</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="color:white;font-size:13px;font-weight:bold;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis;">
+                    ${escHtml(lvl.name)}${lvl.hidden ? " 🚫" : ""}${lvl.featured ? " ⭐" : ""}
+                  </div>
+                  <div style="color:rgba(255,255,255,0.4);font-size:11px;">
+                    by ${escHtml(lvl.author_name)} · ▶ ${lvl.plays} ·
+                    ${d ? `<span style="color:${d.color};">${d.emoji} ${d.name}</span>` : "Unrated"}
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                ${DIFFICULTIES.map((diff, i) => `
+                  <button class="aapRate" data-id="${lvl.id}" data-d="${i}"
+                    style="background:${lvl.difficulty === i ? diff.color + "33" : "rgba(255,255,255,0.05)"};
+                    color:${lvl.difficulty === i ? diff.color : "rgba(255,255,255,0.6)"};
+                    border:1px solid ${lvl.difficulty === i ? diff.color + "99" : "rgba(255,255,255,0.12)"};
+                    border-radius:7px;font-size:10px;padding:4px 7px;cursor:pointer;white-space:nowrap;">
+                    ${diff.emoji} ${diff.name}</button>`).join("")}
+              </div>
+              <div style="display:flex;gap:5px;">
+                <button class="aapFeat" data-id="${lvl.id}" data-v="${lvl.featured ? 0 : 1}"
+                  style="flex:1;background:rgba(255,215,0,0.15);color:#FFD700;font-size:11px;
+                  border:1px solid rgba(255,215,0,0.35);border-radius:7px;padding:5px;cursor:pointer;">
+                  ${lvl.featured ? "★ Unfeature" : "☆ Feature"}</button>
+                <button class="aapHide" data-id="${lvl.id}" data-v="${lvl.hidden ? 0 : 1}"
+                  style="flex:1;background:rgba(255,160,0,0.15);color:#ffbb55;font-size:11px;
+                  border:1px solid rgba(255,160,0,0.35);border-radius:7px;padding:5px;cursor:pointer;">
+                  ${lvl.hidden ? "Unhide" : "Hide"}</button>
+                <button class="aapUnrate" data-id="${lvl.id}"
+                  style="background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.6);font-size:11px;
+                  border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:5px 8px;
+                  cursor:pointer;">Unrate</button>
+                <button class="aapLvlDel" data-id="${lvl.id}"
+                  style="background:rgba(255,80,80,0.15);color:#ff8888;font-size:11px;
+                  border:1px solid rgba(255,80,80,0.35);border-radius:7px;padding:5px 8px;
+                  cursor:pointer;">Delete</button>
+              </div>
+            </div>`;
+        }).join("");
+
+        const after = (ok: boolean, msg: string) => {
+          fb("aap_lvlFb", ok ? `✓ ${msg}` : "❌ Failed.", ok);
+          if (ok) loadLevels();
+        };
+        list.querySelectorAll<HTMLButtonElement>(".aapRate").forEach(b => {
+          b.onclick = () => rateLevel(b.dataset.id!, +b.dataset.d!)
+            .then(ok => after(ok, `Rated ${DIFFICULTIES[+b.dataset.d!].name}.`));
+        });
+        list.querySelectorAll<HTMLButtonElement>(".aapUnrate").forEach(b => {
+          b.onclick = () => rateLevel(b.dataset.id!, null).then(ok => after(ok, "Rating cleared."));
+        });
+        list.querySelectorAll<HTMLButtonElement>(".aapFeat").forEach(b => {
+          b.onclick = () => setFeatured(b.dataset.id!, b.dataset.v === "1")
+            .then(ok => after(ok, b.dataset.v === "1" ? "Featured." : "Unfeatured."));
+        });
+        list.querySelectorAll<HTMLButtonElement>(".aapHide").forEach(b => {
+          b.onclick = () => setHidden(b.dataset.id!, b.dataset.v === "1")
+            .then(ok => after(ok, b.dataset.v === "1" ? "Hidden from players." : "Visible again."));
+        });
+        list.querySelectorAll<HTMLButtonElement>(".aapLvlDel").forEach(b => {
+          b.onclick = () => {
+            if (!confirm("Delete this level for everyone? This cannot be undone.")) return;
+            deleteLevel(b.dataset.id!).then(ok => after(ok, "Deleted."));
+          };
+        });
+      });
+    };
+    loadLevels();
+    $("aap_lvlRefresh").onclick = () => loadLevels();
 
     // Global message
     $("aap_chatSend").onclick = () => {
@@ -613,7 +796,12 @@ export class AdminAbusePanel {
 
     // Cleanup chat interval on close
     const origDestroy = this.destroy.bind(this);
-    this.destroy = () => { clearInterval(chatInterval); clearInterval(ideasInterval); origDestroy(); };
+    this.destroy = () => {
+      clearInterval(chatInterval);
+      clearInterval(ideasInterval);
+      clearInterval(updateStatusTimer);
+      origDestroy();
+    };
 
     // Coin Jump editor — launches Coin Jump then immediately opens the editor overlay
     $("aap_cjEditor").onclick = () => {

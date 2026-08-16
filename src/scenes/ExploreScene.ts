@@ -5,51 +5,11 @@
  */
 import type { Game } from "../game/Game";
 import { colorForNumber, positionToNumber } from "../game/clockData";
-import { LEVELS, type LevelTheme } from "../game/levelData";
-
-interface RoomObj {
-  id: string;
-  emoji: string;
-  vw: number;
-  surface: "floor" | "shelf1" | "shelf2" | "wall";
-  size: number;
-  slot: number | null;
-  msg?: string;
-}
+import { LEVELS, defaultObjects, type LevelTheme, type RoomObj } from "../game/levelData";
 
 function getObjects(theme: LevelTheme): RoomObj[] {
-  const p = theme.puzzleEmojis; // index = slot number
-  const d = theme.dummyEmojis;  // order: 0=lamp 1=window 2=boom 3=sofa 4=aclock 5=cat 6=cookie 7=plant
-  return [
-    // ── LEFT SECTION (0–100vw) ─────────────────────────────────────────────
-    { id: "mystbox",   emoji: p[1],  vw:  6,  surface: "floor",  size: 58, slot: 1  },
-    { id: "gamectrl",  emoji: p[0],  vw: 22,  surface: "floor",  size: 52, slot: 0  },
-    { id: "teddy",     emoji: p[2],  vw: 40,  surface: "floor",  size: 56, slot: 2  },
-    { id: "guitar",    emoji: p[9],  vw: 65,  surface: "wall",   size: 54, slot: 9  },
-    { id: "puzzlepc",  emoji: p[8],  vw: 88,  surface: "floor",  size: 28, slot: 8  },
-    // Dummies
-    { id: "lamp",      emoji: d[0],  vw:  2,  surface: "shelf1", size: 38, slot: null, msg: `${d[0]} Nothing here...` },
-    { id: "window",    emoji: d[1],  vw: 14,  surface: "wall",   size: 56, slot: null, msg: `${d[1]} Dark outside... very dark. 🌙` },
-    { id: "boom",      emoji: d[2],  vw: 78,  surface: "wall",   size: 36, slot: null, msg: `${d[2]} No puzzle here.` },
-
-    // ── MIDDLE SECTION (100–200vw) ────────────────────────────────────────
-    { id: "dice",      emoji: p[3],  vw: 118, surface: "floor",  size: 46, slot: 3  },
-    { id: "crystball", emoji: p[4],  vw: 142, surface: "floor",  size: 50, slot: 4  },
-    { id: "painting",  emoji: p[11], vw: 164, surface: "wall",   size: 50, slot: 11 },
-    { id: "dartboard", emoji: p[7],  vw: 188, surface: "wall",   size: 52, slot: 7  },
-    // Dummies
-    { id: "sofa",      emoji: d[3],  vw: 108, surface: "floor",  size: 78, slot: null, msg: `${d[3]} Just a decoration!` },
-    { id: "aclock",    emoji: d[4],  vw: 153, surface: "shelf1", size: 38, slot: null, msg: `${d[4]} Not THIS clock... the big one! 😅` },
-    { id: "cat",       emoji: d[5],  vw: 175, surface: "floor",  size: 44, slot: null, msg: `${d[5]} I'm not a puzzle!` },
-    { id: "cookie",    emoji: d[6],  vw: 196, surface: "floor",  size: 38, slot: null, msg: `${d[6]} No puzzle here!` },
-
-    // ── RIGHT SECTION (200–300vw) ─────────────────────────────────────────
-    { id: "book",      emoji: p[5],  vw: 212, surface: "shelf1", size: 40, slot: 5  },
-    { id: "trophy",    emoji: p[6],  vw: 228, surface: "shelf1", size: 44, slot: 6  },
-    { id: "key",       emoji: p[10], vw: 286, surface: "floor",  size: 24, slot: 10 },
-    // Dummies
-    { id: "plant",     emoji: d[7],  vw: 260, surface: "floor",  size: 48, slot: null, msg: `${d[7]} Just decoration.` },
-  ];
+  // a player-built level carries its own placement; built-ins use the stock layout
+  return theme.objects?.length ? theme.objects : defaultObjects(theme);
 }
 
 function makeCharacter(
@@ -212,7 +172,8 @@ export class ExploreScene {
     const solved = placed.size;
     const target = game.state.difficulty;
     const isSpooky = solved >= Math.ceil(target * 0.66);
-    const theme = LEVELS[(game.state.currentLevel || 1) - 1];
+    // a community level, when one is loaded, replaces the built-in theme wholesale
+    const theme = game.customTheme ?? LEVELS[(game.state.currentLevel || 1) - 1];
 
     const _hackBtnStyle = (color: string) =>
       `background:rgba(0,0,0,0.6);color:${color};font-size:13px;font-weight:bold;` +

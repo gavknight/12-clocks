@@ -2,7 +2,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import type { MultiplayerManager } from "../multiplayer/MultiplayerManager";
 import { upsertRecord, fetchRecords, upsertCoinRecord, fetchCoinLeaderboard, type CoinRecord, upsertDiamondRecord, fetchDiamondLeaderboard, type DiamondRecord } from "./cloudRecords";
 import { pingMember, setBanStatus } from "./members";
-import { unlockCost, LEVEL_COUNT } from "./levelData";
+import { unlockCost, LEVEL_COUNT, type LevelTheme } from "./levelData";
 import { IS_BEDROCK } from "../bedrock";
 
 export const MAX_COINS = Infinity;
@@ -96,6 +96,9 @@ export class Game {
   private _acIndicator: HTMLDivElement | null = null;
   private _acHidden   = false;
   readonly ui: HTMLElement;
+  /** Set while playing a community-built level; overrides the built-in LevelTheme. */
+  customTheme: LevelTheme | null = null;
+  customLevelName = "";
   _disposeScene: (() => void) | null = null;
   mp: MultiplayerManager | null = null;
   private _runStart = 0;
@@ -266,11 +269,14 @@ export class Game {
     if (!this._updateAlertPill) {
       this._updateAlertPill = document.createElement("div");
       this._updateAlertPill.style.cssText =
-        "position:fixed;top:14px;left:14px;z-index:99992;" +
+        // centred at the top so players actually notice it; the auto-clicker
+        // indicator sits below it (see _updateACIndicator) so they never collide
+        "position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99992;" +
         "background:rgba(0,0,0,0.82);border:1px solid rgba(255,215,0,0.4);" +
-        "border-radius:22px;padding:7px 15px;display:flex;align-items:center;gap:7px;" +
-        "color:#FFD700;font-size:13px;font-weight:bold;font-family:Arial,sans-serif;" +
-        "backdrop-filter:blur(6px);user-select:none;pointer-events:none;";
+        "border-radius:22px;padding:8px 18px;display:flex;align-items:center;gap:7px;" +
+        "color:#FFD700;font-size:14px;font-weight:bold;font-family:Arial,sans-serif;" +
+        "backdrop-filter:blur(6px);user-select:none;pointer-events:none;white-space:nowrap;" +
+        "box-shadow:0 2px 14px rgba(255,215,0,0.25);";
       document.body.appendChild(this._updateAlertPill);
     }
     this._updateAlertPill.style.display = "flex";
@@ -965,6 +971,32 @@ export class ${className} {
     for (const petId of this.state.pets) this.startPetTimer(petId);
   }
 
+  /** Stop one pet's earning timer — used when it leaves the player's inventory. */
+  stopPetTimer(petId: string): void {
+    const id = this._petTimers.get(petId);
+    if (id !== undefined) { clearInterval(id); this._petTimers.delete(petId); }
+  }
+
+  /** Hand a pet over to the market: it stops earning and leaves the inventory. */
+  removePet(petId: string): void {
+    this.stopPetTimer(petId);
+    this.state.pets = this.state.pets.filter(p => p !== petId);
+    this.save();
+  }
+
+  /** Take ownership of a pet bought from another player. */
+  addPet(petId: string): void {
+    if (!this.state.pets.includes(petId)) this.state.pets.push(petId);
+    this.startPetTimer(petId);
+    this.save();
+  }
+
+  /** Stop every running pet timer (used when switching or wiping accounts). */
+  stopAllPetTimers(): void {
+    for (const id of this._petTimers.values()) clearInterval(id);
+    this._petTimers.clear();
+  }
+
   private _showPetToast(def: PetDef): void {
     const toast = document.createElement("div");
     toast.textContent = `${def.emoji} ${def.name} solved a puzzle! +🪙 ${def.reward.toLocaleString()}`;
@@ -1040,7 +1072,7 @@ export class ${className} {
     if (!this._acIndicator) {
       this._acIndicator = document.createElement("div");
       this._acIndicator.style.cssText = `
-        position:fixed;top:8px;left:50%;transform:translateX(-50%);
+        position:fixed;top:52px;left:50%;transform:translateX(-50%);
         font-size:12px;font-weight:bold;font-family:Arial,sans-serif;
         padding:3px 12px;border-radius:20px;z-index:99999;pointer-events:none;
         transition:opacity 0.3s;
@@ -1219,17 +1251,8 @@ export class ${className} {
 
   logout(): void {
     localStorage.removeItem(SESSION_KEY);
-    this.state.unlockedLocks.clear();
-    this.state.inventory.length = 0;
+    this._resetAccountState();
     this.state.username = "";
-    this.state.difficulty = 12;
-    this.state.coins = 0;
-    this.state.currentLevel = 1;
-    this.state.wins = 0;
-    this.state.diamonds = 0;
-    this.state.hasAdminLite = false;
-    this._unlockedLevels = new Set([1]);
-    this._levelSaves = {};
   }
 
   changeUsername(newName: string): void {
@@ -1246,6 +1269,30 @@ export class ${className} {
   }
 
   // ── Save / Load ────────────────────────────────────────────────────────────
+
+  /**
+   * Wipe every per-account field back to defaults and tear down anything the
+   * previous account left running. Must cover the whole of SaveData — a field
+   * missed here leaks across accounts, because a save with no stored value for
+   * it keeps the old one and save() then writes it back under the new account.
+   */
+  private _resetAccountState(): void {
+    this.stopAllPetTimers();
+    if (this._acActive) this._stopAutoClicker(); // guarded: _updateACIndicator() builds the indicator on first call
+    this.state.unlockedLocks.clear();
+    this.state.inventory.length = 0;
+    this.state.difficulty   = 12;
+    this.state.coins        = 0;
+    this.state.currentLevel = 1;
+    this.state.pets         = [];
+    this.state.autoClicker  = false;
+    this.state.wins         = 0;
+    this.state.diamonds     = 0;
+    this.state.hasAdminLite = false;
+    this._unlockedLevels = new Set([1]);
+    this._levelSaves = {};
+  }
+
   private _saveKey(): string {
     const id = this.currentAccountId;
     return id ? `${SAVE_KEY}_${id}` : SAVE_KEY;
@@ -1412,15 +1459,7 @@ export class ${className} {
   }
 
   private _loadForAccount(id: string): void {
-    this.state.unlockedLocks.clear();
-    this.state.inventory.length = 0;
-    this.state.difficulty = 12;
-    this.state.coins = 0;
-    this.state.currentLevel = 1;
-    this.state.diamonds = 0;
-    this.state.hasAdminLite = false;
-    this._unlockedLevels = new Set([1]);
-    this._levelSaves = {};
+    this._resetAccountState();
     try {
       const raw = localStorage.getItem(`${SAVE_KEY}_${id}`);
       if (!raw) return;
@@ -1453,9 +1492,12 @@ export class ${className} {
         lvSave.locks.forEach(n => this.state.unlockedLocks.add(n));
         this.state.inventory.push(...lvSave.inv);
       }
-    } catch { /* ignore */ }
-    this.startAllPetTimers();
-    if (this.state.autoClicker) this.setupAutoClicker();
+    } catch { /* ignore */ } finally {
+      // in a finally so the early returns above (no save yet / legacy format)
+      // still (re)arm the pet timers and auto-clicker for this account
+      this.startAllPetTimers();
+      if (this.state.autoClicker) this.setupAutoClicker();
+    }
   }
 
   /** Resets only the current level's puzzle progress (keeps coins + unlocked levels) */
@@ -1470,15 +1512,7 @@ export class ${className} {
   /** Full wipe — used by admin panel */
   resetAllSaves(): void {
     localStorage.removeItem(this._saveKey());
-    this.state.unlockedLocks.clear();
-    this.state.inventory.length = 0;
-    this.state.difficulty = 12;
-    this.state.coins = 0;
-    this.state.currentLevel = 1;
-    this.state.diamonds = 0;
-    this.state.hasAdminLite = false;
-    this._unlockedLevels = new Set([1]);
-    this._levelSaves = {};
+    this._resetAccountState();
   }
 
   // ── Ban system ────────────────────────────────────────────────────────────
@@ -1617,6 +1651,8 @@ export class ${className} {
 
   /** Enter a level: set currentLevel + difficulty, load saved progress, go to intro */
   goLevel(levelNum: number, difficulty: number): void {
+    this.customTheme = null; // leaving any community level behind
+    this.customLevelName = "";
     this.state.currentLevel = levelNum;
     this.state.difficulty   = difficulty;
     // Load this level's saved progress (or start fresh)
@@ -1643,6 +1679,19 @@ export class ${className} {
   goCoinLeaderboard():  void { this._nav(() => import("../scenes/CoinLeaderboardScene").then(m => new m.CoinLeaderboardScene(this))); }
   goDiamondLeaderboard(): void { this._nav(() => import("../scenes/DiamondLeaderboardScene").then(m => new m.DiamondLeaderboardScene(this))); }
   goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this))); }
+  goLevelBuilder():     void { this._nav(() => import("../scenes/LevelBuilder").then(m => new m.LevelBuilder(this))); }
+  goTradingPlaza():     void { this._nav(() => import("../scenes/TradingPlaza").then(m => new m.TradingPlaza(this))); }
+  goCommunityLevels():  void { this._nav(() => import("../scenes/CommunityLevels").then(m => new m.CommunityLevels(this))); }
+
+  /** Play a player-built level: its theme replaces the built-in one for this run. */
+  playCommunityLevel(theme: LevelTheme, name: string): void {
+    this.customTheme = theme;
+    this.customLevelName = name;
+    this.state.difficulty = 12;
+    this.state.unlockedLocks.clear();
+    this.state.inventory.length = 0;
+    this.goExplore();
+  }
   goIntro():       void {
     this.startTimer();
     this._nav(() => import("../scenes/IntroCutscene").then(m => new m.IntroCutscene(this)));

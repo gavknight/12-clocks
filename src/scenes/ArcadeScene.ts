@@ -756,6 +756,48 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Trading Plaza -->
+          <button id="tradingPlazaBtn" style="
+            background:linear-gradient(135deg,rgba(8,40,26,0.9),rgba(40,160,100,0.7));
+            border:2px solid rgba(80,220,140,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🏪</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Trading Plaza</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Buy &amp; sell pets with other players</div>
+              <div style="color:#7dffb0;font-size:12px;margin-top:4px;">Online • Pay with 🪙 coins, 💎 gems, or both</div>
+            </div>
+          </button>
+
+          <!-- Community Levels -->
+          <button id="communityLvlBtn" style="
+            background:linear-gradient(135deg,rgba(40,10,80,0.9),rgba(120,60,220,0.7));
+            border:2px solid rgba(160,100,255,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🌍</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Community Levels</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Play rooms built by other players</div>
+              <div style="color:#c9a6ff;font-size:12px;margin-top:4px;">Online • Rated Easy → Extreme Demon</div>
+            </div>
+          </button>
+
+          <!-- Level Builder -->
+          <button id="levelBuilderBtn" style="
+            background:linear-gradient(135deg,rgba(30,10,60,0.9),rgba(90,40,180,0.7));
+            border:2px solid rgba(160,100,255,0.45);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🛠️</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Level Builder</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Build any room you want and publish it</div>
+              <div style="color:#c9a6ff;font-size:12px;margin-top:4px;">Colours • 12 objects • 8 decoys</div>
+            </div>
+          </button>
+
           <!-- Custom games (injected by Studio) -->
           <div id="customGamesSection" style="display:none;flex-direction:column;gap:12px;width:100%;margin-top:8px;">
             <div style="color:rgba(255,255,255,0.3);font-size:12px;letter-spacing:2px;padding:0 4px;">YOUR GAMES</div>
@@ -797,6 +839,9 @@ export class ArcadeScene {
 
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
     document.getElementById("diamondLbBtn")!.onclick = () => game.goDiamondLeaderboard();
+    document.getElementById("tradingPlazaBtn")!.onclick = () => game.goTradingPlaza();
+    document.getElementById("communityLvlBtn")!.onclick = () => game.goCommunityLevels();
+    document.getElementById("levelBuilderBtn")!.onclick = () => game.goLevelBuilder();
     document.getElementById("banbanBtn")!.onclick  = () => {
       _tut();
       import("./games/GardenBanban").then(m => {
@@ -1039,8 +1084,10 @@ export class ArcadeScene {
     import("./games/Studio").then(m => {
       const raw = localStorage.getItem("12clocks_custom_games");
       if (!raw) return;
-      const games: Array<{ id: string; name: string; bg: string; objects: unknown[]; win: unknown; createdAt: number }> = JSON.parse(raw);
-      if (!games.length) return;
+      let games: Array<{ id: string; name: string; bg: string; objects: unknown[]; win: unknown; createdAt: number }>;
+      // a corrupt key here used to reject the import and kill the rest of this callback
+      try { games = JSON.parse(raw); } catch { return; }
+      if (!Array.isArray(games) || !games.length) return;
 
       const container = document.getElementById("customGamesSection");
       if (!container) return;

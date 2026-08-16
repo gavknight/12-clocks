@@ -328,6 +328,15 @@ const NEWS = [
   "Farm yields record harvest; cows also inexplicably made of cookies",
 ];
 
+/** Read + parse a localStorage key, falling back if it is missing or corrupt.
+ *  Without this a single bad key throws in the constructor and the game can
+ *  never be opened again — there is no in-game way to clear it. */
+function lsJSON<T>(key: string, fallback: T): T {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return fallback;
+  try { return JSON.parse(raw) as T; } catch { return fallback; }
+}
+
 function buildingCost(b: Building, owned: number): number {
   return Math.ceil(b.baseCost * Math.pow(1.15, owned));
 }
@@ -480,23 +489,23 @@ export class CookieClicker {
     for (const b of BUILDINGS) this._counts.set(b.id, 0);
 
     // Load persisted data
-    this._achievements       = new Set(JSON.parse(localStorage.getItem("cc_achievements")        ?? "[]"));
+    this._achievements       = new Set(lsJSON<string[]>("cc_achievements", []));
     this._prestigeChips      = parseFloat(localStorage.getItem("cc_prestige_chips")              ?? "0");
     this._heavenlyChipsSpent = parseFloat(localStorage.getItem("cc_heavenly_chips_spent")        ?? "0");
-    this._heavenlyUpgrades   = new Set(JSON.parse(localStorage.getItem("cc_heavenly_upgrades")   ?? "[]"));
+    this._heavenlyUpgrades   = new Set(lsJSON<string[]>("cc_heavenly_upgrades", []));
     this._allTimeBaked        = parseFloat(localStorage.getItem("cc_all_time_baked")              ?? "0");
     this._ascensions          = parseInt(localStorage.getItem("cc_ascensions")                    ?? "0", 10);
     this._bakeryName          = localStorage.getItem("cc_bakery_name") ?? "Your Bakery";
     this._sugarLumps          = parseInt(localStorage.getItem("cc_sugar_lumps") ?? "0", 10);
     this._lumpProgress        = parseFloat(localStorage.getItem("cc_lump_progress") ?? "0");
-    const lvls = JSON.parse(localStorage.getItem("cc_bldg_levels") ?? "{}") as Record<string,number>;
+    const lvls = lsJSON<Record<string,number>>("cc_bldg_levels", {});
     for (const b of BUILDINGS) this._bldgLevels.set(b.id, lvls[b.id] ?? 0);
 
-    const savedGP = JSON.parse(localStorage.getItem("cc_garden_plots") ?? "null") as {state:"empty"|"growing"|"ready";progress:number}[]|null;
+    const savedGP = lsJSON<{state:"empty"|"growing"|"ready";progress:number}[]|null>("cc_garden_plots", null);
     if (Array.isArray(savedGP) && savedGP.length === 9) this._gardenPlots = savedGP;
-    const savedPrices = JSON.parse(localStorage.getItem("cc_stock_prices")  ?? "{}") as Record<string,number>;
-    const savedOwned  = JSON.parse(localStorage.getItem("cc_stock_owned")   ?? "{}") as Record<string,number>;
-    const savedAvg    = JSON.parse(localStorage.getItem("cc_stock_avg_buy") ?? "{}") as Record<string,number>;
+    const savedPrices = lsJSON<Record<string,number>>("cc_stock_prices",  {});
+    const savedOwned  = lsJSON<Record<string,number>>("cc_stock_owned",   {});
+    const savedAvg    = lsJSON<Record<string,number>>("cc_stock_avg_buy", {});
     for (const s of STOCKS) {
       this._stockPrices.set(s.id, savedPrices[s.id] ?? s.basePrice);
       this._stockOwned.set(s.id,  savedOwned[s.id]  ?? 0);
@@ -504,7 +513,7 @@ export class CookieClicker {
       this._stockHistory.set(s.id, [this._stockPrices.get(s.id)!]);
     }
 
-    const savedSC = JSON.parse(localStorage.getItem("cc_space_counts") ?? "{}") as Record<string,number>;
+    const savedSC = lsJSON<Record<string,number>>("cc_space_counts", {});
     for (const sb of SPACE_BUILDINGS) this._spaceCounts.set(sb.id, savedSC[sb.id] ?? 0);
 
     // Apply permanent heavenly bonuses for this run

@@ -1,3 +1,15 @@
+/** One placed object in the room. vw is the horizontal position across the
+ *  3-screen-wide room (0–300). slot 0–11 = a puzzle object, null = a decoy. */
+export interface RoomObj {
+  id:      string;
+  emoji:   string;
+  vw:      number;
+  surface: "floor" | "shelf1" | "shelf2" | "wall";
+  size:    number;
+  slot:    number | null;
+  msg?:    string;
+}
+
 export interface LevelTheme {
   name:     string;
   emoji:    string;
@@ -15,6 +27,41 @@ export interface LevelTheme {
   // Per-level objects: 12 puzzle emojis (index = slot 0-11), 8 dummy emojis
   puzzleEmojis: string[];
   dummyEmojis:  string[];
+  /** Player-authored placement. When absent the built-in layout is used. */
+  objects?: RoomObj[];
+}
+
+/** The stock room layout — where objects sit when a level doesn't author its own. */
+export function defaultObjects(theme: LevelTheme): RoomObj[] {
+  const p = theme.puzzleEmojis; // index = slot number
+  const d = theme.dummyEmojis;  // 0=lamp 1=window 2=boom 3=sofa 4=aclock 5=cat 6=cookie 7=plant
+  return [
+    // ── LEFT SECTION (0–100vw) ─────────────────────────────────────────────
+    { id: "mystbox",   emoji: p[1],  vw:  6,  surface: "floor",  size: 58, slot: 1  },
+    { id: "gamectrl",  emoji: p[0],  vw: 22,  surface: "floor",  size: 52, slot: 0  },
+    { id: "teddy",     emoji: p[2],  vw: 40,  surface: "floor",  size: 56, slot: 2  },
+    { id: "guitar",    emoji: p[9],  vw: 65,  surface: "wall",   size: 54, slot: 9  },
+    { id: "puzzlepc",  emoji: p[8],  vw: 88,  surface: "floor",  size: 28, slot: 8  },
+    { id: "lamp",      emoji: d[0],  vw:  2,  surface: "shelf1", size: 38, slot: null, msg: `${d[0]} Nothing here...` },
+    { id: "window",    emoji: d[1],  vw: 14,  surface: "wall",   size: 56, slot: null, msg: `${d[1]} Dark outside... very dark. 🌙` },
+    { id: "boom",      emoji: d[2],  vw: 78,  surface: "wall",   size: 36, slot: null, msg: `${d[2]} No puzzle here.` },
+
+    // ── MIDDLE SECTION (100–200vw) ────────────────────────────────────────
+    { id: "dice",      emoji: p[3],  vw: 118, surface: "floor",  size: 46, slot: 3  },
+    { id: "crystball", emoji: p[4],  vw: 142, surface: "floor",  size: 50, slot: 4  },
+    { id: "painting",  emoji: p[11], vw: 164, surface: "wall",   size: 50, slot: 11 },
+    { id: "dartboard", emoji: p[7],  vw: 188, surface: "wall",   size: 52, slot: 7  },
+    { id: "sofa",      emoji: d[3],  vw: 108, surface: "floor",  size: 78, slot: null, msg: `${d[3]} Just a decoration!` },
+    { id: "aclock",    emoji: d[4],  vw: 153, surface: "shelf1", size: 38, slot: null, msg: `${d[4]} Not THIS clock... the big one! 😅` },
+    { id: "cat",       emoji: d[5],  vw: 175, surface: "floor",  size: 44, slot: null, msg: `${d[5]} I'm not a puzzle!` },
+    { id: "cookie",    emoji: d[6],  vw: 196, surface: "floor",  size: 38, slot: null, msg: `${d[6]} No puzzle here!` },
+
+    // ── RIGHT SECTION (200–300vw) ─────────────────────────────────────────
+    { id: "book",      emoji: p[5],  vw: 212, surface: "shelf1", size: 40, slot: 5  },
+    { id: "trophy",    emoji: p[6],  vw: 228, surface: "shelf1", size: 44, slot: 6  },
+    { id: "key",       emoji: p[10], vw: 286, surface: "floor",  size: 24, slot: 10 },
+    { id: "plant",     emoji: d[7],  vw: 260, surface: "floor",  size: 48, slot: null, msg: `${d[7]} Just decoration.` },
+  ];
 }
 
 export const LEVELS: LevelTheme[] = [
