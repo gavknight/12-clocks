@@ -1686,11 +1686,43 @@ export class ${className} {
   /** Announce anything newly earned. Safe to call often — each badge fires once. */
   checkBadges(): void {
     import("./badges").then(({ takeNewlyEarned }) => {
-      for (const b of takeNewlyEarned(this)) this._showBadgeToast(b.emoji, b.name);
+      // stagger, so two badges at once don't overlap into one unreadable toast
+      // and one blurred chime — they land as a satisfying run instead
+      takeNewlyEarned(this).forEach((b, i) => {
+        setTimeout(() => this._showBadgeToast(b.emoji, b.name), i * 1300);
+      });
     }).catch(() => {});
   }
 
+  /** Rising four-note chime. Synthesised so there's no asset to load or cache. */
+  private _playBadgeSound(): void {
+    try {
+      const ctx = new AudioContext();
+      // C6 E6 G6 C7 — a major arpeggio, reads as "achievement" rather than "alert"
+      const notes = [1047, 1319, 1568, 2093];
+      notes.forEach((freq, i) => {
+        const t0   = ctx.currentTime + i * 0.09;
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "triangle"; // softer than the square wave party music uses
+        osc.frequency.value = freq;
+        // last note rings out longer so the run resolves instead of stopping dead
+        const dur = i === notes.length - 1 ? 0.75 : 0.3;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.13, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.02);
+      });
+      // free the hardware context once the tail has finished
+      setTimeout(() => ctx.close().catch(() => {}), 1400);
+    } catch { /* audio blocked or unavailable — the toast still shows */ }
+  }
+
   private _showBadgeToast(emoji: string, name: string): void {
+    this._playBadgeSound();
     const t = document.createElement("div");
     t.style.cssText =
       "position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:99993;" +
