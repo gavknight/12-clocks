@@ -766,7 +766,7 @@ export class ArcadeScene {
             <div>
               <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Trading Plaza</div>
               <div style="color:rgba(255,255,255,0.6);font-size:13px;">Buy &amp; sell pets with other players</div>
-              <div style="color:#7dffb0;font-size:12px;margin-top:4px;">Online • Pay with 🪙 coins, 💎 gems, or both</div>
+              <div style="color:#7dffb0;font-size:12px;margin-top:4px;">Online • Pay with 🪙 coins, 💎 diamonds, or both</div>
             </div>
           </button>
 

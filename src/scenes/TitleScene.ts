@@ -208,7 +208,7 @@ export class TitleScene {
             <div id="statCoins" style="color:#FFD700;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.coins)}</div>
           </div>
           <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,220,255,0.35);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
-            <div style="color:rgba(100,220,255,0.7);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">💎 Gems</div>
+            <div style="color:rgba(100,220,255,0.7);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">💎 Diamonds</div>
             <div id="statDiamonds" style="color:#66ddff;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.diamonds)}</div>
           </div>
           <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,200,255,0.25);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">

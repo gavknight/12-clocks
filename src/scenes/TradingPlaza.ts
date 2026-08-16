@@ -94,7 +94,7 @@ export class TradingPlaza {
       const blocked    = owned || !affordable;
       const why = owned ? "Already owned"
                 : !canCoins ? "Not enough coins"
-                : !canGems  ? "Not enough gems"
+                : !canGems  ? "Not enough diamonds"
                 : "Buy";
       return `
         <div style="background:rgba(0,0,0,0.34);border:1px solid rgba(255,255,255,0.12);
@@ -146,12 +146,12 @@ export class TradingPlaza {
               <input id="tpCoins" type="number" min="0" value="0" style="${inp}" />
             </div>
             <div style="flex:1;">
-              <div style="color:#66ddff;font-size:11px;margin-bottom:3px;">💎 Gem price</div>
+              <div style="color:#66ddff;font-size:11px;margin-bottom:3px;">💎 Diamond price</div>
               <input id="tpGems" type="number" min="0" value="0" style="${inp}" />
             </div>
           </div>
           <div style="color:rgba(255,255,255,0.35);font-size:11px;">
-            Set one, or both — a buyer pays everything you ask for.
+            Set a coin price, a diamond price, or both — a buyer pays everything you ask.
           </div>
           <button id="tpList" style="background:rgba(80,220,140,0.25);color:#7dffb0;font-size:14px;
             font-weight:bold;border:2px solid rgba(80,220,140,0.5);border-radius:10px;
@@ -320,7 +320,7 @@ export class TradingPlaza {
       const petId = (document.getElementById("tpPet")   as HTMLSelectElement).value;
       const coins = Math.max(0, Math.floor(+(document.getElementById("tpCoins") as HTMLInputElement).value || 0));
       const gems  = Math.max(0, Math.floor(+(document.getElementById("tpGems")  as HTMLInputElement).value || 0));
-      if (coins <= 0 && gems <= 0) { this._fb("❌ Set a coin price, a gem price, or both.", false); return; }
+      if (coins <= 0 && gems <= 0) { this._fb("❌ Set a coin price, a diamond price, or both.", false); return; }
       if (!g.state.pets.includes(petId)) { this._fb("❌ You don't own that pet.", false); return; }
       const myId = g.currentAccountId;
       if (!myId) { this._fb("❌ Log in to trade.", false); return; }
