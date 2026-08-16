@@ -756,6 +756,20 @@ export class ArcadeScene {
             </div>
           </button>
 
+          <!-- Trapped In Your Computer -->
+          <button id="trappedBtn" style="
+            background:linear-gradient(135deg,rgba(10,10,20,0.95),rgba(70,10,10,0.8));
+            border:2px solid rgba(255,60,60,0.6);border-radius:20px;
+            padding:20px 24px;cursor:pointer;text-align:left;
+            display:flex;align-items:center;gap:16px;">
+            <div style="font-size:40px;flex-shrink:0;">🖥️</div>
+            <div>
+              <div style="color:white;font-size:18px;font-weight:bold;margin-bottom:4px;">Trapped In Your Computer</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;">Close 4 horror programs to escape</div>
+              <div style="color:#ff8888;font-size:12px;margin-top:4px;">🎤 Mic required • Scream and you're out • Earn 💎</div>
+            </div>
+          </button>
+
           <!-- Trading Plaza -->
           <button id="tradingPlazaBtn" style="
             background:linear-gradient(135deg,rgba(8,40,26,0.9),rgba(40,160,100,0.7));
@@ -839,6 +853,9 @@ export class ArcadeScene {
 
     document.getElementById("coinLbBtn")!.onclick  = () => game.goCoinLeaderboard();
     document.getElementById("diamondLbBtn")!.onclick = () => game.goDiamondLeaderboard();
+    document.getElementById("trappedBtn")!.onclick = () => {
+      import("./games/TrappedInWindows").then(m => new m.TrappedInWindows(game));
+    };
     document.getElementById("tradingPlazaBtn")!.onclick = () => game.goTradingPlaza();
     document.getElementById("communityLvlBtn")!.onclick = () => game.goCommunityLevels();
     document.getElementById("levelBuilderBtn")!.onclick = () => game.goLevelBuilder();
@@ -1033,7 +1050,7 @@ export class ArcadeScene {
         duckLifeBtn:"duckLife", knightsQuestBtn:"knightsQuest",
         youtubeBtn:"youtube", mm2Btn:"mm2",
         tradingPlazaBtn:"tradingPlaza", levelBuilderBtn:"levelBuilder",
-        communityLvlBtn:"communityLevels",
+        communityLvlBtn:"communityLevels", trappedBtn:"trapped",
       };
       for (const [btnId, gameId] of Object.entries(btnMap)) {
         const el = document.getElementById(btnId);

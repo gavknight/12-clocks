@@ -17,7 +17,7 @@ export interface GameState {
   pets: string[]; // owned pet IDs
   autoClicker: boolean; // owned auto clicker
   wins: number;
-  diamonds: number; // admin-gifted only, no in-game way to earn/spend
+  diamonds: number; // admin-gifted, earned in TrappedInWindows, spent in the Trading Plaza
   hasAdminLite: boolean; // bought in Shop with diamonds — grants a reduced admin panel
 }
 
