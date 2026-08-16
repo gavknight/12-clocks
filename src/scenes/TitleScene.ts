@@ -207,6 +207,10 @@ export class TitleScene {
             <div style="color:rgba(255,200,0,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">🪙 Coins</div>
             <div id="statCoins" style="color:#FFD700;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.coins)}</div>
           </div>
+          <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,220,255,0.35);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
+            <div style="color:rgba(100,220,255,0.7);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">💎 Gems</div>
+            <div id="statDiamonds" style="color:#66ddff;font-size:13px;font-weight:900;font-family:'Arial Black',Arial;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_fmt(game.state.diamonds)}</div>
+          </div>
           <div style="background:rgba(0,0,0,0.5);border:1.5px solid rgba(100,200,255,0.25);border-radius:14px;padding:10px 8px;text-align:center;overflow:hidden;">
             <div style="color:rgba(100,200,255,0.6);font-size:9px;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Done</div>
             <div id="statDone" style="color:#7dd3fc;font-size:22px;font-weight:900;font-family:'Arial Black',Arial;">${game.completedLevelCount}</div>
@@ -614,6 +618,19 @@ ${game.hasHacks ? `<button id="adminBtn" style="
     if (hasSave) {
       document.getElementById("contBtn")!.onclick = () => game.goExplore();
     }
+
+    // Keep the currency tiles live — coins from pets and gems from trade sales
+    // both arrive in the background, so a value rendered once goes stale fast.
+    const statTick = window.setInterval(() => {
+      const c = document.getElementById("statCoins");
+      const d = document.getElementById("statDiamonds");
+      const w = document.getElementById("statWins");
+      if (!c && !d && !w) return;
+      if (c) c.textContent = _fmt(game.state.coins);
+      if (d) d.textContent = _fmt(game.state.diamonds);
+      if (w) w.textContent = String(game.state.wins);
+    }, 1000);
+    game._disposeScene = () => { clearInterval(statTick); game.ui.innerHTML = ""; };
     document.getElementById("signOutBtn")!.onclick = () => {
       game.logout();
       game.goAuth();

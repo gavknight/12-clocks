@@ -38,9 +38,19 @@ export class TradingPlaza {
   private _mine: Listing[] = [];
   private _busy = false;
 
+  private _balTick = 0;
+
   constructor(game: Game) {
     this._g = game;
-    game._disposeScene = () => { game.ui.innerHTML = ""; };
+    // money can land mid-browse (a sale paying out, a pet earning), so keep the
+    // header pills live rather than frozen at whatever they were on render
+    this._balTick = window.setInterval(() => {
+      const c = document.getElementById("tpCoinBal");
+      const d = document.getElementById("tpGemBal");
+      if (c) c.textContent = game.state.coins.toLocaleString();
+      if (d) d.textContent = game.state.diamonds.toLocaleString();
+    }, 1000);
+    game._disposeScene = () => { clearInterval(this._balTick); game.ui.innerHTML = ""; };
     this._loading();
     this._reload();
   }
@@ -218,10 +228,10 @@ export class TradingPlaza {
         <div style="display:flex;gap:12px;margin-bottom:14px;">
           <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,215,0,0.3);
             border-radius:20px;padding:6px 14px;color:#FFD700;font-size:13px;font-weight:bold;">
-            🪙 ${g.state.coins.toLocaleString()}</div>
+            🪙 <span id="tpCoinBal">${g.state.coins.toLocaleString()}</span></div>
           <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(100,220,255,0.3);
             border-radius:20px;padding:6px 14px;color:#66ddff;font-size:13px;font-weight:bold;">
-            💎 ${g.state.diamonds.toLocaleString()}</div>
+            💎 <span id="tpGemBal">${g.state.diamonds.toLocaleString()}</span></div>
         </div>
 
         <div style="width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px;">
