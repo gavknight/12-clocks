@@ -1,6 +1,7 @@
 import type { Game } from "../game/Game";
 import { LEVELS, defaultObjects, type LevelTheme, type RoomObj } from "../game/levelData";
 import { newLevelId, publishLevel } from "../game/clockLevels";
+import { bumpStat } from "../game/badges";
 
 // The room is 3 screens wide in-game (0–300vw). The editor squeezes that into a
 // horizontally-scrolling strip, so 1vw of room = PX_PER_VW editor pixels.
@@ -464,6 +465,8 @@ export class LevelBuilder {
         pubBtn.disabled = false;
         pubBtn.textContent = "🌍 Publish Online";
         if (ok) {
+          bumpStat("levelsPublished");
+          g.checkBadges();
           fb("✓ Published! Every player can find it under Community Levels.");
           setTimeout(() => g.goCommunityLevels(), 1200);
         } else {

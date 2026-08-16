@@ -1681,6 +1681,28 @@ export class ${className} {
   goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this))); }
   goLevelBuilder():     void { this._nav(() => import("../scenes/LevelBuilder").then(m => new m.LevelBuilder(this))); }
   goTradingPlaza():     void { this._nav(() => import("../scenes/TradingPlaza").then(m => new m.TradingPlaza(this))); }
+  goBadges():           void { this._nav(() => import("../scenes/BadgesScene").then(m => new m.BadgesScene(this))); }
+
+  /** Announce anything newly earned. Safe to call often — each badge fires once. */
+  checkBadges(): void {
+    import("./badges").then(({ takeNewlyEarned }) => {
+      for (const b of takeNewlyEarned(this)) this._showBadgeToast(b.emoji, b.name);
+    }).catch(() => {});
+  }
+
+  private _showBadgeToast(emoji: string, name: string): void {
+    const t = document.createElement("div");
+    t.style.cssText =
+      "position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:99993;" +
+      "background:rgba(0,0,0,0.9);border:2px solid rgba(255,215,0,0.6);border-radius:18px;" +
+      "padding:10px 20px;color:#FFD700;font-size:15px;font-weight:bold;" +
+      "font-family:Arial,sans-serif;pointer-events:none;white-space:nowrap;" +
+      "box-shadow:0 4px 22px rgba(255,215,0,0.3);transition:opacity 0.5s;";
+    t.textContent = `🎖️ Badge earned — ${emoji} ${name}!`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = "0"; }, 3400);
+    setTimeout(() => t.remove(), 3900);
+  }
   goCommunityLevels():  void { this._nav(() => import("../scenes/CommunityLevels").then(m => new m.CommunityLevels(this))); }
 
   /** Play a player-built level: its theme replaces the built-in one for this run. */

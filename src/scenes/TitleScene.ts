@@ -455,6 +455,13 @@ ${hasSave ? `
             🛍️ Shop
           </button>
 
+          <button id="badgesBtn" style="
+            background:linear-gradient(135deg,#4a3800,#b8860b);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
+            border:2px solid rgba(255,215,0,0.5);cursor:pointer;">
+            🎖️ Badges
+          </button>
+
           <button id="versionBtn" style="
             background:linear-gradient(135deg,#0a2a4a,#1a5a8a);color:white;font-size:18px;
             padding:12px 24px;border-radius:20px;
@@ -621,6 +628,8 @@ ${game.hasHacks ? `<button id="adminBtn" style="
 
     // Keep the currency tiles live — coins from pets and gems from trade sales
     // both arrive in the background, so a value rendered once goes stale fast.
+    import("../game/badges").then(({ primeSeen }) => { primeSeen(game); game.checkBadges(); }).catch(() => {});
+
     const statTick = window.setInterval(() => {
       const c = document.getElementById("statCoins");
       const d = document.getElementById("statDiamonds");
@@ -646,6 +655,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       document.getElementById("realBtn")!.onclick    = () => exitBedrock();
     }
     document.getElementById("shopBtn")!.onclick    = () => game.goShop();
+    document.getElementById("badgesBtn")!.onclick  = () => game.goBadges();
     // Mods panel (right side) — re-renders in place
     const renderMods = () => {
       const on = game.modMode;
@@ -911,7 +921,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
         "playBtn", hasSave ? "contBtn" : null,
         !IS_BEDROCK ? "mpBtn" : null, !IS_BEDROCK ? "duelBtn" : null,
         "arcadeBtn", !IS_BEDROCK ? "lbBtn" : null,
-        "shopBtn", "versionBtn", "howToPlayBtn", "installBtn",
+        "shopBtn", "badgesBtn", "versionBtn", "howToPlayBtn", "installBtn",
       ];
       const navEls = navIds
         .filter(Boolean)

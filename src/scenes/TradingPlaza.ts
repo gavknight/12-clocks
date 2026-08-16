@@ -4,6 +4,7 @@ import {
   fetchOpenListings, fetchMyListings, createListing, claimListing,
   cancelListing, paySeller, deleteListing, type Listing,
 } from "../game/trading";
+import { bumpStat } from "../game/badges";
 
 type Tab = "buy" | "sell";
 
@@ -300,6 +301,8 @@ export class TradingPlaza {
           g.state.coins    = Math.max(0, g.state.coins    - l.price_coins);
           g.state.diamonds = Math.max(0, g.state.diamonds - l.price_diamonds);
           g.addPet(l.pet_id); // also saves
+          bumpStat("petsBought");
+          g.checkBadges();
           const pet = petOf(l.pet_id);
           return paySeller(l.seller_id, l.price_coins, l.price_diamonds).then(paid => {
             this._busy = false;
@@ -341,6 +344,8 @@ export class TradingPlaza {
         }
         // held by the market until sold or taken back, so it can't be duplicated
         g.removePet(petId);
+        bumpStat("petsSold");
+        g.checkBadges();
         this._fb("✓ Listed! It's held by the market until it sells.");
         this._reload();
       });
