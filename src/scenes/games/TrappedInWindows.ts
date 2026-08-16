@@ -13,11 +13,28 @@ import type { Game } from "../../game/Game";
 
 // ── Tuning ──────────────────────────────────────────────────────────────────
 const CALIBRATE_MS   = 1800;  // sample the room before we judge anything
-const SCREAM_FACTOR  = 3.2;   // how far above your own room noise counts
-const SCREAM_FLOOR   = 0.055; // absolute floor, so a silent room can't false-fire
-const SCREAM_HOLD_MS = 110;   // must stay loud this long — a cough won't do it
+const SCREAM_HOLD_MS = 90;    // must persist this long — a click or cough won't do it
 const GEMS_PER_5S    = 1;
 const STAGE_BONUS    = [25, 50, 75, 150];
+
+// A scream — even a whispered one — puts energy in the 700–4000 Hz vocal band.
+// Watching that band instead of raw loudness is what lets a quiet scream count
+// while a hum, a fan or a door slam doesn't.
+const VOCAL_LO_HZ = 700;
+const VOCAL_HI_HZ = 4000;
+
+export type Sensitivity = "whisper" | "normal" | "loud";
+
+const SENS: Record<Sensitivity, { factor: number; floor: number; label: string; desc: string }> = {
+  // factor = how far above your own room noise; floor = absolute minimum so a
+  // silent room can't false-fire on nothing
+  whisper: { factor: 1.7, floor: 0.010, label: "🤫 Quiet scream",
+             desc: "Catches a whisper-scream. Nobody else has to hear you." },
+  normal:  { factor: 2.6, floor: 0.030, label: "😰 Normal",
+             desc: "A regular startled yelp." },
+  loud:    { factor: 4.2, floor: 0.075, label: "😱 Full scream",
+             desc: "Only a proper scream counts. Hardest to fail." },
+};
 
 const STAGES = [
   { exe: "CookieClicker.exe", icon: "🍪", title: "Cursed Clicker",  hint: "Click 30 times. Something watches." },
@@ -43,9 +60,13 @@ export class TrappedInWindows {
   private _stream: MediaStream | null = null;
   private _ctx:    AudioContext | null = null;
   private _an:     AnalyserNode | null = null;
-  // explicit ArrayBuffer — getByteTimeDomainData rejects a SharedArrayBuffer view
+  // explicit ArrayBuffer — the analyser reads reject a SharedArrayBuffer view
   private _buf:    Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(0));
+  private _freq:   Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(0));
+  private _binLo = 0;
+  private _binHi = 0;
   private _ambient = 0;
+  private _sens: Sensitivity = "whisper";
   private _loudSince = 0;
   private _micWatch = 0;
 
@@ -144,12 +165,30 @@ export class TrappedInWindows {
             <b style="color:#ff8888;">Turning the mic off mid-run ejects you with nothing.</b>
           </div>
         </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+          <div style="color:rgba(255,255,255,0.5);font-size:12px;">How loud do you need to be?</div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;">
+            ${(Object.keys(SENS) as Sensitivity[]).map(k => `
+              <button class="twSens" data-k="${k}" style="
+                background:${k === this._sens ? "rgba(120,190,255,0.25)" : "rgba(255,255,255,0.07)"};
+                color:${k === this._sens ? "#9fd8ff" : "rgba(255,255,255,0.6)"};
+                border:1px solid ${k === this._sens ? "rgba(120,190,255,0.6)" : "rgba(255,255,255,0.15)"};
+                border-radius:9px;padding:8px 13px;font-size:12px;cursor:pointer;font-family:inherit;">
+                ${SENS[k].label}</button>`).join("")}
+          </div>
+          <div id="twSensDesc" style="color:rgba(255,255,255,0.38);font-size:11px;min-height:15px;">
+            ${SENS[this._sens].desc}</div>
+        </div>
+
         <div style="display:flex;gap:10px;margin-top:4px;">
           <button id="twStart" class="twBtn">🎤 Allow mic &amp; start</button>
           <button id="twQuit" class="twBtn" style="background:#333a48;">Leave</button>
         </div>
       </div>`;
 
+    this._root.querySelectorAll<HTMLButtonElement>(".twSens").forEach(b => {
+      b.onclick = () => { this._sens = b.dataset.k as Sensitivity; this._intro(); };
+    });
     this._root.querySelector<HTMLButtonElement>("#twStart")!.onclick = () => this._initMic();
     this._root.querySelector<HTMLButtonElement>("#twQuit")!.onclick  = () => this._exit();
   }
@@ -186,10 +225,17 @@ export class TrappedInWindows {
     this._ctx = ctx;
     const src = ctx.createMediaStreamSource(this._stream);
     const an  = ctx.createAnalyser();
-    an.fftSize = 1024;
+    an.fftSize = 2048;            // finer bins so the vocal band is well resolved
+    an.smoothingTimeConstant = 0.3; // responsive, but not jittery frame to frame
     src.connect(an);
-    this._an  = an;
-    this._buf = new Uint8Array(new ArrayBuffer(an.fftSize));
+    this._an   = an;
+    this._buf  = new Uint8Array(new ArrayBuffer(an.fftSize));
+    this._freq = new Uint8Array(new ArrayBuffer(an.frequencyBinCount));
+
+    // map the vocal band onto FFT bins for this device's sample rate
+    const hzPerBin = ctx.sampleRate / an.fftSize;
+    this._binLo = Math.max(1, Math.floor(VOCAL_LO_HZ / hzPerBin));
+    this._binHi = Math.min(an.frequencyBinCount - 1, Math.ceil(VOCAL_HI_HZ / hzPerBin));
 
     const m = msg();
     if (m) m.textContent = "Listening to the room… stay quiet.";
@@ -202,25 +248,103 @@ export class TrappedInWindows {
       if (performance.now() - t0 < CALIBRATE_MS) { this._raf = requestAnimationFrame(sample); return; }
       this._ambient = peak;
       this._watchMic();
-      this._desktop();
+      this._micTest();
     };
     sample();
   }
 
-  /** RMS level, 0..1, straight off the analyser. Nothing is retained. */
+  /**
+   * Practice round. Nobody should discover the detector is too deaf (or too
+   * twitchy) three stages in — you prove it hears you first, and can dial the
+   * sensitivity without losing a run.
+   */
+  private _micTest(): void {
+    this._root.innerHTML = `
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+        justify-content:center;gap:14px;background:#000d1a;padding:24px;text-align:center;">
+        <div style="font-size:44px;">🎤</div>
+        <div style="color:#7fd4ff;font-size:19px;font-weight:bold;">Test your scream</div>
+        <div style="color:rgba(255,255,255,0.5);font-size:13px;max-width:360px;line-height:1.6;">
+          Scream as quietly as you plan to. If the bar hits the red line, the game will catch it.
+        </div>
+        <div style="position:relative;width:min(300px,80vw);height:20px;background:rgba(255,255,255,0.09);
+          border-radius:10px;overflow:hidden;">
+          <div id="twMicBar" style="height:100%;width:0%;background:#44dd77;transition:width 0.06s;"></div>
+          <div style="position:absolute;top:0;bottom:0;left:100%;width:2px;background:#ff4444;"></div>
+        </div>
+        <div id="twTestState" style="color:rgba(255,255,255,0.4);font-size:13px;height:20px;">
+          waiting…</div>
+        <div style="color:rgba(255,255,255,0.3);font-size:11px;">
+          sensitivity: ${SENS[this._sens].label}
+        </div>
+        <div style="display:flex;gap:9px;margin-top:6px;">
+          <button id="twGo" class="twBtn">Start the game →</button>
+          <button id="twRetune" class="twBtn" style="background:#333a48;">Change sensitivity</button>
+        </div>
+      </div>`;
+
+    let heard = false;
+    const step = () => {
+      if (this._dead || this._phase !== "mic") return;
+      const lvl = this._level();
+      const pct = Math.min(120, (lvl / this._threshold) * 100);
+      const bar = this._root.querySelector<HTMLElement>("#twMicBar");
+      if (bar) {
+        bar.style.width = `${Math.min(100, pct)}%`;
+        bar.style.background = pct >= 100 ? "#ff4444" : pct > 55 ? "#ffbb33" : "#44dd77";
+      }
+      if (pct >= 100 && !heard) {
+        heard = true;
+        const st = this._root.querySelector<HTMLElement>("#twTestState");
+        if (st) { st.textContent = "✓ heard you — that's enough"; st.style.color = "#7dff9a"; }
+      }
+      this._raf = requestAnimationFrame(step);
+    };
+    step();
+
+    this._root.querySelector<HTMLButtonElement>("#twGo")!.onclick = () => {
+      cancelAnimationFrame(this._raf);
+      this._desktop();
+    };
+    this._root.querySelector<HTMLButtonElement>("#twRetune")!.onclick = () => {
+      cancelAnimationFrame(this._raf);
+      this._stream?.getTracks().forEach(t => t.stop());
+      this._stream = null;
+      clearInterval(this._micWatch);
+      this._ctx?.close().catch(() => {});
+      this._ctx = null; this._an = null; this._ambient = 0;
+      this._intro();
+    };
+  }
+
+  /**
+   * Energy in the vocal band, 0..1, read live off the analyser. Nothing is
+   * retained or transmitted.
+   *
+   * Deliberately NOT overall loudness: a quiet scream is soft but still bright
+   * in 700–4000 Hz, whereas a fan, a thump or traffic is loud and dull. Scoring
+   * the band rather than the volume is what makes a whispered scream register.
+   */
   private _level(): number {
     if (!this._an) return 0;
-    this._an.getByteTimeDomainData(this._buf);
-    let sum = 0;
-    for (let i = 0; i < this._buf.length; i++) {
-      const v = (this._buf[i] - 128) / 128;
-      sum += v * v;
+    this._an.getByteFrequencyData(this._freq);
+    let band = 0, total = 0;
+    for (let i = 0; i < this._freq.length; i++) {
+      const v = this._freq[i] / 255;
+      total += v;
+      if (i >= this._binLo && i <= this._binHi) band += v;
     }
-    return Math.sqrt(sum / this._buf.length);
+    if (total <= 0.0001) return 0;
+    const bins = Math.max(1, this._binHi - this._binLo + 1);
+    const density = band / bins;          // how strong the vocal band is
+    const focus   = band / total;         // how much of the sound lives there
+    // both must be true: audible in-band energy AND concentrated there
+    return density * Math.min(1, focus * 2.2);
   }
 
   private get _threshold(): number {
-    return Math.max(SCREAM_FLOOR, this._ambient * SCREAM_FACTOR);
+    const s = SENS[this._sens];
+    return Math.max(s.floor, this._ambient * s.factor);
   }
 
   /** Ejects with nothing if the mic is cut — muting can't be used to cheat. */
