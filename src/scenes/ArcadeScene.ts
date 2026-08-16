@@ -1032,6 +1032,8 @@ export class ArcadeScene {
         minecraftBeeBtn:"bee", fireFighterBtn:"fireFighter",
         duckLifeBtn:"duckLife", knightsQuestBtn:"knightsQuest",
         youtubeBtn:"youtube", mm2Btn:"mm2",
+        tradingPlazaBtn:"tradingPlaza", levelBuilderBtn:"levelBuilder",
+        communityLvlBtn:"communityLevels",
       };
       for (const [btnId, gameId] of Object.entries(btnMap)) {
         const el = document.getElementById(btnId);

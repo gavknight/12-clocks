@@ -1,7 +1,11 @@
-# Mission Control — New Game
+# Mission Control — 12 Clocks
 
 ## Project Overview
-A 2D game built with BabylonJS + Vite + TypeScript.
+A 2D puzzle game built with BabylonJS + Vite + TypeScript. Find twelve missing
+numbers hidden around a room and return them to the clock — plus a large arcade
+of mini-games, online play, and player-created content.
+
+**Live:** https://12-clocks.vercel.app · **Backend:** Supabase (project `xgzgqdhkjcsrgzhjyiss`)
 
 ---
 
@@ -50,26 +54,37 @@ docs/
 
 ## Progress
 
-### Phase 0 — Baseline Setup ✅
-- [x] Vite + TypeScript project initialized
-- [x] BabylonJS core, GUI, and Inspector installed
-- [x] Orthographic 2D camera configured
-- [x] InputManager skeleton created
-- [x] Folder structure established
-- [x] Inspector enabled in dev mode
+### Shipped ✅
+- [x] Core puzzle loop — 28 themed rooms, 12 numbers each
+- [x] Accounts, saves, bans, admin panels
+- [x] Arcade — 30+ mini-games
+- [x] Online multiplayer, duels, clans
+- [x] Leaderboards — time, coins, diamonds
+- [x] Pets, auto-clicker, shop economy
+- [x] Background music system + Music Creator
+- [x] Update Alert — live countdown pill for all players
+- [x] Trading Plaza — player-to-player pet market (v1.3)
+- [x] Level Builder + Community Levels — player-made rooms, admin-rated (v1.3)
+- [x] Badges — 19 milestone awards incl. a secret (v1.3)
 
-### Phase 1 — Game Design (TODO)
-- [ ] Define game concept and mechanics
-- [ ] Design player character
-- [ ] Define scene/level structure
+### v1.3 — Trade & Create (2026-08-16)
+- Trading Plaza: sell pets for coins, diamonds, or both. Listings escrow the
+  pet so it can't be duped; buys are a conditional write (`status=eq.open`) so
+  two players can never claim one listing; sellers are paid via `player_gifts`
+  even while offline.
+- Level Builder: object placement moved out of ExploreScene's hardcoded
+  `getObjects()` into `levelData.defaultObjects()`, with an optional
+  `objects[]` on LevelTheme. Players drag objects across the 3-screen room.
+- Community Levels: browse/play published rooms; admin rates Easy → Extreme
+  Demon, features, hides, deletes.
+- Badges: derived from live state, so they can't desync from the save.
 
-### Phase 2 — Core Gameplay (TODO)
-- [ ] Player entity with movement
-- [ ] Scene management (menu, game, game over)
-- [ ] Basic collision detection
+### Known gaps
+- [ ] Trading has no listing fee or price cap — two accounts can shuttle a pet
+      to move currency between them
+- [ ] `paySeller` proven by direct DB test, not yet by a real in-game sale
+- [ ] Vercel MCP is not authorised for this scope; deploys go via git push
 
-### Phase 3 — Polish (TODO)
-- [ ] Sprites and animations
-- [ ] Audio
-- [ ] UI (score, health, etc.)
-- [ ] Build & packaging
+### Next
+- [ ] Decide on trade moderation (fees, caps, admin takedown of listings)
+- [ ] More secret badges
