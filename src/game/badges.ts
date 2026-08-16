@@ -5,8 +5,11 @@
 // *seen*, so a newly-earned badge can announce itself exactly once.
 
 import type { Game } from "./Game";
-import { PETS } from "./Game";
+import { PETS, ITEMS } from "./Game";
 import { LEVEL_COUNT } from "./levelData";
+
+/** The deep-end diamond pets — owning any one of them is an achievement. */
+const MYTHIC = new Set(["wyrm", "thunder", "blackhole", "comet", "deity"]);
 
 export type BadgeTier = "bronze" | "silver" | "gold" | "legend";
 
@@ -120,6 +123,14 @@ export const BADGES: Badge[] = [
     value: () => getStats().gemItemsBought, goal: 1 },
   { id: "well_equipped", emoji: "🎒", name: "Well Equipped", tier: "gold",
     desc: "Own 4 upgrades at once", value: g => g.state.items.length, goal: 4 },
+  { id: "fully_loaded", emoji: "🧰", name: "Fully Loaded", tier: "legend",
+    desc: "Own every upgrade", value: g => g.state.items.length, goal: ITEMS.length },
+  { id: "royalty",  emoji: "👑", name: "Royalty", tier: "legend",
+    desc: "Wear the Royal Crown",
+    value: g => (g.hasItem("vip_crown") ? 1 : 0), goal: 1 },
+  { id: "mythic",   emoji: "🌠", name: "Mythic Keeper", tier: "legend",
+    desc: "Own a mythic-tier pet",
+    value: g => g.state.pets.filter(p => MYTHIC.has(p)).length, goal: 1 },
   { id: "survivor", emoji: "🖥️", name: "Survivor", tier: "silver",
     desc: "Escape Trapped In Your Computer",
     value: () => getStats().escapes, goal: 1 },

@@ -19,7 +19,8 @@ export class TitleScene {
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     const hasSave = game.state.unlockedLocks.size > 0 || game.state.inventory.length > 0;
     const solved  = game.state.unlockedLocks.size;
-    const name    = game.state.username || "Player";
+    // 👑 prefix comes from the Royal Crown item; empty string when not owned
+    const name    = game.nameCrown + (game.state.username || "Player");
     const tmVersion = sessionStorage.getItem(TIME_MACHINE_KEY);
     const isOldEra  = tmVersion !== null && tmVersion !== "v1.0";
     const isV01     = tmVersion === "v0.1";

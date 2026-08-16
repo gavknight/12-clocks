@@ -85,7 +85,7 @@ export class TrappedInWindows {
   private _clicks = 0;
   private _signsFound = 0;
   private _bossHp = 20;
-  private _shieldUsed = false;
+  private _shieldsUsed = 0;
 
   /** Tell the player their shield just saved them — otherwise it's invisible. */
   private _flashShield(): void {
@@ -95,9 +95,10 @@ export class TrappedInWindows {
       "background:rgba(0,0,0,0.85);border:2px solid rgba(120,200,255,0.7);border-radius:16px;" +
       "padding:14px 22px;color:#9fd8ff;font-size:17px;font-weight:bold;pointer-events:none;" +
       "text-align:center;transition:opacity 0.5s;";
-    el.innerHTML = `🛡️ Scare Shield used!<br>
-      <span style="font-size:12px;color:rgba(255,255,255,0.55);">
-      it won't save you again this run</span>`;
+    const left = this._g.shieldCharges - this._shieldsUsed;
+    el.innerHTML = `🛡️ Shield absorbed it!<br>
+      <span style="font-size:12px;color:rgba(255,255,255,0.55);">${
+        left > 0 ? left + " charge" + (left === 1 ? "" : "s") + " left" : "no charges left"}</span>`;
     this._root.appendChild(el);
     this._later(1300, () => { el.style.opacity = "0"; });
     this._later(1900, () => el.remove());
@@ -386,8 +387,8 @@ export class TrappedInWindows {
       if (!this._loudSince) this._loudSince = now;
       else if (now - this._loudSince > SCREAM_HOLD_MS) {
         // 🛡️ Scare Shield absorbs the first scream of a run, then burns out
-        if (this._g.hasItem("scare_shield") && !this._shieldUsed) {
-          this._shieldUsed = true;
+        if (this._shieldsUsed < this._g.shieldCharges) {
+          this._shieldsUsed++;
           this._loudSince = 0;
           this._flashShield();
         } else {
@@ -784,7 +785,7 @@ export class TrappedInWindows {
       this._dead = false;
       this._phase = "intro";
       this._stage = 0; this._cleared = 0; this._gems = 0; this._startTs = 0;
-      this._shieldUsed = false;
+      this._shieldsUsed = 0;
       this._ambient = 0; this._loudSince = 0;
       this._stream = null; this._ctx = null; this._an = null;
       this._intro();

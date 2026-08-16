@@ -1,5 +1,5 @@
 import type { Game } from "../game/Game";
-import { PETS, ITEMS, type PetDef, type ItemDef } from "../game/Game";
+import { PETS, ITEMS, GEM_EXCHANGE, type PetDef, type ItemDef } from "../game/Game";
 import { bumpStat } from "../game/badges";
 
 type Tab = "pets" | "gems";
@@ -132,6 +132,29 @@ export class ShopScene {
             margin-bottom:16px;">
             ${gemItems.map(i => this._itemCard(game, i)).join("")}
             ${this._adminLiteCard(game)}
+          </div>
+
+          <div style="color:rgba(255,255,255,0.4);font-size:12px;margin:6px 0 10px;">
+            Exchange — turn 💎 into 🪙</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
+            gap:10px;width:100%;max-width:460px;margin-bottom:16px;">
+            ${GEM_EXCHANGE.map(x => {
+              const can = game.state.diamonds >= x.gems;
+              return `
+                <div style="background:rgba(255,255,255,0.05);border:2px solid rgba(255,200,0,0.2);
+                  border-radius:16px;padding:13px 10px;display:flex;flex-direction:column;
+                  align-items:center;gap:5px;text-align:center;">
+                  <div style="font-size:30px;">💰</div>
+                  <div style="color:white;font-size:13px;font-weight:bold;">${x.label}</div>
+                  <div style="color:#FFD700;font-size:12px;font-weight:bold;">🪙 ${fmt(x.coins)}</div>
+                  <button id="buyEx_${x.gems}" style="
+                    background:${can ? "#66ddff" : "rgba(255,255,255,0.1)"};
+                    color:${can ? "#00202e" : "rgba(255,255,255,0.35)"};font-size:12px;
+                    font-weight:bold;padding:7px 15px;border-radius:16px;border:none;
+                    cursor:${can ? "pointer" : "default"};white-space:nowrap;margin-top:3px;">
+                    💎 ${fmt(x.gems)}</button>
+                </div>`;
+            }).join("")}
           </div>`;
 
       game.ui.innerHTML = `
@@ -224,6 +247,18 @@ export class ShopScene {
           // speed items change pet cadence, so the running timers must be rebuilt
           game.restartPetTimers();
           game.checkBadges();
+          render();
+        };
+      });
+
+      GEM_EXCHANGE.forEach(x => {
+        const btn = document.getElementById(`buyEx_${x.gems}`);
+        if (!btn) return;
+        btn.onclick = () => {
+          if (game.state.diamonds < x.gems) return;
+          game.state.diamonds -= x.gems;
+          game.state.coins    += x.coins;
+          game.save();
           render();
         };
       });

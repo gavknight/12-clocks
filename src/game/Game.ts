@@ -55,6 +55,29 @@ export const ITEMS: ItemDef[] = [
     desc: "+50% diamonds from the computer",          cost: 0, gemCost:   800 },
   { id: "midas_touch", emoji: "✨", name: "Midas Touch",
     desc: "Pets earn double coins",                   cost: 0, gemCost: 1_500 },
+
+  // ── Deep Diamond Aisle ───────────────────────────────────────────────────
+  { id: "lucky_dice",  emoji: "🎲", name: "Lucky Dice",
+    desc: "1 in 10 pet payouts pays 10×",             cost: 0, gemCost:  2_500 },
+  { id: "diamond_crown", emoji: "💠", name: "Diamond Crown",
+    desc: "Pets earn triple coins",                   cost: 0, gemCost:  4_000 },
+  { id: "time_machine", emoji: "🕰️", name: "Time Machine",
+    desc: "Pets work twice as fast",                  cost: 0, gemCost:  7_500 },
+  { id: "gem_forge",   emoji: "🔮", name: "Gem Forge",
+    desc: "Double diamonds from the computer",        cost: 0, gemCost: 15_000 },
+  { id: "shield_plus", emoji: "🛡️", name: "Aegis",
+    desc: "Survive 3 screams per run, not 1",         cost: 0, gemCost: 25_000 },
+  { id: "vip_crown",   emoji: "👑", name: "Royal Crown",
+    desc: "Wear a 👑 by your name everywhere",         cost: 0, gemCost: 50_000 },
+];
+
+/** Coin bundles you can buy with diamonds — the main gem sink for rich players. */
+export interface GemExchangeDef { gems: number; coins: number; label: string; }
+export const GEM_EXCHANGE: GemExchangeDef[] = [
+  { gems:    50, coins:       1_000_000, label: "Pouch"  },
+  { gems:   250, coins:       6_000_000, label: "Sack"   },
+  { gems: 1_000, coins:      30_000_000, label: "Chest"  },
+  { gems: 5_000, coins:     200_000_000, label: "Vault"  },
 ];
 
 // Ids are permanent — they're what sits in every player's save. Never rename one.
@@ -82,6 +105,13 @@ export const PETS: PetDef[] = [
   { id: "kraken",  emoji: "🦑", name: "Kraken",        cost: 0, gemCost:   900, interval: 4_000, reward:   260_000 },
   { id: "alien",   emoji: "👽", name: "Alien",         cost: 0, gemCost: 2_000, interval: 3_000, reward:   650_000 },
   { id: "cosmic",  emoji: "🌌", name: "Cosmic Dragon", cost: 0, gemCost: 5_000, interval: 2_500, reward: 1_800_000 },
+
+  // ── Mythic tier — the deep end of the Diamond Aisle ──────────────────────
+  { id: "wyrm",    emoji: "🐲", name: "Void Wyrm",    cost: 0, gemCost:  12_000, interval: 2_200, reward:      5_000_000 },
+  { id: "thunder", emoji: "⚡", name: "Thunderbird",  cost: 0, gemCost:  25_000, interval: 2_000, reward:     15_000_000 },
+  { id: "blackhole",emoji:"🕳️", name: "Black Hole",   cost: 0, gemCost:  60_000, interval: 1_800, reward:     50_000_000 },
+  { id: "comet",   emoji: "☄️", name: "Comet",        cost: 0, gemCost: 120_000, interval: 1_600, reward:    180_000_000 },
+  { id: "deity",   emoji: "🌠", name: "The Infinite", cost: 0, gemCost: 300_000, interval: 1_400, reward:    750_000_000 },
 ];
 
 export interface StoredAccount {
@@ -1004,22 +1034,39 @@ export class ${className} {
   /** Coin multiplier from owned items — stacks multiplicatively. */
   get petCoinMultiplier(): number {
     let m = 1;
-    if (this.hasItem("lucky_charm")) m *= 1.25;
-    if (this.hasItem("midas_touch")) m *= 2;
+    if (this.hasItem("lucky_charm"))    m *= 1.25;
+    if (this.hasItem("midas_touch"))    m *= 2;
+    if (this.hasItem("diamond_crown"))  m *= 3;
     return m;
   }
 
   /** Interval multiplier — below 1 means pets tick sooner. */
   get petSpeedMultiplier(): number {
     let m = 1;
-    if (this.hasItem("coffee"))      m *= 0.85;
-    if (this.hasItem("golden_gear")) m *= 0.75;
+    if (this.hasItem("coffee"))       m *= 0.85;
+    if (this.hasItem("golden_gear"))  m *= 0.75;
+    if (this.hasItem("time_machine")) m *= 0.5;
     return m;
   }
 
   /** Diamond multiplier applied to minigame payouts. */
   get gemMultiplier(): number {
-    return this.hasItem("gem_magnet") ? 1.5 : 1;
+    let m = 1;
+    if (this.hasItem("gem_magnet")) m *= 1.5;
+    if (this.hasItem("gem_forge"))  m *= 2;
+    return m;
+  }
+
+  /** How many screams the player can absorb per horror run. */
+  get shieldCharges(): number {
+    if (this.hasItem("shield_plus"))  return 3;
+    if (this.hasItem("scare_shield")) return 1;
+    return 0;
+  }
+
+  /** 👑 shown beside the player's name once they own the Royal Crown. */
+  get nameCrown(): string {
+    return this.hasItem("vip_crown") ? "👑 " : "";
   }
 
   /** Start a timer for a single pet (skips if already running). */
@@ -1031,9 +1078,12 @@ export class ${className} {
     const every = Math.max(1200, Math.round(def.interval * this.petSpeedMultiplier));
     const id = window.setInterval(() => {
       if (!this.inMiniGame) return;
-      this.state.coins += Math.round(def.reward * this.petCoinMultiplier);
+      // 🎲 Lucky Dice — 1 in 10 payouts pays 10x
+      const jackpot = this.hasItem("lucky_dice") && Math.random() < 0.1;
+      const payout = Math.round(def.reward * this.petCoinMultiplier * (jackpot ? 10 : 1));
+      this.state.coins += payout;
       this.save();
-      this._showPetToast(def);
+      this._showPetToast(def, payout, jackpot);
     }, every);
     this._petTimers.set(petId, id);
   }
@@ -1075,9 +1125,11 @@ export class ${className} {
     this._petTimers.clear();
   }
 
-  private _showPetToast(def: PetDef): void {
+  private _showPetToast(def: PetDef, payout = def.reward, jackpot = false): void {
     const toast = document.createElement("div");
-    toast.textContent = `${def.emoji} ${def.name} solved a puzzle! +🪙 ${def.reward.toLocaleString()}`;
+    toast.textContent = jackpot
+      ? `🎲 JACKPOT! ${def.emoji} ${def.name} +🪙 ${payout.toLocaleString()}`
+      : `${def.emoji} ${def.name} solved a puzzle! +🪙 ${payout.toLocaleString()}`;
     toast.style.cssText = `
       position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
       background:rgba(0,0,0,0.85);color:#FFD700;font-size:15px;font-weight:bold;
