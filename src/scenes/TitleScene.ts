@@ -456,6 +456,13 @@ ${hasSave ? `
             🛍️ Shop
           </button>
 
+          <button id="ohioBtn" style="
+            background:linear-gradient(135deg,#3a0a4a,#8a1a9a);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
+            border:2px solid rgba(220,120,255,0.6);cursor:pointer;">
+            🌀 Ohio Mode
+          </button>
+
           <button id="badgesBtn" style="
             background:linear-gradient(135deg,#4a3800,#b8860b);color:white;font-size:18px;
             padding:12px 24px;border-radius:20px;
@@ -657,6 +664,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
     }
     document.getElementById("shopBtn")!.onclick    = () => game.goShop();
     document.getElementById("badgesBtn")!.onclick  = () => game.goBadges();
+    document.getElementById("ohioBtn")!.onclick    = () => game.goOhio();
     // Mods panel (right side) — re-renders in place
     const renderMods = () => {
       const on = game.modMode;
@@ -922,7 +930,7 @@ ${game.hasHacks ? `<button id="adminBtn" style="
         "playBtn", hasSave ? "contBtn" : null,
         !IS_BEDROCK ? "mpBtn" : null, !IS_BEDROCK ? "duelBtn" : null,
         "arcadeBtn", !IS_BEDROCK ? "lbBtn" : null,
-        "shopBtn", "badgesBtn", "versionBtn", "howToPlayBtn", "installBtn",
+        "shopBtn", "ohioBtn", "badgesBtn", "versionBtn", "howToPlayBtn", "installBtn",
       ];
       const navEls = navIds
         .filter(Boolean)

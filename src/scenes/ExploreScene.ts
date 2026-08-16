@@ -6,6 +6,7 @@
 import type { Game } from "../game/Game";
 import { colorForNumber, positionToNumber } from "../game/clockData";
 import { LEVELS, defaultObjects, type LevelTheme, type RoomObj } from "../game/levelData";
+import { hasMod } from "../game/ohio";
 
 function getObjects(theme: LevelTheme): RoomObj[] {
   // a player-built level carries its own placement; built-ins use the stock layout
@@ -135,11 +136,15 @@ function makeRoomClock(placed: Set<number>, isSpooky: boolean, accent = "rgba(25
 
 export class ExploreScene {
   private timeouts: ReturnType<typeof setTimeout>[] = [];
+  /** Listeners/intervals added by Ohio Mode, torn down with the scene. */
+  private _ohioCleanup: Array<() => void> = [];
 
   constructor(game: Game) {
     this._build(game);
     game._disposeScene = () => {
       this.timeouts.forEach(t => clearTimeout(t));
+      this._ohioCleanup.forEach(fn => fn());
+      this._ohioCleanup = [];
       // Clear mp callbacks so old events don't fire into a disposed scene
       if (game.mp) {
         game.mp.onCursor     = null;
@@ -155,6 +160,114 @@ export class ExploreScene {
 
   private _later(ms: number, fn: () => void): void {
     this.timeouts.push(setTimeout(fn, ms));
+  }
+
+
+  /** Stack whatever Ohio Mode rolled onto the room. No-op when it's off. */
+  private _applyOhio(game: Game): void {
+    const roll = game.ohioRoll;
+    if (!roll) return;
+
+    const inner = document.getElementById("roomInner");
+    const scroll = document.getElementById("roomScroll");
+    if (!inner || !scroll) return;
+
+    // transforms compose, so mirror + upside-down is a genuine double whammy
+    const tf: string[] = [];
+    if (hasMod(roll, "mirror")) tf.push("scaleX(-1)");
+    if (hasMod(roll, "upside")) tf.push("rotate(180deg)");
+    if (tf.length) inner.style.transform = tf.join(" ");
+
+    if (hasMod(roll, "fog"))  inner.style.filter = "blur(3.4px)";
+    if (hasMod(roll, "spin")) inner.style.animation = "ohioSpin 14s linear infinite";
+
+    if (hasMod(roll, "tiny")) {
+      game.ui.querySelectorAll<HTMLElement>(".roomobj").forEach(el => {
+        el.style.fontSize = `${parseFloat(el.style.fontSize) * 0.45}px`;
+      });
+    }
+
+    if (hasMod(roll, "fade")) {
+      game.ui.querySelectorAll<HTMLElement>(".roomobj").forEach((el, i) => {
+        el.style.animation = `ohioFade ${2.4 + (i % 5) * 0.4}s ease-in-out ${i * 0.2}s infinite`;
+      });
+    }
+
+    if (hasMod(roll, "jitter")) {
+      game.ui.querySelectorAll<HTMLElement>(".roomobj").forEach((el, i) => {
+        el.style.animation = `ohioJitter ${0.8 + (i % 4) * 0.25}s ease-in-out infinite alternate`;
+      });
+    }
+
+    // objects flee the cursor — you have to approach them sideways
+    if (hasMod(roll, "slippy")) {
+      game.ui.querySelectorAll<HTMLElement>(".roomobj").forEach(el => {
+        el.addEventListener("mouseenter", () => {
+          const dx = (Math.random() - 0.5) * 90;
+          el.style.transition = "transform 0.25s";
+          el.style.transform = `translateX(${dx}px)`;
+          setTimeout(() => { el.style.transform = ""; }, 420);
+        });
+      });
+    }
+
+    if (hasMod(roll, "dark")) {
+      const torch = document.createElement("div");
+      torch.id = "ohioTorch";
+      torch.style.cssText =
+        "position:absolute;inset:0;z-index:390;pointer-events:none;" +
+        "background:radial-gradient(circle 130px at 50% 50%,transparent 0%," +
+        "rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.97) 75%);";
+      game.ui.querySelector<HTMLElement>(".screen")?.appendChild(torch);
+      const move = (e: PointerEvent) => {
+        torch.style.background =
+          `radial-gradient(circle 130px at ${e.clientX}px ${e.clientY}px,transparent 0%,` +
+          "rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.97) 75%)";
+      };
+      window.addEventListener("pointermove", move);
+      this._ohioCleanup.push(() => window.removeEventListener("pointermove", move));
+    }
+
+    if (hasMod(roll, "rush")) {
+      let left = 90;
+      const pill = document.createElement("div");
+      pill.style.cssText =
+        "position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:420;" +
+        "background:rgba(0,0,0,0.85);border:2px solid rgba(255,80,80,0.7);border-radius:20px;" +
+        "padding:6px 16px;color:#ff8888;font-size:15px;font-weight:bold;" +
+        "font-family:Arial,sans-serif;pointer-events:none;";
+      game.ui.querySelector<HTMLElement>(".screen")?.appendChild(pill);
+      const tick = window.setInterval(() => {
+        left--;
+        pill.textContent = `⏱️ ${left}s`;
+        if (left <= 10) pill.style.color = "#ff4444";
+        if (left <= 0) {
+          clearInterval(tick);
+          game.ohioRoll = null;
+          game.goTitle();
+        }
+      }, 1000);
+      pill.textContent = `⏱️ ${left}s`;
+      this._ohioCleanup.push(() => clearInterval(tick));
+    }
+
+    // banner naming the roll, so the chaos reads as intentional
+    const banner = document.createElement("div");
+    banner.style.cssText =
+      "position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:420;" +
+      "background:rgba(0,0,0,0.85);border:2px solid " + roll.tier.color + ";border-radius:16px;" +
+      "padding:8px 16px;text-align:center;font-family:Arial,sans-serif;pointer-events:none;" +
+      "max-width:92vw;";
+    banner.innerHTML =
+      `<div style="color:${roll.tier.color};font-size:14px;font-weight:900;">
+         🌀 OHIO — ${roll.tier.emoji} ${roll.tier.name}</div>` +
+      (roll.mods.length
+        ? `<div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px;">
+             ${roll.mods.map(m => m.emoji + " " + m.name).join(" · ")}</div>`
+        : `<div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;">
+             a calm room. lucky you.</div>`) +
+      `<div style="color:#FFD700;font-size:11px;margin-top:2px;">${roll.tier.bonus}× coins</div>`;
+    game.ui.querySelector<HTMLElement>(".screen")?.appendChild(banner);
   }
 
   private _surfaceStyle(surface: RoomObj["surface"], size: number): string {
@@ -220,6 +333,9 @@ export class ExploreScene {
                              15%,85%{opacity:1;transform:translateX(-50%) translateY(0)} }
         @keyframes clockPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
         #roomScroll::-webkit-scrollbar { display:none }
+        @keyframes ohioSpin { from{rotate:0deg} to{rotate:360deg} }
+        @keyframes ohioFade { 0%,100%{opacity:1} 50%{opacity:0.06} }
+        @keyframes ohioJitter { from{translate:-7px 0} to{translate:7px 0} }
       </style>
 
       <div class="screen" style="background:#0a0020;position:relative;overflow:hidden;">
@@ -583,6 +699,8 @@ export class ExploreScene {
         });
       };
     }
+
+    this._applyOhio(game);
 
     // ── MULTIPLAYER ──────────────────────────────────────────────────────────
     const mp = game.mp;

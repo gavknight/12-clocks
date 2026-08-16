@@ -4,6 +4,7 @@ import { upsertRecord, fetchRecords, upsertCoinRecord, fetchCoinLeaderboard, typ
 import { pingMember, setBanStatus } from "./members";
 import { unlockCost, LEVEL_COUNT, type LevelTheme } from "./levelData";
 import { IS_BEDROCK } from "../bedrock";
+import { rollOhio, type OhioRoll } from "./ohio";
 
 export const MAX_COINS = Infinity;
 
@@ -176,6 +177,13 @@ export class Game {
   /** Set while playing a community-built level; overrides the built-in LevelTheme. */
   customTheme: LevelTheme | null = null;
   customLevelName = "";
+  /** 🌀 Ohio Mode — chaos modifiers, re-rolled every time you enter a room. */
+  ohioMode = false;
+  ohioRoll: OhioRoll | null = null;
+
+  rollOhioIfOn(): void {
+    this.ohioRoll = this.ohioMode ? rollOhio() : null;
+  }
   _disposeScene: (() => void) | null = null;
   mp: MultiplayerManager | null = null;
   private _runStart = 0;
@@ -1247,6 +1255,20 @@ export class ${className} {
    * Save current unlockedLocks + inventory into the level's save slot.
    * If completed=true: award 100 coins and unlock the next level.
    */
+  private _showOhioPayout(reward: number, mult: number): void {
+    const t = document.createElement("div");
+    t.style.cssText =
+      "position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:99994;" +
+      "background:rgba(0,0,0,0.9);border:2px solid rgba(220,120,255,0.7);border-radius:18px;" +
+      "padding:11px 22px;color:#e0a0ff;font-size:16px;font-weight:bold;" +
+      "font-family:Arial,sans-serif;pointer-events:none;white-space:nowrap;" +
+      "box-shadow:0 4px 24px rgba(200,100,255,0.35);transition:opacity 0.5s;";
+    t.textContent = `🌀 OHIO ${mult}× — 🪙 ${reward.toLocaleString()}`;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = "0"; }, 3200);
+    setTimeout(() => t.remove(), 3700);
+  }
+
   saveLevelProgress(completed: boolean): void {
     const n = this.state.currentLevel;
     this._levelSaves[n] = {
@@ -1255,12 +1277,17 @@ export class ${className} {
       completed,
     };
     if (completed) {
-      this.state.coins += 100;
+      // Ohio pays for the chaos you actually put up with
+      const mult = this.ohioRoll?.tier.bonus ?? 1;
+      const reward = 100 * mult;
+      this.state.coins += reward;
       this.state.wins += 1;
+      if (mult > 1) this._showOhioPayout(reward, mult);
       const next = n + 1;
       if (next <= LEVEL_COUNT) this._unlockedLevels.add(next);
     }
     this.save();
+    this.checkBadges();
   }
 
   // ── Account helpers ────────────────────────────────────────────────────────
@@ -1815,6 +1842,7 @@ export class ${className} {
   goLevelBuilder():     void { this._nav(() => import("../scenes/LevelBuilder").then(m => new m.LevelBuilder(this))); }
   goTradingPlaza():     void { this._nav(() => import("../scenes/TradingPlaza").then(m => new m.TradingPlaza(this))); }
   goBadges():           void { this._nav(() => import("../scenes/BadgesScene").then(m => new m.BadgesScene(this))); }
+  goOhio():             void { this._nav(() => import("../scenes/OhioScene").then(m => new m.OhioScene(this))); }
 
   /** Announce anything newly earned. Safe to call often — each badge fires once. */
   checkBadges(): void {
@@ -1934,6 +1962,7 @@ export class ${className} {
     this._nav(() => import("../scenes/IntroCutscene").then(m => new m.IntroCutscene(this)));
   }
   goExplore():     void {
+    this.rollOhioIfOn();
     if (this._runStart === 0) this.startTimer();
     this._nav(() => import("../scenes/ExploreScene").then(m => new m.ExploreScene(this)));
   }
