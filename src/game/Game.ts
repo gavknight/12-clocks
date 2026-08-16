@@ -19,23 +19,69 @@ export interface GameState {
   wins: number;
   diamonds: number; // admin-gifted, earned in TrappedInWindows, spent in the Trading Plaza
   hasAdminLite: boolean; // bought in Shop with diamonds — grants a reduced admin panel
+  items: string[]; // owned ItemDef ids — permanent upgrades
 }
 
 export interface PetDef {
   id:       string;
   emoji:    string;
   name:     string;
-  cost:     number;
-  interval: number; // ms between puzzle solves
-  reward:   number; // coins per solve
+  cost:     number;  // coin price — 0 when the pet is diamond-only
+  gemCost?: number;  // diamond price, for the shop's Diamond Aisle
+  interval: number;  // ms between puzzle solves
+  reward:   number;  // coins per solve
 }
 
+/** One-off purchases with a permanent effect. */
+export interface ItemDef {
+  id:       string;
+  emoji:    string;
+  name:     string;
+  desc:     string;
+  cost:     number;  // coin price — 0 when diamond-only
+  gemCost?: number;
+}
+
+export const ITEMS: ItemDef[] = [
+  { id: "coffee",      emoji: "☕", name: "Endless Coffee",
+    desc: "Pets work 15% faster, forever",            cost: 250_000 },
+  { id: "lucky_charm", emoji: "🍀", name: "Lucky Charm",
+    desc: "Pets earn 25% more coins",                 cost: 0, gemCost:   120 },
+  { id: "golden_gear", emoji: "⚙️", name: "Golden Gear",
+    desc: "Pets work another 25% faster",             cost: 0, gemCost:   300 },
+  { id: "scare_shield",emoji: "🛡️", name: "Scare Shield",
+    desc: "Survive your first scream in the computer", cost: 0, gemCost:  500 },
+  { id: "gem_magnet",  emoji: "🧲", name: "Gem Magnet",
+    desc: "+50% diamonds from the computer",          cost: 0, gemCost:   800 },
+  { id: "midas_touch", emoji: "✨", name: "Midas Touch",
+    desc: "Pets earn double coins",                   cost: 0, gemCost: 1_500 },
+];
+
+// Ids are permanent — they're what sits in every player's save. Never rename one.
 export const PETS: PetDef[] = [
-  { id: "cat",     emoji: "🐱", name: "Cat",     cost:        5_000, interval: 80_000, reward:    50 },
-  { id: "dog",     emoji: "🐶", name: "Dog",     cost:       25_000, interval: 60_000, reward:   150 },
-  { id: "fox",     emoji: "🦊", name: "Fox",     cost:      100_000, interval: 40_000, reward:   400 },
-  { id: "dragon",  emoji: "🐉", name: "Dragon",  cost:      500_000, interval: 25_000, reward: 1_500 },
-  { id: "unicorn", emoji: "🦄", name: "Unicorn", cost:    2_000_000, interval: 10_000, reward: 5_000 },
+  // ── Coin pets, cheapest first ────────────────────────────────────────────
+  { id: "hamster", emoji: "🐹", name: "Hamster", cost:        1_000, interval: 100_000, reward:      15 },
+  { id: "duck",    emoji: "🦆", name: "Duck",    cost:        2_500, interval:  90_000, reward:      30 },
+  { id: "cat",     emoji: "🐱", name: "Cat",     cost:        5_000, interval:  80_000, reward:      50 },
+  { id: "rabbit",  emoji: "🐰", name: "Rabbit",  cost:       12_000, interval:  70_000, reward:      90 },
+  { id: "dog",     emoji: "🐶", name: "Dog",     cost:       25_000, interval:  60_000, reward:     150 },
+  { id: "owl",     emoji: "🦉", name: "Owl",     cost:       50_000, interval:  55_000, reward:     250 },
+  { id: "fox",     emoji: "🦊", name: "Fox",     cost:      100_000, interval:  40_000, reward:     400 },
+  { id: "wolf",    emoji: "🐺", name: "Wolf",    cost:      200_000, interval:  35_000, reward:     700 },
+  { id: "dragon",  emoji: "🐉", name: "Dragon",  cost:      500_000, interval:  25_000, reward:   1_500 },
+  { id: "tiger",   emoji: "🐯", name: "Tiger",   cost:      750_000, interval:  22_000, reward:   2_000 },
+  { id: "bear",    emoji: "🐻", name: "Bear",    cost:    1_200_000, interval:  18_000, reward:   3_200 },
+  { id: "unicorn", emoji: "🦄", name: "Unicorn", cost:    2_000_000, interval:  10_000, reward:   5_000 },
+  { id: "panda",   emoji: "🐼", name: "Panda",   cost:    3_500_000, interval:   9_000, reward:   8_000 },
+  { id: "octopus", emoji: "🐙", name: "Octopus", cost:    6_000_000, interval:   8_000, reward:  14_000 },
+  { id: "robot",   emoji: "🤖", name: "Robot",   cost:   12_000_000, interval:   6_500, reward:  28_000 },
+
+  // ── Diamond Aisle — bought with gems only ────────────────────────────────
+  { id: "ghost",   emoji: "👻", name: "Ghost",         cost: 0, gemCost:   150, interval: 6_000, reward:    45_000 },
+  { id: "phoenix", emoji: "🔥", name: "Phoenix",       cost: 0, gemCost:   400, interval: 5_000, reward:   110_000 },
+  { id: "kraken",  emoji: "🦑", name: "Kraken",        cost: 0, gemCost:   900, interval: 4_000, reward:   260_000 },
+  { id: "alien",   emoji: "👽", name: "Alien",         cost: 0, gemCost: 2_000, interval: 3_000, reward:   650_000 },
+  { id: "cosmic",  emoji: "🌌", name: "Cosmic Dragon", cost: 0, gemCost: 5_000, interval: 2_500, reward: 1_800_000 },
 ];
 
 export interface StoredAccount {
@@ -71,6 +117,7 @@ interface SaveData {
   wins:           number;
   diamonds:       number;
   hasAdminLite:   boolean;
+  items:          string[];
   levels: Record<string, { locks: number[]; inv: number[]; completed: boolean }>;
 }
 
@@ -79,7 +126,7 @@ export class Game {
   readonly state: GameState = {
     unlockedLocks: new Set(), inventory: [], username: "",
     difficulty: 12, coins: 0, currentLevel: 1, pets: [], autoClicker: false, wins: 0, diamonds: 0,
-    hasAdminLite: false,
+    hasAdminLite: false, items: [],
   };
   modMode = false;
   private _modSnapshot: string | null = null;
@@ -952,18 +999,49 @@ export class ${className} {
     document.body.appendChild(ov);
   }
 
+  hasItem(id: string): boolean { return this.state.items.includes(id); }
+
+  /** Coin multiplier from owned items — stacks multiplicatively. */
+  get petCoinMultiplier(): number {
+    let m = 1;
+    if (this.hasItem("lucky_charm")) m *= 1.25;
+    if (this.hasItem("midas_touch")) m *= 2;
+    return m;
+  }
+
+  /** Interval multiplier — below 1 means pets tick sooner. */
+  get petSpeedMultiplier(): number {
+    let m = 1;
+    if (this.hasItem("coffee"))      m *= 0.85;
+    if (this.hasItem("golden_gear")) m *= 0.75;
+    return m;
+  }
+
+  /** Diamond multiplier applied to minigame payouts. */
+  get gemMultiplier(): number {
+    return this.hasItem("gem_magnet") ? 1.5 : 1;
+  }
+
   /** Start a timer for a single pet (skips if already running). */
   startPetTimer(petId: string): void {
     if (this._petTimers.has(petId)) return;
     const def = PETS.find(p => p.id === petId);
     if (!def) return;
+    // floor guards against an interval so small it pins the CPU
+    const every = Math.max(1200, Math.round(def.interval * this.petSpeedMultiplier));
     const id = window.setInterval(() => {
       if (!this.inMiniGame) return;
-      this.state.coins += def.reward;
+      this.state.coins += Math.round(def.reward * this.petCoinMultiplier);
       this.save();
       this._showPetToast(def);
-    }, def.interval);
+    }, every);
     this._petTimers.set(petId, id);
+  }
+
+  /** Buying an item can change pet cadence, so restart the timers. */
+  restartPetTimers(): void {
+    this.stopAllPetTimers();
+    this.startAllPetTimers();
   }
 
   /** Start timers for all currently owned pets. */
@@ -1289,6 +1367,7 @@ export class ${className} {
     this.state.wins         = 0;
     this.state.diamonds     = 0;
     this.state.hasAdminLite = false;
+    this.state.items        = [];
     this._unlockedLevels = new Set([1]);
     this._levelSaves = {};
   }
@@ -1427,6 +1506,7 @@ export class ${className} {
       wins:           this.state.wins,
       diamonds:       this.state.diamonds,
       hasAdminLite:   this.state.hasAdminLite,
+      items:          [...this.state.items],
       levels:         this._levelSaves,
     };
     localStorage.setItem(this._saveKey(), JSON.stringify(data));
@@ -1481,6 +1561,7 @@ export class ${className} {
       this.state.wins         = data.wins         ?? 0;
       this.state.diamonds     = data.diamonds     ?? 0;
       this.state.hasAdminLite = data.hasAdminLite ?? false;
+      this.state.items        = data.items         ?? [];
       if (data.unlockedLevels) {
         this._unlockedLevels = new Set([1, ...data.unlockedLevels]);
       }

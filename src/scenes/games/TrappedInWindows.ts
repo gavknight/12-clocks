@@ -10,6 +10,7 @@
  * with zero reward, so muting isn't a way to cheat the scare check.
  */
 import type { Game } from "../../game/Game";
+import { bumpStat, getStats } from "../../game/badges";
 
 // ── Tuning ──────────────────────────────────────────────────────────────────
 const CALIBRATE_MS   = 1800;  // sample the room before we judge anything
@@ -84,6 +85,23 @@ export class TrappedInWindows {
   private _clicks = 0;
   private _signsFound = 0;
   private _bossHp = 20;
+  private _shieldUsed = false;
+
+  /** Tell the player their shield just saved them — otherwise it's invisible. */
+  private _flashShield(): void {
+    const el = document.createElement("div");
+    el.style.cssText =
+      "position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);z-index:70;" +
+      "background:rgba(0,0,0,0.85);border:2px solid rgba(120,200,255,0.7);border-radius:16px;" +
+      "padding:14px 22px;color:#9fd8ff;font-size:17px;font-weight:bold;pointer-events:none;" +
+      "text-align:center;transition:opacity 0.5s;";
+    el.innerHTML = `🛡️ Scare Shield used!<br>
+      <span style="font-size:12px;color:rgba(255,255,255,0.55);">
+      it won't save you again this run</span>`;
+    this._root.appendChild(el);
+    this._later(1300, () => { el.style.opacity = "0"; });
+    this._later(1900, () => el.remove());
+  }
 
   constructor(game: Game) {
     this._g = game;
@@ -366,7 +384,16 @@ export class TrappedInWindows {
     const now = performance.now();
     if (lvl > this._threshold) {
       if (!this._loudSince) this._loudSince = now;
-      else if (now - this._loudSince > SCREAM_HOLD_MS) this._end("scream");
+      else if (now - this._loudSince > SCREAM_HOLD_MS) {
+        // 🛡️ Scare Shield absorbs the first scream of a run, then burns out
+        if (this._g.hasItem("scare_shield") && !this._shieldUsed) {
+          this._shieldUsed = true;
+          this._loudSince = 0;
+          this._flashShield();
+        } else {
+          this._end("scream");
+        }
+      }
     } else {
       this._loudSince = 0;
     }
@@ -704,11 +731,17 @@ export class TrappedInWindows {
     // muting the mic is the one exit that pays nothing
     let award = why === "micoff" ? 0 : this._gems + survivalGems;
     if (why === "escaped") award += 200; // full clear bonus
+    if (award > 0) award = Math.round(award * this._g.gemMultiplier); // 🧲 Gem Magnet
+
+    // badge stats — a mic-off run still counts as time survived, just unpaid
+    bumpStat("bestSurvival", Math.max(0, secs - getStats().bestSurvival));
+    if (why === "escaped") bumpStat("escapes");
 
     if (award > 0) {
       this._g.state.diamonds += award;
       this._g.save(); // also syncs the diamond leaderboard
     }
+    this._g.checkBadges();
 
     const head =
       why === "scream"  ? { icon: "😱", color: "#ff6666", title: "YOU SCREAMED",
@@ -751,6 +784,7 @@ export class TrappedInWindows {
       this._dead = false;
       this._phase = "intro";
       this._stage = 0; this._cleared = 0; this._gems = 0; this._startTs = 0;
+      this._shieldUsed = false;
       this._ambient = 0; this._loudSince = 0;
       this._stream = null; this._ctx = null; this._an = null;
       this._intro();

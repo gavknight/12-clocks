@@ -37,8 +37,14 @@ export interface BadgeStats {
   petsSold:        number;
   petsBought:      number;
   treeFound:       number;
+  gemItemsBought:  number;
+  escapes:         number;
+  bestSurvival:    number;
 }
-const ZERO: BadgeStats = { levelsPublished: 0, petsSold: 0, petsBought: 0, treeFound: 0 };
+const ZERO: BadgeStats = {
+  levelsPublished: 0, petsSold: 0, petsBought: 0, treeFound: 0,
+  gemItemsBought: 0, escapes: 0, bestSurvival: 0,
+};
 
 export function getStats(): BadgeStats {
   try { return { ...ZERO, ...JSON.parse(localStorage.getItem(STAT_KEY) ?? "{}") }; }
@@ -87,6 +93,10 @@ export const BADGES: Badge[] = [
   // ── Pets ──────────────────────────────────────────────────────────────────
   { id: "pet_owner", emoji: "🐱", name: "Pet Owner",  tier: "bronze",
     desc: "Own your first pet", value: g => g.state.pets.length, goal: 1 },
+  { id: "collector", emoji: "🐾", name: "Collector",  tier: "silver",
+    desc: "Own 5 pets at once", value: g => g.state.pets.length, goal: 5 },
+  { id: "menagerie", emoji: "🦁", name: "Menagerie",  tier: "gold",
+    desc: "Own 12 pets at once", value: g => g.state.pets.length, goal: 12 },
   { id: "zookeeper", emoji: "🦄", name: "Zookeeper",  tier: "legend",
     desc: "Own every pet at once", value: g => g.state.pets.length, goal: PETS.length },
 
@@ -103,6 +113,19 @@ export const BADGES: Badge[] = [
     desc: "Sell a pet in the Trading Plaza", value: () => getStats().petsSold, goal: 1 },
   { id: "mogul",     emoji: "📈", name: "Mogul",      tier: "gold",
     desc: "Sell 10 pets", value: () => getStats().petsSold, goal: 10 },
+
+  // ── Shopping & survival ───────────────────────────────────────────────────
+  { id: "big_spender", emoji: "🛍️", name: "Big Spender", tier: "silver",
+    desc: "Buy from the Diamond Aisle",
+    value: () => getStats().gemItemsBought, goal: 1 },
+  { id: "well_equipped", emoji: "🎒", name: "Well Equipped", tier: "gold",
+    desc: "Own 4 upgrades at once", value: g => g.state.items.length, goal: 4 },
+  { id: "survivor", emoji: "🖥️", name: "Survivor", tier: "silver",
+    desc: "Escape Trapped In Your Computer",
+    value: () => getStats().escapes, goal: 1 },
+  { id: "nerves", emoji: "🧊", name: "Nerves of Steel", tier: "legend",
+    desc: "Last 120 seconds without screaming",
+    value: () => getStats().bestSurvival, goal: 120 },
 
   // ── Secrets ───────────────────────────────────────────────────────────────
   { id: "old_tree", emoji: "🌳", name: "The Old Tree", tier: "legend", secret: true,
