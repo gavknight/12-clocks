@@ -204,6 +204,15 @@ export class ExploreScene {
         }</div>`;
     }).join("");
 
+    // ── Secret: a tiny acorn tucked on the top shelf, far right of the room.
+    // Deliberately small and unlisted in getObjects() so it reads as scenery.
+    const acornHTML = `
+      <div id="secretAcorn" style="
+        position:absolute;left:calc(243vw);${this._surfaceStyle("shelf1", 17)}
+        font-size:17px;line-height:1;cursor:pointer;pointer-events:all;user-select:none;
+        opacity:0.62;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.6));
+        transition:transform 0.15s,opacity 0.2s;">🌰</div>`;
+
     game.ui.innerHTML = `
       <style>
         @keyframes bump { 0%,100%{transform:scale(1)} 50%{transform:scale(1.32)} }
@@ -277,6 +286,7 @@ export class ExploreScene {
             <!-- ── ALL OBJECTS ── -->
             <div style="position:absolute;inset:0;z-index:10;">
               ${objectsHTML}
+              ${acornHTML}
             </div>
 
             <!-- ── THE CLOCK (in the room, center, on floor) ── -->
@@ -554,6 +564,25 @@ export class ExploreScene {
         }
       };
     });
+
+    const acorn = document.getElementById("secretAcorn");
+    if (acorn) {
+      acorn.onmouseenter = () => { acorn.style.transform = "scale(1.3)"; acorn.style.opacity = "1"; };
+      acorn.onmouseleave = () => { acorn.style.transform = ""; acorn.style.opacity = "0.62"; };
+      acorn.onclick = (e) => {
+        e.stopPropagation();
+        if (dragDist > 6) return; // was a drag, not a click
+        acorn.style.animation = "bump 0.3s ease";
+        this._later(320, () => {
+          import("./TreeScene").then(m => {
+            game._disposeScene?.();
+            game._disposeScene = null;
+            game.ui.innerHTML = "";
+            new m.TreeScene(game);
+          });
+        });
+      };
+    }
 
     // ── MULTIPLAYER ──────────────────────────────────────────────────────────
     const mp = game.mp;

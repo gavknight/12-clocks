@@ -27,6 +27,20 @@ export class BadgesScene {
     const val = b.value(game);
     const pct = Math.max(0, Math.min(100, (val / b.goal) * 100));
 
+    // an unearned secret gives nothing away — no name, no hint, no progress
+    if (b.secret && !earned) {
+      return `
+        <div style="background:rgba(255,255,255,0.03);border:2px dashed rgba(255,255,255,0.12);
+          border-radius:16px;padding:13px 12px;display:flex;flex-direction:column;
+          align-items:center;gap:5px;text-align:center;">
+          <div style="font-size:34px;line-height:1;opacity:0.3;">❔</div>
+          <div style="color:rgba(255,255,255,0.35);font-size:13px;font-weight:900;
+            font-family:'Arial Black',Arial;">???</div>
+          <div style="color:rgba(255,255,255,0.25);font-size:10px;line-height:1.35;">
+            A secret badge. Somewhere in the room.</div>
+        </div>`;
+    }
+
     return `
       <div style="background:${earned ? `${t.color}1a` : "rgba(255,255,255,0.04)"};
         border:2px solid ${earned ? `${t.color}88` : "rgba(255,255,255,0.09)"};

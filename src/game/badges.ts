@@ -19,6 +19,8 @@ export interface Badge {
   /** Current progress toward `goal` — drives the progress bar on locked badges. */
   value: (g: Game) => number;
   goal:  number;
+  /** Hidden in the badge list until earned — no hint, no progress bar. */
+  secret?: boolean;
 }
 
 export const TIER_STYLE: Record<BadgeTier, { color: string; label: string }> = {
@@ -34,8 +36,9 @@ export interface BadgeStats {
   levelsPublished: number;
   petsSold:        number;
   petsBought:      number;
+  treeFound:       number;
 }
-const ZERO: BadgeStats = { levelsPublished: 0, petsSold: 0, petsBought: 0 };
+const ZERO: BadgeStats = { levelsPublished: 0, petsSold: 0, petsBought: 0, treeFound: 0 };
 
 export function getStats(): BadgeStats {
   try { return { ...ZERO, ...JSON.parse(localStorage.getItem(STAT_KEY) ?? "{}") }; }
@@ -100,6 +103,11 @@ export const BADGES: Badge[] = [
     desc: "Sell a pet in the Trading Plaza", value: () => getStats().petsSold, goal: 1 },
   { id: "mogul",     emoji: "📈", name: "Mogul",      tier: "gold",
     desc: "Sell 10 pets", value: () => getStats().petsSold, goal: 10 },
+
+  // ── Secrets ───────────────────────────────────────────────────────────────
+  { id: "old_tree", emoji: "🌳", name: "The Old Tree", tier: "legend", secret: true,
+    desc: "Found the acorn on the top shelf",
+    value: () => getStats().treeFound, goal: 1 },
 ];
 
 export function isEarned(b: Badge, g: Game): boolean {
