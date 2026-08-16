@@ -1694,8 +1694,58 @@ export class ${className} {
     }).catch(() => {});
   }
 
-  /** Rising four-note chime. Synthesised so there's no asset to load or cache. */
+  private _badgeAudio: HTMLAudioElement | null = null;
+  private _badgeAudioBroken = false;
+
+  /**
+   * Drop a file at public/sounds/badge.mp3 (or .wav / .ogg) and it plays instead
+   * of the built-in chime — no code change needed. If the file is missing or the
+   * format won't decode, we fall straight back to the synthesised arpeggio, so
+   * the game never ends up silent.
+   */
   private _playBadgeSound(): void {
+    if (this._badgeAudioBroken) { this._synthBadgeSound(); return; }
+
+    if (!this._badgeAudio) {
+      const a = new Audio();
+      // let the browser pick whichever of these it can actually decode
+      for (const [src, type] of [
+        ["/sounds/badge.mp3", "audio/mpeg"],
+        ["/sounds/badge.ogg", "audio/ogg"],
+        ["/sounds/badge.wav", "audio/wav"],
+      ] as const) {
+        const s = document.createElement("source");
+        s.src = src;
+        s.type = type;
+        a.appendChild(s);
+      }
+      a.preload = "auto";
+      a.volume  = 0.65;
+      // fires when every <source> has failed — i.e. no badge sound is installed
+      a.onerror = () => { this._badgeAudioBroken = true; };
+      this._badgeAudio = a;
+    }
+
+    const a = this._badgeAudio;
+    try {
+      a.currentTime = 0;
+      const p = a.play();
+      if (p) {
+        p.catch(() => {
+          // no file installed → use the chime. If instead the browser blocked
+          // autoplay, the synth is blocked too and simply stays silent.
+          this._badgeAudioBroken = true;
+          this._synthBadgeSound();
+        });
+      }
+    } catch {
+      this._badgeAudioBroken = true;
+      this._synthBadgeSound();
+    }
+  }
+
+  /** Fallback: rising four-note chime, synthesised so it needs no asset. */
+  private _synthBadgeSound(): void {
     try {
       const ctx = new AudioContext();
       // C6 E6 G6 C7 — a major arpeggio, reads as "achievement" rather than "alert"
