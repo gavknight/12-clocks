@@ -56,18 +56,43 @@ export class MultiplayerManager {
     const peerId = `12clocks-${this.name.toLowerCase().replace(/\s+/g, "-")}`;
     this._peer = await this._makePeer(peerId);
     return new Promise((resolve, reject) => {
+      let settled = false;
+      const done = () => { if (!settled) { settled = true; resolve(); } };
+      const fail = (e: Error) => { if (!settled) { settled = true; reject(e); } };
+
       this._peer!.on("open", () => {
         this.isHost = true;
         this._peer!.on("connection", conn => this._setup(conn));
-        resolve();
+        done();
       });
+
       this._peer!.on("error", (err) => {
-        // ID taken — fall back to a random peer (can still join others)
-        if (String(err).includes("unavailable")) { resolve(); return; }
-        reject(err);
+        // Our name is already claimed on the broker — nearly always our own
+        // stale peer from an earlier scene. Actually take a random ID so we
+        // can still dial out; resolving on the dead peer would leave `id`
+        // null and every later connect would hang until it timed out.
+        if (String(err).includes("unavailable")) {
+          this._peer?.destroy();
+          this._makePeer().then(p => {
+            this._peer = p;
+            p.on("open", () => {
+              p.on("connection", conn => this._setup(conn));
+              done(); // isHost stays false: nobody can find us by name
+            });
+            p.on("error", e => fail(e as Error));
+          }).catch(e => fail(e as Error));
+          return;
+        }
+        fail(err as Error);
       });
-      setTimeout(() => reject(new Error("timeout")), 10_000);
+
+      setTimeout(() => fail(new Error("timeout")), 10_000);
     });
+  }
+
+  /** True once we hold our username-based ID, so friends can dial us by name. */
+  get isReachableByName(): boolean {
+    return this.isHost && !!this._peer?.id;
   }
 
   /** Join another player by their username */

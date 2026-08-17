@@ -354,6 +354,13 @@ export class FriendsScene {
   }
 
   private async _joinFriend(f: Friend): Promise<void> {
+    // Release any peer we're already holding, or it keeps our username ID and
+    // the new one can't claim it.
+    if (this._game.mp) {
+      this._game.mp.dispose();
+      this._game.mp = null;
+      await new Promise(r => setTimeout(r, 400));
+    }
     const mp = new MultiplayerManager(this._me.name);
     try {
       await mp.goOnline().catch(() => {});

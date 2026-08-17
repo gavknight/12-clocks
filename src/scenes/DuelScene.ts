@@ -88,9 +88,24 @@ export class DuelScene {
   // ── Matchmaking logic ──────────────────────────────────────────────────────
   private async _startMatchmaking() {
     try {
+      // Drop any peer left over from the lobby or a previous duel first — it
+      // still owns our username-based PeerJS ID, and the new peer would lose
+      // the race for it. LobbyScene does the same on entry.
+      if (this._game.mp) {
+        this._game.mp.dispose();
+        this._game.mp = null;
+        await new Promise(r => setTimeout(r, 400)); // let the broker release the ID
+      }
+
       // Set up our PeerJS peer first
       this._mp = new MultiplayerManager(this._game.state.username);
       await this._mp.goOnline();
+
+      // A friend duel only works if they can dial us by name.
+      if (this._challenge?.host && !this._mp.isReachableByName) {
+        this._showError("Couldn't claim your name online. Close other tabs of the game and retry.");
+        return;
+      }
       const myPeerId = `12clocks-${this._game.state.username.toLowerCase().replace(/\s+/g, "-")}`;
 
       // Friend challenge — skip the queue entirely and pair the two of us.

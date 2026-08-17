@@ -224,11 +224,12 @@ export class Game {
   private _lastRequestCount = -1;
 
   private _startFriendPoller(): void {
-    const check = () => {
+    // Invites are time-sensitive — a challenge nobody sees for 12s feels broken,
+    // and they expire after 90s. Friend requests can tick over far more slowly.
+    const checkInvites = () => {
       const me = this.currentAccountId;
       if (!me) return;
-
-      import("./friends").then(({ fetchInvites, fetchLinks, respondToInvite }) => {
+      import("./friends").then(({ fetchInvites, respondToInvite }) => {
         fetchInvites(me).then(invites => {
           for (const inv of invites) {
             if (this._seenInviteIds.has(inv.id)) continue;
@@ -236,8 +237,13 @@ export class Game {
             this._showInvite(inv.id, inv.from_name, inv.kind, respondToInvite);
           }
         }).catch(() => {});
+      }).catch(() => {});
+    };
 
-        // Badge new friend requests, but don't nag on every poll.
+    const checkRequests = () => {
+      const me = this.currentAccountId;
+      if (!me) return;
+      import("./friends").then(({ fetchLinks }) => {
         fetchLinks(me).then(links => {
           const pending = links.filter(l => l.status === "pending" && l.to_id === me).length;
           if (this._lastRequestCount === -1) { this._lastRequestCount = pending; return; }
@@ -249,7 +255,10 @@ export class Game {
         }).catch(() => {});
       }).catch(() => {});
     };
-    setInterval(check, 12_000);
+
+    checkInvites();
+    setInterval(checkInvites, 4_000);
+    setInterval(checkRequests, 20_000);
   }
 
   /** Accept/decline card for a "come play" or "I challenge you" invite. */
@@ -299,6 +308,11 @@ export class Game {
   /** Connect to a friend's hosted room and drop straight in. */
   private _joinFriendGame(username: string): void {
     import("../multiplayer/MultiplayerManager").then(async ({ MultiplayerManager }) => {
+      if (this.mp) {
+        this.mp.dispose();
+        this.mp = null;
+        await new Promise(r => setTimeout(r, 400));
+      }
       const mp = new MultiplayerManager(this.state.username || "Player");
       try {
         await mp.goOnline().catch(() => {});
