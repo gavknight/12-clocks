@@ -27,6 +27,8 @@ export class MultiplayerManager {
   private _cursorTimer = 0;
   isHost          = false; // true if we called goOnline() — only joiners request sync
   initialSyncDone = false; // prevents infinite reqsync loop
+  /** Last PeerJS error type seen, so scenes can report why a connect failed. */
+  lastError       = "";
 
   onCursor:     ((id: string, name: string, color: string, x: number, y: number) => void) | null = null;
   onInv:        ((items: number[]) => void) | null = null;
@@ -67,11 +69,20 @@ export class MultiplayerManager {
       });
 
       this._peer!.on("error", (err) => {
-        // Our name is already claimed on the broker — nearly always our own
-        // stale peer from an earlier scene. Actually take a random ID so we
-        // can still dial out; resolving on the dead peer would leave `id`
-        // null and every later connect would hang until it timed out.
-        if (String(err).includes("unavailable")) {
+        const type = (err as unknown as { type?: string }).type ?? "";
+        this.lastError = type || String(err);
+
+        // Once we're connected, this handler must never tear the peer down.
+        // "peer-unavailable" fires whenever *someone else* can't be reached,
+        // and swapping our live peer out at that point would strand a friend
+        // who was about to connect to us.
+        if (settled) return;
+
+        // Our own name is already claimed on the broker — nearly always our
+        // stale peer from an earlier scene. Take a random ID so we can still
+        // dial out; resolving on the dead peer would leave `id` null and every
+        // later connect would hang until it timed out.
+        if (type === "unavailable-id") {
           this._peer?.destroy();
           this._makePeer().then(p => {
             this._peer = p;
@@ -79,11 +90,11 @@ export class MultiplayerManager {
               p.on("connection", conn => this._setup(conn));
               done(); // isHost stays false: nobody can find us by name
             });
-            p.on("error", e => fail(e as Error));
+            p.on("error", e => fail(new Error((e as unknown as { type?: string }).type ?? String(e))));
           }).catch(e => fail(e as Error));
           return;
         }
-        fail(err as Error);
+        fail(new Error(type || String(err)));
       });
 
       setTimeout(() => fail(new Error("timeout")), 10_000);

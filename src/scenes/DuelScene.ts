@@ -103,7 +103,7 @@ export class DuelScene {
 
       // A friend duel only works if they can dial us by name.
       if (this._challenge?.host && !this._mp.isReachableByName) {
-        this._showError("Couldn't claim your name online. Close other tabs of the game and retry.");
+        this._showError("Your name is already online elsewhere, so they can't reach you. Close your other tabs of the game and retry.");
         return;
       }
       const myPeerId = `12clocks-${this._game.state.username.toLowerCase().replace(/\s+/g, "-")}`;
@@ -133,7 +133,35 @@ export class DuelScene {
         this._waitForOpponent();
       }
     } catch (e) {
-      this._showError("Connection failed. Try again.");
+      this._showError(this._explain(e));
+    }
+  }
+
+  /**
+   * Turn a PeerJS failure into something actionable. The old blanket
+   * "Connection failed" hid which of these it was, and they need different
+   * things from the player.
+   */
+  private _explain(e: unknown): string {
+    const raw = this._mp?.lastError || (e instanceof Error ? e.message : String(e));
+    switch (raw) {
+      case "unavailable-id":
+        return "Your name is already online elsewhere. Close your other tabs of the game and retry.";
+      case "peer-unavailable":
+        return `Couldn't reach ${this._opponentName || "them"} — they may have left. Ask them to try again.`;
+      case "browser-incompatible":
+        return "This browser can't do peer-to-peer. Try Chrome or Edge.";
+      case "ssl-unavailable":
+        return "Multiplayer needs a secure (https) connection.";
+      case "network":
+      case "server-error":
+        return "Couldn't reach the multiplayer server. Check your internet, then retry.";
+      case "invalid-id":
+        return "Your username has characters multiplayer can't use. Rename to letters and numbers.";
+      case "timeout":
+        return "Timed out connecting. The multiplayer server may be busy — retry in a moment.";
+      default:
+        return `Connection failed (${raw || "unknown"}). Try again.`;
     }
   }
 
