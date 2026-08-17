@@ -426,6 +426,15 @@ ${hasSave ? `
             🌐 Multiplayer
           </button>` : ""}
 
+          ${!IS_BEDROCK ? `<button id="friendsBtn" style="
+            background:linear-gradient(135deg,#0f4c81,#2fa3a3);color:white;font-size:18px;
+            padding:12px 24px;border-radius:20px;
+            border:2px solid rgba(120,220,220,0.5);cursor:pointer;">
+            👥 Friends<span id="friendsBadge" style="display:none;background:#ff4444;
+              color:white;font-size:12px;font-weight:bold;border-radius:10px;
+              padding:1px 7px;margin-left:6px;"></span>
+          <\button>` : ""}
+
           ${!IS_BEDROCK ? `<button id="duelBtn" style="
             background:linear-gradient(135deg,#7a0000,#e63946);color:white;font-size:18px;
             padding:12px 24px;border-radius:20px;
@@ -654,6 +663,23 @@ ${game.hasHacks ? `<button id="adminBtn" style="
     };
     if (game.hasHacks) document.getElementById("adminBtn")!.onclick = () => game.goAdmin();
     if (!IS_BEDROCK) document.getElementById("mpBtn")!.onclick   = () => game.goLobby();
+    if (!IS_BEDROCK) {
+      document.getElementById("friendsBtn")!.onclick = () => game.goFriends();
+      // Badge the button with unread DMs + pending requests.
+      import("../game/friends").then(({ unreadTotal, fetchLinks }) => {
+        const me = game.currentAccountId;
+        if (!me) return;
+        Promise.all([unreadTotal(me), fetchLinks(me)]).then(([unread, links]) => {
+          const pending = links.filter(l => l.status === "pending" && l.to_id === me).length;
+          const total = unread + pending;
+          const badge = document.getElementById("friendsBadge");
+          if (badge && total > 0) {
+            badge.style.display = "inline-block";
+            badge.textContent = String(total);
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+    }
     if (!IS_BEDROCK) document.getElementById("duelBtn")?.addEventListener("click", () => game.goDuel());
     document.getElementById("arcadeBtn")!.onclick = () => game.goArcade();
     if (!IS_BEDROCK) {

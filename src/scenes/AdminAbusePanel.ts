@@ -4,6 +4,7 @@ import {
   fetchAllLevelsForAdmin, difficultyOf, rateLevel, setFeatured, setHidden, deleteLevel,
   DIFFICULTIES,
 } from "../game/clockLevels";
+import { mountAdminPlus } from "./adminPlusSections";
 
 function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -348,6 +349,15 @@ export class AdminAbusePanel {
           <div id="aap_musicFb" style="color:#80ff80;font-size:12px;min-height:14px;"></div>
         </div>
 
+        <!-- Admin Panel+ — the exact same sections as the Alt+L panel -->
+        <div style="color:#66ffcc;font-size:15px;font-weight:bold;
+          border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;">
+          🛰️ Admin Panel+
+        </div>
+        <div style="color:rgba(100,255,204,0.5);font-size:11px;margin-top:-10px;">
+          Live spy · kick / freeze / puppet · events &amp; titles · also on Alt+L
+        </div>
+        <div id="aap_plusMount"></div>
 
       </div>
     `;
@@ -363,6 +373,12 @@ export class AdminAbusePanel {
     };
 
     $("aap_close").onclick = () => this.destroy();
+
+    // Admin Panel+ sections, mounted from the shared module so this panel and
+    // the Alt+L overlay can never drift apart.
+    const plusMount = mountAdminPlus(this.game, $("aap_plusMount"));
+    const beforePlus = this.destroy.bind(this);
+    this.destroy = () => { plusMount.destroy(); beforePlus(); };
 
     let updateStatusTimer = 0; // ticks the Update Alert status readout
 

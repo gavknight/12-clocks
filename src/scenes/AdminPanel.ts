@@ -81,6 +81,14 @@ export class AdminPanel {
           Press Ctrl anywhere · or click 🔧 Admin on the title screen
         </div>
 
+        <!-- Admin Panel+ -->
+        <div style="width:100%;max-width:360px;">
+          ${btn("🛰️", "Admin Panel+ — Live Spy, Events & Titles", "#66ffcc", () => game.goAdminPlus())}
+          <div style="color:rgba(255,255,255,0.3);font-size:11px;margin-top:4px;">
+            Or press Alt+L anywhere.
+          </div>
+        </div>
+
         <!-- Cheat buttons -->
         <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:8px;">
           ${btn("🎒", "Give All 12 Numbers", "white", () => {

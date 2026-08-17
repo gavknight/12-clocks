@@ -18,10 +18,18 @@ export class DuelScene {
   private _progressInterval = 0;
   private _disposed = false;
 
-  constructor(game: Game) {
+  /**
+   * A friend challenge, when this duel is against a specific person instead of
+   * the random queue. `host` waits for the friend to connect; the other side
+   * dials straight into `opponentName`.
+   */
+  private _challenge: { opponentName: string; host: boolean } | null = null;
+
+  constructor(game: Game, challenge?: { opponentName: string; host: boolean }) {
     this._game = game;
     if (!game.state.username) { game.goAuth(); return; }
     this._total = game.state.difficulty || 12;
+    this._challenge = challenge ?? null;
     this._showMatchmaking();
   }
 
@@ -85,6 +93,17 @@ export class DuelScene {
       await this._mp.goOnline();
       const myPeerId = `12clocks-${this._game.state.username.toLowerCase().replace(/\s+/g, "-")}`;
 
+      // Friend challenge — skip the queue entirely and pair the two of us.
+      if (this._challenge) {
+        this._opponentName = this._challenge.opponentName;
+        if (this._challenge.host) {
+          this._awaitChallenger();
+        } else {
+          await this._joinOpponent("", "");
+        }
+        return;
+      }
+
       // Look for a waiting opponent
       const waiting = await this._findWaiting();
       if (waiting) {
@@ -130,12 +149,26 @@ export class DuelScene {
     });
   }
 
+  /** Challenger side of a friend duel: sit online until they dial in. */
+  private _awaitChallenger() {
+    const statusEl = document.getElementById("statusText");
+    if (statusEl) statusEl.textContent = `Waiting for ${this._opponentName} to accept…`;
+
+    this._mp!.onDuelReady = () => {
+      this._mp!.sendDuelReady();
+      this._startCountdown();
+    };
+    this._mp!.onDuelProgress = (locks, total) => this._onOpponentProgress(locks, total);
+    this._mp!.onDuelWin = () => this._onOpponentWin();
+    this._mp!.onDisconnect = () => this._onDisconnect();
+  }
+
   private async _joinOpponent(opponentPeerId: string, opponentRowId: string) {
     const statusEl = document.getElementById("statusText");
     if (statusEl) statusEl.textContent = `Found ${this._opponentName}! Connecting...`;
 
-    // Mark their row as matched
-    await this._markMatched(opponentRowId, this._game.state.username);
+    // Friend duels have no queue row to mark.
+    if (opponentRowId) await this._markMatched(opponentRowId, this._game.state.username);
 
     this._mp!.onDuelReady = () => this._startCountdown();
     this._mp!.onDuelProgress = (locks, total) => this._onOpponentProgress(locks, total);

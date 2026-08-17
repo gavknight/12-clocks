@@ -5,6 +5,11 @@ import { pingMember, setBanStatus } from "./members";
 import { unlockCost, LEVEL_COUNT, type LevelTheme } from "./levelData";
 import { IS_BEDROCK } from "../bedrock";
 import { rollOhio, type OhioRoll } from "./ohio";
+import {
+  AP_SB, AP_H, AP_H_UPSERT, AP_H_QUIET, ALL_PLAYERS,
+  titleDef, eventDef, isBirthdayToday,
+  type PlayerCommand,
+} from "./adminPlus";
 
 export const MAX_COINS = Infinity;
 
@@ -206,6 +211,332 @@ export class Game {
     this._startIdleWatcher();
     this.fetchAdminUsers();
     setInterval(() => this.fetchAdminUsers(), 15000);
+    this._startPresenceHeartbeat();
+    this._startCommandPoller();
+    this._startEventPoller();
+    this._startTitlePoller();
+    this._startFriendPoller();
+  }
+
+  // ── Friends: incoming invites and requests ───────────────────────────────
+
+  private _seenInviteIds = new Set<number>();
+  private _lastRequestCount = -1;
+
+  private _startFriendPoller(): void {
+    const check = () => {
+      const me = this.currentAccountId;
+      if (!me) return;
+
+      import("./friends").then(({ fetchInvites, fetchLinks, respondToInvite }) => {
+        fetchInvites(me).then(invites => {
+          for (const inv of invites) {
+            if (this._seenInviteIds.has(inv.id)) continue;
+            this._seenInviteIds.add(inv.id);
+            this._showInvite(inv.id, inv.from_name, inv.kind, respondToInvite);
+          }
+        }).catch(() => {});
+
+        // Badge new friend requests, but don't nag on every poll.
+        fetchLinks(me).then(links => {
+          const pending = links.filter(l => l.status === "pending" && l.to_id === me).length;
+          if (this._lastRequestCount === -1) { this._lastRequestCount = pending; return; }
+          if (pending > this._lastRequestCount) {
+            this._showAdminNotice("👥 New friend request!",
+              "Someone wants to be your friend — open Friends to accept.", "#7dc4ff");
+          }
+          this._lastRequestCount = pending;
+        }).catch(() => {});
+      }).catch(() => {});
+    };
+    setInterval(check, 12_000);
+  }
+
+  /** Accept/decline card for a "come play" or "I challenge you" invite. */
+  private _showInvite(
+    id: number, fromName: string, kind: "play" | "duel",
+    respond: (id: number, accept: boolean) => Promise<void>,
+  ): void {
+    const isDuel = kind === "duel";
+    const card = document.createElement("div");
+    card.style.cssText =
+      "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:999999;" +
+      `background:rgba(8,10,26,0.97);border:2px solid ${isDuel ? "#ffe066" : "#7dffc4"};` +
+      "border-radius:16px;padding:14px 18px;max-width:320px;width:90%;" +
+      "box-shadow:0 6px 28px rgba(0,0,0,0.7);font-family:Arial,sans-serif;text-align:center;";
+    card.innerHTML =
+      `<div style="font-size:30px;">${isDuel ? "⚔️" : "🎮"}</div>` +
+      `<div style="color:${isDuel ? "#ffe066" : "#7dffc4"};font-size:15px;font-weight:bold;margin-top:3px;">` +
+        `${fromName} ${isDuel ? "challenges you!" : "wants to play!"}</div>` +
+      `<div style="color:rgba(255,255,255,0.55);font-size:12px;margin-top:3px;">` +
+        `${isDuel ? "First to finish wins." : "Join their room and play together."}</div>` +
+      `<div style="display:flex;gap:7px;margin-top:11px;">` +
+        `<button id="__invYes" style="flex:1;background:${isDuel ? "rgba(255,224,102,0.25)" : "rgba(125,255,196,0.25)"};` +
+          `color:${isDuel ? "#ffe066" : "#7dffc4"};font-size:13px;font-weight:bold;` +
+          `border:1px solid ${isDuel ? "#ffe066" : "#7dffc4"};border-radius:9px;padding:9px;cursor:pointer;">` +
+          `✓ ${isDuel ? "Accept" : "Join"}</button>` +
+        `<button id="__invNo" style="flex:1;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.5);` +
+          `font-size:13px;border:1px solid rgba(255,255,255,0.2);border-radius:9px;padding:9px;cursor:pointer;">` +
+          `✕ No thanks</button>` +
+      `</div>`;
+    document.body.appendChild(card);
+
+    const close = () => card.remove();
+    card.querySelector<HTMLElement>("#__invNo")!.onclick = () => { respond(id, false).catch(() => {}); close(); };
+    card.querySelector<HTMLElement>("#__invYes")!.onclick = () => {
+      respond(id, true).catch(() => {});
+      close();
+      if (isDuel) {
+        this.goFriendDuel(fromName, false);
+      } else {
+        this._joinFriendGame(fromName);
+      }
+    };
+    // Invites go stale; don't leave a dead card on screen.
+    setTimeout(close, 60_000);
+  }
+
+  /** Connect to a friend's hosted room and drop straight in. */
+  private _joinFriendGame(username: string): void {
+    import("../multiplayer/MultiplayerManager").then(async ({ MultiplayerManager }) => {
+      const mp = new MultiplayerManager(this.state.username || "Player");
+      try {
+        await mp.goOnline().catch(() => {});
+        await mp.joinPlayer(username);
+        this.mp = mp;
+        this.goExplore();
+      } catch {
+        mp.dispose();
+        this._showAdminNotice("❌ Couldn't connect", `${username} isn't reachable right now.`, "#ff6666");
+      }
+    });
+  }
+
+  // ── Admin Panel+ : presence, remote commands, events, titles ─────────────
+
+  /** Epoch ms this browser session started — shown in the Live Player Spy. */
+  private _sessionStarted = Date.now();
+
+  /** id of the event the owner has switched on, or null. */
+  activeEventId: string | null = null;
+  /** id of this player's title, or null. */
+  myTitleId: string | null = null;
+
+  /** True while an admin has this player frozen. */
+  frozen = false;
+
+  /**
+   * Birthday Boy runs itself on the game's birthday, so it wins over whatever
+   * the owner has toggled. Otherwise the manually chosen event applies.
+   */
+  get liveEventId(): string | null {
+    return isBirthdayToday() ? "birthday_boy" : this.activeEventId;
+  }
+
+  /** Stat multiplier from this player's title — 1 when untitled. */
+  get titleMultiplier(): number {
+    return titleDef(this.myTitleId)?.mult ?? 1;
+  }
+
+  /** Coin multiplier from the live event × this player's title. */
+  get eventCoinMultiplier(): number {
+    return (eventDef(this.liveEventId)?.coins ?? 1) * this.titleMultiplier;
+  }
+  /** Win multiplier from the live event × this player's title. */
+  get eventWinMultiplier(): number {
+    return (eventDef(this.liveEventId)?.wins ?? 1) * this.titleMultiplier;
+  }
+  /** Diamond multiplier from the live event × this player's title. */
+  get eventGemMultiplier(): number {
+    return (eventDef(this.liveEventId)?.diamonds ?? 1) * this.titleMultiplier;
+  }
+
+  /** Tell the server where we are and what we're worth, every 8s. */
+  private _startPresenceHeartbeat(): void {
+    const beat = () => {
+      const accountId = this.currentAccountId;
+      if (!accountId) return;
+      fetch(`${AP_SB}/player_presence`, {
+        method: "POST",
+        headers: AP_H_UPSERT,
+        body: JSON.stringify({
+          account_id:      accountId,
+          username:        this.state.username || "Player",
+          scene:           this.currentScene,
+          coins:           Math.round(this.state.coins),
+          wins:            this.state.wins,
+          diamonds:        this.state.diamonds,
+          title:           this.myTitleId,
+          session_started: this._sessionStarted,
+          last_seen:       Date.now(),
+          mp_state:        this.mp ? (this.mp.isHost ? "hosting" : "joined") : "solo",
+          mp_peers:        this.mp ? Math.max(0, this.mp.playerCount - 1) : 0,
+        }),
+      }).catch(() => {});
+    };
+    beat();
+    setInterval(beat, 8_000);
+  }
+
+  /** Watch for kick / freeze / goto commands aimed at us (or at everyone). */
+  private _startCommandPoller(): void {
+    const check = () => {
+      const accountId = this.currentAccountId;
+      if (!accountId) return;
+      const target = `account_id=in.("${accountId}","${ALL_PLAYERS}")`;
+      fetch(`${AP_SB}/player_commands?${target}&consumed=eq.false&order=created_at.asc`, {
+        headers: AP_H,
+      }).then(r => r.json()).then((rows: PlayerCommand[]) => {
+        if (!Array.isArray(rows) || !rows.length) return;
+        for (const row of rows) this._runCommand(row);
+        // Broadcast commands stay for other players, so only tick off our own.
+        const mine = rows.filter(r => r.account_id === accountId).map(r => r.id);
+        if (mine.length) {
+          fetch(`${AP_SB}/player_commands?id=in.(${mine.join(",")})`, {
+            method: "PATCH", headers: AP_H_QUIET, body: JSON.stringify({ consumed: true }),
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    };
+    setInterval(check, 3_000);
+  }
+
+  private _seenCommandIds = new Set<number>();
+
+  private _runCommand(cmd: PlayerCommand): void {
+    // A broadcast row is never marked consumed, so guard against replaying it.
+    if (this._seenCommandIds.has(cmd.id)) return;
+    this._seenCommandIds.add(cmd.id);
+
+    // Commands are live orders, not a queue. Anything issued before this
+    // session began is history — otherwise a week-old "freeze all" would
+    // land on every player who opens the game.
+    if (cmd.created_at < this._sessionStarted) return;
+
+    switch (cmd.command) {
+      case "kick":
+        this._showAdminNotice("👢 Kicked", cmd.payload || "An admin sent you back to the title screen.", "#ff6666");
+        this.unfreeze();
+        this.goTitle();
+        break;
+      case "freeze":
+        this.freeze(cmd.payload || "An admin has frozen your screen.");
+        break;
+      case "unfreeze":
+        this.unfreeze();
+        break;
+      case "goto":
+        this.unfreeze();
+        this._gotoDestination(cmd.payload || "title");
+        break;
+    }
+  }
+
+  /** Send a player wherever the admin picked. Ids come from PUPPET_DESTINATIONS. */
+  private _gotoDestination(id: string): void {
+    const routes: Record<string, () => void> = {
+      title:        () => this.goTitle(),
+      arcade:       () => this.goArcade(),
+      shop:         () => this.goShop(),
+      levelSelect:  () => this.goLevelSelect(),
+      lobby:        () => this.goLobby(),
+      tradingPlaza: () => this.goTradingPlaza(),
+      badges:       () => this.goBadges(),
+      ohio:         () => this.goOhio(),
+      clan:         () => this.goClan(),
+      ending:       () => this.goEnding(),
+      banned:       () => this.goBanned(),
+    };
+    (routes[id] ?? routes.title)();
+  }
+
+  /** Lock the screen behind an unskippable overlay until an admin lifts it. */
+  freeze(message: string): void {
+    if (this.frozen) {
+      const msgEl = document.getElementById("__freezeMsg");
+      if (msgEl) msgEl.textContent = message;
+      return;
+    }
+    this.frozen = true;
+    const ov = document.createElement("div");
+    ov.id = "__freezeOverlay";
+    ov.style.cssText =
+      "position:fixed;inset:0;z-index:2000000;background:rgba(0,0,20,0.94);" +
+      "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;" +
+      "font-family:Arial,sans-serif;text-align:center;padding:24px;backdrop-filter:blur(3px);";
+    ov.innerHTML =
+      `<div style="font-size:56px;">🧊</div>` +
+      `<div style="color:#88ddff;font-size:24px;font-weight:900;">FROZEN BY AN ADMIN</div>` +
+      `<div id="__freezeMsg" style="color:rgba(255,255,255,0.8);font-size:15px;max-width:320px;">${message}</div>` +
+      `<div style="color:rgba(255,255,255,0.35);font-size:12px;">You'll be released when the admin says so.</div>`;
+    document.body.appendChild(ov);
+  }
+
+  unfreeze(): void {
+    if (!this.frozen) return;
+    this.frozen = false;
+    document.getElementById("__freezeOverlay")?.remove();
+  }
+
+  /** Small toast used by kick and by title/event announcements. */
+  private _showAdminNotice(heading: string, body: string, color: string): void {
+    const toast = document.createElement("div");
+    toast.style.cssText =
+      "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);" +
+      `background:rgba(10,10,20,0.96);border:2px solid ${color};border-radius:14px;` +
+      "padding:12px 20px;z-index:999999;cursor:pointer;max-width:320px;width:90%;" +
+      "box-shadow:0 4px 24px rgba(0,0,0,0.6);font-family:Arial,sans-serif;text-align:center;";
+    toast.innerHTML =
+      `<div style="color:${color};font-size:15px;font-weight:bold;">${heading}</div>` +
+      `<div style="color:rgba(255,255,255,0.75);font-size:13px;margin-top:4px;">${body}</div>`;
+    toast.onclick = () => toast.remove();
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 10_000);
+  }
+
+  /** Poll which server-wide event is live. */
+  private _startEventPoller(): void {
+    const check = () => {
+      fetch(`${AP_SB}/global_settings?key=eq.active_event&select=value`, { headers: AP_H })
+        .then(r => r.json()).then((rows: { value: string }[]) => {
+          const next = rows[0]?.value || null;
+          const normalised = next && next !== "none" ? next : null;
+          if (normalised === this.activeEventId) return;
+          const before = this.liveEventId;
+          this.activeEventId = normalised;
+          const now = this.liveEventId;
+          if (now && now !== before) {
+            const def = eventDef(now);
+            if (def) this._showAdminNotice(`${def.emoji} ${def.name} is LIVE!`, def.desc, def.color);
+          }
+        }).catch(() => {});
+    };
+    check();
+    setInterval(check, 15_000);
+  }
+
+  /** Poll our own title so a grant takes effect without a reload. */
+  private _startTitlePoller(): void {
+    const check = () => {
+      const accountId = this.currentAccountId;
+      if (!accountId) return;
+      fetch(`${AP_SB}/player_titles?account_id=eq.${accountId}&select=title`, { headers: AP_H })
+        .then(r => r.json()).then((rows: { title: string }[]) => {
+          const next = rows[0]?.title ?? null;
+          if (next === this.myTitleId) return;
+          this.myTitleId = next;
+          const def = titleDef(next);
+          if (def) {
+            this._showAdminNotice(
+              `${def.emoji} You are now ${def.name}!`,
+              `${def.mult.toLocaleString()}× coins, wins and diamonds.`,
+              def.color,
+            );
+          }
+        }).catch(() => {});
+    };
+    check();
+    setInterval(check, 15_000);
   }
 
   private _lastReportId = 0;
@@ -1045,7 +1376,7 @@ export class ${className} {
     if (this.hasItem("lucky_charm"))    m *= 1.25;
     if (this.hasItem("midas_touch"))    m *= 2;
     if (this.hasItem("diamond_crown"))  m *= 3;
-    return m;
+    return m * this.eventCoinMultiplier;
   }
 
   /** Interval multiplier — below 1 means pets tick sooner. */
@@ -1062,7 +1393,7 @@ export class ${className} {
     let m = 1;
     if (this.hasItem("gem_magnet")) m *= 1.5;
     if (this.hasItem("gem_forge"))  m *= 2;
-    return m;
+    return m * this.eventGemMultiplier;
   }
 
   /** How many screams the player can absorb per horror run. */
@@ -1279,9 +1610,9 @@ export class ${className} {
     if (completed) {
       // Ohio pays for the chaos you actually put up with
       const mult = this.ohioRoll?.tier.bonus ?? 1;
-      const reward = 100 * mult;
+      const reward = Math.round(100 * mult * this.eventCoinMultiplier);
       this.state.coins += reward;
-      this.state.wins += 1;
+      this.state.wins += Math.round(this.eventWinMultiplier);
       if (mult > 1) this._showOhioPayout(reward, mult);
       const next = n + 1;
       if (next <= LEVEL_COUNT) this._unlockedLevels.add(next);
@@ -1769,6 +2100,11 @@ export class ${className} {
         e.preventDefault();
         import("../scenes/AdminLitePanel").then(m => new m.AdminLitePanel(this));
       }
+      // Alt+L — 🛰️ Admin Panel+ (live player spy, kick/freeze/puppet, events)
+      if (e.altKey && e.key === "l" && this.hasHacks) {
+        e.preventDefault();
+        this.goAdminPlus();
+      }
       if (e.altKey && e.key === "c" && this.hasHacks && (window as any).__coinJump) {
         e.preventDefault();
         import("../scenes/games/CoinJumpEditor").then(m => new m.CoinJumpEditor(this));
@@ -1802,7 +2138,11 @@ export class ${className} {
     }
   }
 
-  private _nav(fn: () => void): void {
+  /** Where this player currently is — heartbeated to the Live Player Spy. */
+  currentScene = "title";
+
+  private _nav(fn: () => void, label?: string): void {
+    if (label) this.currentScene = label;
     this._disposeScene?.();
     this._disposeScene = null;
     this.ui.innerHTML = "";
@@ -1828,21 +2168,21 @@ export class ${className} {
     this.goIntro();
   }
 
-  goMods():             void { this._nav(() => import("../scenes/ModsScene").then(m => new m.ModsScene(this))); }
-  goArcade():           void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("arcade")); this._nav(() => import("../scenes/ArcadeScene").then(m => new m.ArcadeScene(this))); }
-  goAuth():             void { this._nav(() => import("../scenes/AuthScene").then(m => new m.AuthScene(this))); }
-  goLobby():            void { this._nav(() => import("../scenes/LobbyScene").then(m => new m.LobbyScene(this))); }
-  goDuel():             void { this._nav(() => import("../scenes/DuelScene").then(m => new m.DuelScene(this))); }
-  goTitle():            void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("back")); this._nav(() => import("../scenes/TitleScene").then(m => new m.TitleScene(this))); }
-  goLevelSelect():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("start")); this._nav(() => import("../scenes/LevelSelect").then(m => new m.LevelSelect(this))); }
-  goLeaderboard():      void { this._nav(() => import("../scenes/LeaderboardScene").then(m => new m.LeaderboardScene(this))); }
-  goCoinLeaderboard():  void { this._nav(() => import("../scenes/CoinLeaderboardScene").then(m => new m.CoinLeaderboardScene(this))); }
-  goDiamondLeaderboard(): void { this._nav(() => import("../scenes/DiamondLeaderboardScene").then(m => new m.DiamondLeaderboardScene(this))); }
-  goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this))); }
-  goLevelBuilder():     void { this._nav(() => import("../scenes/LevelBuilder").then(m => new m.LevelBuilder(this))); }
-  goTradingPlaza():     void { this._nav(() => import("../scenes/TradingPlaza").then(m => new m.TradingPlaza(this))); }
-  goBadges():           void { this._nav(() => import("../scenes/BadgesScene").then(m => new m.BadgesScene(this))); }
-  goOhio():             void { this._nav(() => import("../scenes/OhioScene").then(m => new m.OhioScene(this))); }
+  goMods():             void { this._nav(() => import("../scenes/ModsScene").then(m => new m.ModsScene(this)), "Mods"); }
+  goArcade():           void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("arcade")); this._nav(() => import("../scenes/ArcadeScene").then(m => new m.ArcadeScene(this)), "Arcade"); }
+  goAuth():             void { this._nav(() => import("../scenes/AuthScene").then(m => new m.AuthScene(this)), "Login"); }
+  goLobby():            void { this._nav(() => import("../scenes/LobbyScene").then(m => new m.LobbyScene(this)), "Lobby"); }
+  goDuel():             void { this._nav(() => import("../scenes/DuelScene").then(m => new m.DuelScene(this)), "Duel"); }
+  goTitle():            void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("back")); this._nav(() => import("../scenes/TitleScene").then(m => new m.TitleScene(this)), "Title Screen"); }
+  goLevelSelect():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("start")); this._nav(() => import("../scenes/LevelSelect").then(m => new m.LevelSelect(this)), "Level Select"); }
+  goLeaderboard():      void { this._nav(() => import("../scenes/LeaderboardScene").then(m => new m.LeaderboardScene(this)), "Leaderboard"); }
+  goCoinLeaderboard():  void { this._nav(() => import("../scenes/CoinLeaderboardScene").then(m => new m.CoinLeaderboardScene(this)), "Coin Leaderboard"); }
+  goDiamondLeaderboard(): void { this._nav(() => import("../scenes/DiamondLeaderboardScene").then(m => new m.DiamondLeaderboardScene(this)), "Diamond Leaderboard"); }
+  goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this)), "Shop"); }
+  goLevelBuilder():     void { this._nav(() => import("../scenes/LevelBuilder").then(m => new m.LevelBuilder(this)), "Level Builder"); }
+  goTradingPlaza():     void { this._nav(() => import("../scenes/TradingPlaza").then(m => new m.TradingPlaza(this)), "Trading Plaza"); }
+  goBadges():           void { this._nav(() => import("../scenes/BadgesScene").then(m => new m.BadgesScene(this)), "Badges"); }
+  goOhio():             void { this._nav(() => import("../scenes/OhioScene").then(m => new m.OhioScene(this)), "Ohio Mode"); }
 
   /** Announce anything newly earned. Safe to call often — each badge fires once. */
   checkBadges(): void {
@@ -1959,17 +2299,17 @@ export class ${className} {
   }
   goIntro():       void {
     this.startTimer();
-    this._nav(() => import("../scenes/IntroCutscene").then(m => new m.IntroCutscene(this)));
+    this._nav(() => import("../scenes/IntroCutscene").then(m => new m.IntroCutscene(this)), "Intro");
   }
   goExplore():     void {
     this.rollOhioIfOn();
     if (this._runStart === 0) this.startTimer();
-    this._nav(() => import("../scenes/ExploreScene").then(m => new m.ExploreScene(this)));
+    this._nav(() => import("../scenes/ExploreScene").then(m => new m.ExploreScene(this)), `Level ${this.state.currentLevel}`);
   }
-  goClock():       void { this._nav(() => import("../scenes/ClockScene").then(m => new m.ClockScene(this))); }
-  goPuzzle(i: number): void { this._nav(() => import("../scenes/MiniPuzzle").then(m => new m.MiniPuzzle(this, i))); }
-  goEnding():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("win")); this._nav(() => import("../scenes/EndingScene").then(m => new m.EndingScene(this))); }
-  goAdmin():       void { if (!this.hasHacks) return; this._nav(() => import("../scenes/AdminPanel").then(m => new m.AdminPanel(this))); }
+  goClock():       void { this._nav(() => import("../scenes/ClockScene").then(m => new m.ClockScene(this)), "The Clock"); }
+  goPuzzle(i: number): void { this._nav(() => import("../scenes/MiniPuzzle").then(m => new m.MiniPuzzle(this, i)), `Puzzle ${i + 1}`); }
+  goEnding():      void { import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("win")); this._nav(() => import("../scenes/EndingScene").then(m => new m.EndingScene(this)), "Ending"); }
+  goAdmin():       void { if (!this.hasHacks) return; this._nav(() => import("../scenes/AdminPanel").then(m => new m.AdminPanel(this)), "Admin Panel"); }
   private _activePollId = -1;
   private _startPollWatcher(): void {
     const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
@@ -2027,8 +2367,24 @@ export class ${className} {
     if (!this.hasHacks) return;
     import("../scenes/AdminAbusePanel").then(m => new m.AdminAbusePanel(this));
   }
-  goClan():        void { this._nav(() => import("../scenes/ClanScene").then(m => new m.ClanScene(this))); }
-  goBanned():      void { this._nav(() => import("../scenes/BannedScreen").then(m => new m.BannedScreen(this))); }
+  goClan():        void { this._nav(() => import("../scenes/ClanScene").then(m => new m.ClanScene(this)), "Clan"); }
+  goBanned():      void { this._nav(() => import("../scenes/BannedScreen").then(m => new m.BannedScreen(this)), "Banned"); }
+
+  goFriends():     void { this._nav(() => import("../scenes/FriendsScene").then(m => new m.FriendsScene(this)), "Friends"); }
+
+  /** A duel against a specific friend rather than the random queue. */
+  goFriendDuel(opponentName: string, host: boolean): void {
+    this._nav(
+      () => import("../scenes/DuelScene").then(m => new m.DuelScene(this, { opponentName, host })),
+      `Duel vs ${opponentName}`,
+    );
+  }
+
+  goAdminPlus():   void {
+    if (!this.hasHacks) return;
+    this.currentScene = "Admin Panel+";
+    import("../scenes/AdminPlusPanel").then(m => new m.AdminPlusPanel(this));
+  }
 
   addToInventory(num: number): void {
     if (!this.state.inventory.includes(num)) { this.state.inventory.push(num); this.save(); }
