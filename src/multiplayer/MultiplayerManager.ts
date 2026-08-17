@@ -13,6 +13,26 @@ export type MPMsg =
 
 const PLAYER_COLORS = ["#FF6B6B","#4ECDC4","#45B7D1","#FFEAA7","#DDA0DD","#98D8C8","#F7DC6F"];
 
+/**
+ * The PeerJS ID for a username. Every caller must use this one function:
+ * host and joiner deriving the ID even slightly differently means they can
+ * never find each other.
+ *
+ * PeerJS only accepts alphanumerics separated by single - _ or space, and
+ * rejects a leading or trailing separator outright. The old inline version
+ * replaced spaces but kept every other character, so a trailing space
+ * ("WeeklyOwner ") produced "12clocks-weeklyowner-" and the broker refused it
+ * with `invalid-id` — while joinPlayer trimmed first and looked for a
+ * different ID again.
+ */
+export function peerIdForName(username: string): string {
+  const slug = (username ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")   // punctuation, emoji, accents, spaces
+    .replace(/^-+|-+$/g, "");      // no leading/trailing separator
+  return slug ? `12clocks-${slug}` : "12clocks-player";
+}
+
 function colorFor(name: string): string {
   const h = [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
   return PLAYER_COLORS[h % PLAYER_COLORS.length];
@@ -55,7 +75,7 @@ export class MultiplayerManager {
 
   /** Go online using your username as the peer ID. Others can join you by typing your name. */
   async goOnline(): Promise<void> {
-    const peerId = `12clocks-${this.name.toLowerCase().replace(/\s+/g, "-")}`;
+    const peerId = peerIdForName(this.name);
     this._peer = await this._makePeer(peerId);
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -108,7 +128,7 @@ export class MultiplayerManager {
 
   /** Join another player by their username */
   async joinPlayer(username: string): Promise<void> {
-    const targetId = `12clocks-${username.trim().toLowerCase().replace(/\s+/g, "-")}`;
+    const targetId = peerIdForName(username);
     if (!this._peer) this._peer = await this._makePeer();
     return new Promise((resolve, reject) => {
       const connect = () => {

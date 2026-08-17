@@ -5,6 +5,8 @@
  * Player Spy uses, so there's no second presence system to keep in sync.
  */
 
+import { peerIdForName } from "../multiplayer/MultiplayerManager";
+
 const SB  = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1";
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
 
@@ -55,10 +57,8 @@ export interface Friend {
   unread:    number;
 }
 
-/** PeerJS id for a username — must match MultiplayerManager.goOnline(). */
-export function peerIdFor(username: string): string {
-  return `12clocks-${username.toLowerCase().replace(/\s+/g, "-")}`;
-}
+/** PeerJS id for a username — the single shared implementation. */
+export const peerIdFor = peerIdForName;
 
 /** Invites older than this are stale and ignored. */
 export const INVITE_TTL_MS = 90_000;

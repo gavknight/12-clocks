@@ -1,5 +1,5 @@
 import type { Game } from "../game/Game";
-import { MultiplayerManager } from "../multiplayer/MultiplayerManager";
+import { MultiplayerManager, peerIdForName } from "../multiplayer/MultiplayerManager";
 
 const SB      = "https://xgzgqdhkjcsrgzhjyiss.supabase.co/rest/v1/duel_queue";
 const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnemdxZGhramNzcmd6aGp5aXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5Njc0NjQsImV4cCI6MjA4MDU0MzQ2NH0.jNO90VavTfHfF2adH38kmkRMf2b-qibBz6wnusE_CdE";
@@ -106,7 +106,7 @@ export class DuelScene {
         this._showError("Your name is already online elsewhere, so they can't reach you. Close your other tabs of the game and retry.");
         return;
       }
-      const myPeerId = `12clocks-${this._game.state.username.toLowerCase().replace(/\s+/g, "-")}`;
+      const myPeerId = peerIdForName(this._game.state.username);
 
       // Friend challenge — skip the queue entirely and pair the two of us.
       if (this._challenge) {

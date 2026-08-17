@@ -1738,7 +1738,17 @@ export class ${className} {
     localStorage.setItem(SESSION_KEY, id);
     this._loadForAccount(id);
     const acc = this._getAccounts().find(a => a.id === id);
-    if (acc) { this.state.username = acc.username; pingMember(id, acc.username); }
+    if (acc) {
+      // Repair names saved before changeUsername() trimmed. A stray space is
+      // invisible on screen but breaks the PeerJS ID built from it.
+      const clean = (acc.username ?? "").trim();
+      if (clean !== acc.username) {
+        acc.username = clean;
+        this._saveAccounts(this._getAccounts().map(a => a.id === id ? { ...a, username: clean } : a));
+      }
+      this.state.username = clean;
+      pingMember(id, clean);
+    }
   }
 
   loginAsGuest(): void {
