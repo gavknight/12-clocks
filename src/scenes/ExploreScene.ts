@@ -4,6 +4,7 @@
  * Big clock IN the room — bring inventory numbers to it to place them.
  */
 import type { Game } from "../game/Game";
+import { IS_DEMO } from "../demo";
 import { colorForNumber, positionToNumber } from "../game/clockData";
 import { LEVELS, defaultObjects, type LevelTheme, type RoomObj } from "../game/levelData";
 import { hasMod } from "../game/ohio";
@@ -682,7 +683,9 @@ export class ExploreScene {
     });
 
     const acorn = document.getElementById("secretAcorn");
-    if (acorn) {
+    // The tree is a full-version secret — the demo doesn't even show the acorn.
+    if (acorn && IS_DEMO) acorn.style.display = "none";
+    else if (acorn) {
       acorn.onmouseenter = () => { acorn.style.transform = "scale(1.3)"; acorn.style.opacity = "1"; };
       acorn.onmouseleave = () => { acorn.style.transform = ""; acorn.style.opacity = "0.62"; };
       acorn.onclick = (e) => {

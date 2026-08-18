@@ -1,6 +1,7 @@
 import type { Game } from "../game/Game";
 import { PETS, ITEMS, GEM_EXCHANGE, type PetDef, type ItemDef } from "../game/Game";
 import { bumpStat } from "../game/badges";
+import { IS_DEMO } from "../demo";
 
 type Tab = "pets" | "gems";
 
@@ -90,8 +91,13 @@ export class ShopScene {
 
   private _build(game: Game): void {
     const render = () => {
-      const coinPets = PETS.filter(p => !p.gemCost);
-      const gemPets  = PETS.filter(p =>  p.gemCost);
+      // The demo ships the original coin pets only. The Diamond Aisle and the
+      // mythic tier above it are full-version content, so the whole tab goes.
+      if (IS_DEMO && this._tab === "gems") this._tab = "pets";
+      const shopPets = IS_DEMO ? PETS.filter(p => !p.gemCost) : PETS;
+
+      const coinPets = shopPets.filter(p => !p.gemCost);
+      const gemPets  = shopPets.filter(p =>  p.gemCost);
       const coinItems = ITEMS.filter(i => !i.gemCost);
       const gemItems  = ITEMS.filter(i =>  i.gemCost);
 
@@ -183,7 +189,7 @@ export class ShopScene {
 
           <div style="display:flex;gap:8px;width:100%;max-width:460px;margin-bottom:16px;">
             ${tabBtn("pets", "🪙 Coin Shop",     "#FFD700")}
-            ${tabBtn("gems", "💎 Diamond Aisle", "#66ddff")}
+            ${IS_DEMO ? "" : tabBtn("gems", "💎 Diamond Aisle", "#66ddff")}
           </div>
 
           ${body}
@@ -193,7 +199,7 @@ export class ShopScene {
               border-radius:14px;padding:12px 16px;width:100%;max-width:460px;
               margin-bottom:14px;text-align:center;">
               <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-bottom:4px;">
-                Your pets — ${game.state.pets.length} / ${PETS.length}</div>
+                Your pets — ${game.state.pets.length} / ${shopPets.length}</div>
               <div style="font-size:20px;line-height:1.5;">
                 ${game.state.pets.map(id => PETS.find(p => p.id === id)?.emoji ?? "").join(" ")}</div>
             </div>` : ""}

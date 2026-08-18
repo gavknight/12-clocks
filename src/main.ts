@@ -1,5 +1,6 @@
 import { Game } from "./game/Game";
 import { IS_BEDROCK } from "./bedrock";
+import "./demo";   // sets up demo detection + the ?demo= override before the game reads it
 import { GamepadManager } from "./input/GamepadManager";
 import { BgMusicManager } from "./game/BgMusicManager";
 
@@ -188,6 +189,7 @@ window.addEventListener("beforeinstallprompt", (e) => {
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const game = new Game(canvas);
+
 game.start();
 BgMusicManager.get(); // init singleton — starts polling for global bg music
 

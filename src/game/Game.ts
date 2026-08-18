@@ -4,6 +4,7 @@ import { upsertRecord, fetchRecords, upsertCoinRecord, fetchCoinLeaderboard, typ
 import { pingMember, setBanStatus } from "./members";
 import { unlockCost, LEVEL_COUNT, type LevelTheme } from "./levelData";
 import { IS_BEDROCK } from "../bedrock";
+import { IS_DEMO } from "../demo";
 import { rollOhio, type OhioRoll } from "./ohio";
 import {
   AP_SB, AP_H, AP_H_UPSERT, AP_H_QUIET, ALL_PLAYERS,
@@ -187,7 +188,9 @@ export class Game {
   ohioRoll: OhioRoll | null = null;
 
   rollOhioIfOn(): void {
-    this.ohioRoll = this.ohioMode ? rollOhio() : null;
+    // Ohio Mode is full-version only, so the demo never rolls one even if an
+    // old save carries the flag over.
+    this.ohioRoll = (this.ohioMode && !IS_DEMO) ? rollOhio() : null;
   }
   _disposeScene: (() => void) | null = null;
   mp: MultiplayerManager | null = null;
@@ -344,11 +347,13 @@ export class Game {
    * the owner has toggled. Otherwise the manually chosen event applies.
    */
   get liveEventId(): string | null {
+    if (IS_DEMO) return null;   // server events are full-version only
     return isBirthdayToday() ? "birthday_boy" : this.activeEventId;
   }
 
   /** Stat multiplier from this player's title — 1 when untitled. */
   get titleMultiplier(): number {
+    if (IS_DEMO) return 1;      // stat titles are full-version only
     return titleDef(this.myTitleId)?.mult ?? 1;
   }
 
@@ -2205,8 +2210,8 @@ export class ${className} {
   goShop():             void { this._nav(() => import("../scenes/ShopScene").then(m => new m.ShopScene(this)), "Shop"); }
   goLevelBuilder():     void { this._nav(() => import("../scenes/LevelBuilder").then(m => new m.LevelBuilder(this)), "Level Builder"); }
   goTradingPlaza():     void { this._nav(() => import("../scenes/TradingPlaza").then(m => new m.TradingPlaza(this)), "Trading Plaza"); }
-  goBadges():           void { this._nav(() => import("../scenes/BadgesScene").then(m => new m.BadgesScene(this)), "Badges"); }
-  goOhio():             void { this._nav(() => import("../scenes/OhioScene").then(m => new m.OhioScene(this)), "Ohio Mode"); }
+  goBadges():           void { if (IS_DEMO) return this.goTitle(); this._nav(() => import("../scenes/BadgesScene").then(m => new m.BadgesScene(this)), "Badges"); }
+  goOhio():             void { if (IS_DEMO) return this.goTitle(); this._nav(() => import("../scenes/OhioScene").then(m => new m.OhioScene(this)), "Ohio Mode"); }
 
   /** Announce anything newly earned. Safe to call often — each badge fires once. */
   checkBadges(): void {
@@ -2394,7 +2399,7 @@ export class ${className} {
   goClan():        void { this._nav(() => import("../scenes/ClanScene").then(m => new m.ClanScene(this)), "Clan"); }
   goBanned():      void { this._nav(() => import("../scenes/BannedScreen").then(m => new m.BannedScreen(this)), "Banned"); }
 
-  goFriends():     void { this._nav(() => import("../scenes/FriendsScene").then(m => new m.FriendsScene(this)), "Friends"); }
+  goFriends():     void { if (IS_DEMO) return this.goTitle(); this._nav(() => import("../scenes/FriendsScene").then(m => new m.FriendsScene(this)), "Friends"); }
 
   /** A duel against a specific friend rather than the random queue. */
   goFriendDuel(opponentName: string, host: boolean): void {

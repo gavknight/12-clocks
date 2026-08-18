@@ -1,5 +1,6 @@
 import type { Game } from "../game/Game";
 import { LEVELS, unlockCost } from "../game/levelData";
+import { IS_DEMO, DEMO_LEVELS } from "../demo";
 import { IS_BEDROCK } from "../bedrock";
 
 export class LevelSelect {
@@ -112,6 +113,12 @@ export class LevelSelect {
       const n = parseInt(tile.dataset["level"]!);
       const cost = unlockCost(n);
 
+      if (IS_DEMO && n > DEMO_LEVELS) {
+        alert(`${LEVELS[n-1].emoji} ${LEVELS[n-1].name} is in the full version of 12 Clocks.\n\n` +
+              `The demo includes levels 1–${DEMO_LEVELS}.`);
+        return;
+      }
+
       if (game.isLevelUnlocked(n)) {
         import("../scenes/Tutorial").then(({advanceTutorial})=>advanceTutorial("map"));
         openDiff(n);
@@ -152,11 +159,25 @@ export class LevelSelect {
         bg     = "rgba(255,255,255,0.08)";
       }
 
-      const lockBadge = !unlocked ? `
+      // In the demo everything past DEMO_LEVELS reads as full-version content,
+      // not as something a pile of coins could open.
+      const demoLocked = IS_DEMO && n > DEMO_LEVELS;
+
+      const lockBadge = demoLocked ? `
+        <div style="position:absolute;bottom:4px;left:0;right:0;text-align:center;
+          font-size:9px;color:#c98bff;font-weight:bold;">
+          🔒 FULL
+        </div>` : !unlocked ? `
         <div style="position:absolute;bottom:4px;left:0;right:0;text-align:center;
           font-size:10px;color:${canAfford ? "#FFD700" : "#ff6666"};">
           🔒 ${cost}🪙
         </div>` : "";
+
+      if (demoLocked) {
+        border = "rgba(160,60,255,0.35)";
+        bg     = "rgba(120,40,200,0.10)";
+        badge  = "";
+      }
 
       return `
         <div data-level="${n}" style="
@@ -164,7 +185,7 @@ export class LevelSelect {
           background:${bg};border:2px solid ${border};border-radius:14px;
           padding:10px 4px 18px;display:flex;flex-direction:column;
           align-items:center;gap:4px;cursor:pointer;
-          opacity:${!unlocked && !canAfford ? 0.5 : 1};
+          opacity:${demoLocked ? 0.45 : (!unlocked && !canAfford ? 0.5 : 1)};
           transition:transform 0.12s;
         "
         onmouseenter="this.style.transform='scale(1.06)'"

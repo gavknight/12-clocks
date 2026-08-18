@@ -6,6 +6,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 import { IS_BEDROCK, enterBedrock, exitBedrock } from "../bedrock";
+import { IS_DEMO, DEMO_HIDDEN_BUTTONS } from "../demo";
 import { TIME_MACHINE_KEY, VERSION_NAMES } from "./VersionHistory";
 import { getMemberCount } from "../game/members";
 import { rulesHTML, bindReportButtons } from "../game/rules";
@@ -657,6 +658,15 @@ ${game.hasHacks ? `<button id="adminBtn" style="
       if (w) w.textContent = String(game.state.wins);
     }, 1000);
     game._disposeScene = () => { clearInterval(statTick); game.ui.innerHTML = ""; };
+    // Demo build: strip the full-version-only features off the menu. Hidden
+    // rather than locked — the demo shouldn't be a wall of padlocks.
+    if (IS_DEMO) {
+      DEMO_HIDDEN_BUTTONS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+    }
+
     document.getElementById("signOutBtn")!.onclick = () => {
       game.logout();
       game.goAuth();

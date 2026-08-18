@@ -3,6 +3,7 @@ import { GamepadMenu } from "../input/GamepadMenu";
 import { IS_BEDROCK, exitBedrock } from "../bedrock";
 import { TIME_MACHINE_KEY, VERSION_GAMES, VERSION_NAMES } from "./VersionHistory";
 import { rulesHTML, bindReportButtons } from "../game/rules";
+import { IS_DEMO, DEMO_GAMES, demoLockHTML } from "../demo";
 
 export class ArcadeScene {
   constructor(game: Game) {
@@ -1035,6 +1036,22 @@ export class ArcadeScene {
     document.getElementById("youtubeBtn")!.onclick = () => {
       import("./games/YouTubeGame").then(m => { game.ui.innerHTML = ""; new m.YouTubeGame(game); });
     };
+
+    // ── Demo filtering ────────────────────────────────────────────────────────
+    // The demo ships a handful of mini-games. Hide the rest outright rather than
+    // teasing every card, and say once at the bottom that there are more.
+    if (IS_DEMO) {
+      const grid = document.querySelector<HTMLElement>(".screen") ?? game.ui;
+      grid.querySelectorAll<HTMLElement>("button[id]").forEach(card => {
+        const id = card.id;
+        if (id === "backBtn" || id === "arcadeRulesBtn" || DEMO_GAMES.has(id)) return;
+        card.style.display = "none";
+      });
+      const notice = document.createElement("div");
+      notice.innerHTML = demoLockHTML(
+        `${DEMO_GAMES.size} mini-games in the demo — the full version has 30+`);
+      grid.appendChild(notice);
+    }
 
     // ── Time Machine filtering ────────────────────────────────────────────────
     const tmVersion = sessionStorage.getItem(TIME_MACHINE_KEY);

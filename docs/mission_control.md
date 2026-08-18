@@ -134,6 +134,14 @@ docs/
 - Community Levels: browse/play published rooms; admin rates Easy → Extreme
   Demon, features, hides, deletes.
 - Badges: derived from live state, so they can't desync from the save.
+- Demo Edition (`src/demo.ts`): the cut-down build for its own Vercel project.
+  No second entry point — `IS_DEMO` is true when the hostname contains "demo",
+  so one codebase serves both deployments and the URL decides which game a
+  player gets. `?demo=1` / `?demo=0` override it for local testing. The demo
+  gets levels 1–3, Coin Jump + Fruit Slice, and coin pets only; Friends, Ohio
+  Mode, the Diamond Aisle, server events and stat titles are stripped. Routes
+  are blocked in `Game.ts` as well as hidden in the UI, so a stale link can't
+  reach a stripped feature.
 
 ### Known gaps
 - [ ] Trading has no listing fee or price cap — two accounts can shuttle a pet
